@@ -337,7 +337,7 @@ export function ContextSettingsModal({
             >
               <FormField
                 label="AI Provider"
-                tooltip="Choose between Claude (via Agent SDK) or Gemini (via REST API)"
+                tooltip="Choose between Claude (via Agent SDK), Gemini (via REST API), or OpenRouter (OpenAI-compatible API)"
               >
                 <select
                   value={formState.CLAUDE_MEM_PROVIDER || 'claude'}
@@ -380,16 +380,14 @@ export function ContextSettingsModal({
                   </FormField>
                   <FormField
                     label="Gemini Model"
-                    tooltip="Gemini model used for generating observations"
+                    tooltip="Gemini model identifier used for generating observations"
                   >
-                    <select
+                    <input
+                      type="text"
                       value={formState.CLAUDE_MEM_GEMINI_MODEL || 'gemini-2.5-flash-lite'}
                       onChange={(e) => updateSetting('CLAUDE_MEM_GEMINI_MODEL', e.target.value)}
-                    >
-                      <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (10 RPM free)</option>
-                      <option value="gemini-2.5-flash">gemini-2.5-flash (5 RPM free)</option>
-                      <option value="gemini-3-flash-preview">gemini-3-flash-preview (5 RPM free)</option>
-                    </select>
+                      placeholder="e.g., gemini-2.5-flash-lite or gemini-2.5-pro"
+                    />
                   </FormField>
                   <div className="toggle-group" style={{ marginTop: '8px' }}>
                     <ToggleSwitch

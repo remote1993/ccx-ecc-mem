@@ -35,15 +35,10 @@ import {
 // v1beta does not support newer models like gemini-3-flash.
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models';
 
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash' as const;
+
 // Gemini model types (available via API)
-export type GeminiModel =
-  | 'gemini-2.5-flash-lite'
-  | 'gemini-2.5-flash'
-  | 'gemini-2.5-pro'
-  | 'gemini-2.0-flash'
-  | 'gemini-2.0-flash-lite'
-  | 'gemini-3-flash'
-  | 'gemini-3-flash-preview';
+export type GeminiModel = string;
 
 // Free tier RPM limits by model (requests per minute)
 const GEMINI_RPM_LIMITS: Record<GeminiModel, number> = {
@@ -506,29 +501,9 @@ export class GeminiAgent {
     // This prevents Issue #733 where random project .env files could interfere
     const apiKey = settings.CLAUDE_MEM_GEMINI_API_KEY || getCredential('GEMINI_API_KEY') || '';
 
-    // Model: from settings or default, with validation
-    const defaultModel: GeminiModel = 'gemini-2.5-flash';
-    const configuredModel = settings.CLAUDE_MEM_GEMINI_MODEL || defaultModel;
-    const validModels: GeminiModel[] = [
-      'gemini-2.5-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-2.5-pro',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-3-flash',
-      'gemini-3-flash-preview',
-    ];
-
-    let model: GeminiModel;
-    if (validModels.includes(configuredModel as GeminiModel)) {
-      model = configuredModel as GeminiModel;
-    } else {
-      logger.warn('SDK', `Invalid Gemini model "${configuredModel}", falling back to ${defaultModel}`, {
-        configured: configuredModel,
-        validModels,
-      });
-      model = defaultModel;
-    }
+    // Model: from settings or default
+    const configuredModel = String(settings.CLAUDE_MEM_GEMINI_MODEL || DEFAULT_GEMINI_MODEL).trim();
+    const model = configuredModel || DEFAULT_GEMINI_MODEL;
 
     // Rate limiting: enabled by default for free tier users
     const rateLimitingEnabled = settings.CLAUDE_MEM_GEMINI_RATE_LIMITING_ENABLED !== 'false';

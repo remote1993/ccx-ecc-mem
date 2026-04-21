@@ -245,9 +245,9 @@ export class SettingsRoutes extends BaseRouteHandler {
 
     // Validate CLAUDE_MEM_GEMINI_MODEL
     if (settings.CLAUDE_MEM_GEMINI_MODEL) {
-      const validGeminiModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3-flash-preview'];
-      if (!validGeminiModels.includes(settings.CLAUDE_MEM_GEMINI_MODEL)) {
-        return { valid: false, error: 'CLAUDE_MEM_GEMINI_MODEL must be one of: gemini-2.5-flash-lite, gemini-2.5-flash, gemini-3-flash-preview' };
+      const model = String(settings.CLAUDE_MEM_GEMINI_MODEL).trim();
+      if (!model) {
+        return { valid: false, error: 'CLAUDE_MEM_GEMINI_MODEL must not be empty' };
       }
     }
 
