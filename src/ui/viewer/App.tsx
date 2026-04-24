@@ -9,6 +9,7 @@ import { useStats } from './hooks/useStats';
 import { usePagination } from './hooks/usePagination';
 import { useTheme } from './hooks/useTheme';
 import { Observation, Summary, UserPrompt } from './types';
+import { getViewerLabels } from './i18n';
 import { mergeAndDeduplicateByProject } from './utils/data';
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
   const { settings, saveSettings, isSaving, saveStatus } = useSettings();
   const { stats, refreshStats } = useStats();
   const { preference, resolvedTheme, setThemePreference } = useTheme();
+  const labels = useMemo(() => getViewerLabels(settings.CLAUDE_MEM_MODE), [settings.CLAUDE_MEM_MODE]);
   const pagination = usePagination(currentFilter, currentSource);
 
   const availableProjects = useMemo(() => {
@@ -122,6 +124,7 @@ export function App() {
         themePreference={preference}
         onThemeChange={setThemePreference}
         onContextPreviewToggle={toggleContextPreview}
+        labels={labels}
       />
 
       <Feed
@@ -131,6 +134,7 @@ export function App() {
         onLoadMore={handleLoadMore}
         isLoading={pagination.observations.isLoading || pagination.summaries.isLoading || pagination.prompts.isLoading}
         hasMore={pagination.observations.hasMore || pagination.summaries.hasMore || pagination.prompts.hasMore}
+        labels={labels}
       />
 
       <ContextSettingsModal
@@ -140,12 +144,13 @@ export function App() {
         onSave={saveSettings}
         isSaving={isSaving}
         saveStatus={saveStatus}
+        labels={labels}
       />
 
       <button
         className="console-toggle-btn"
         onClick={toggleLogsModal}
-        title="Toggle Console"
+        title={labels.toggleConsole}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="4 17 10 11 4 5"></polyline>

@@ -1,12 +1,14 @@
 import React from 'react';
 import { ThemePreference } from '../hooks/useTheme';
+import type { ViewerLabels } from '../i18n';
 
 interface ThemeToggleProps {
   preference: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
+  labels: ViewerLabels;
 }
 
-export function ThemeToggle({ preference, onThemeChange }: ThemeToggleProps) {
+export function ThemeToggle({ preference, onThemeChange, labels }: ThemeToggleProps) {
   const cycleTheme = () => {
     const cycle: ThemePreference[] = ['system', 'light', 'dark'];
     const currentIndex = cycle.indexOf(preference);
@@ -51,12 +53,12 @@ export function ThemeToggle({ preference, onThemeChange }: ThemeToggleProps) {
   const getTitle = () => {
     switch (preference) {
       case 'light':
-        return 'Theme: Light (click for Dark)';
+        return labels.themeLightTitle;
       case 'dark':
-        return 'Theme: Dark (click for System)';
+        return labels.themeDarkTitle;
       case 'system':
       default:
-        return 'Theme: System (click for Light)';
+        return labels.themeSystemTitle;
     }
   };
 

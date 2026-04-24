@@ -62,6 +62,25 @@ export interface ModePrompts {
   summary_footer: string;             // Footer with closing instructions and language requirement
 }
 
+export interface ContextLabels {
+  recent_context: string;
+  no_previous_sessions: string;
+  legend: string;
+  format: string;
+  fetch_details: string;
+  stats: string;
+  observations_short: string;
+  read_tokens_short: string;
+  work_tokens_short: string;
+  savings: string;
+  saved_tokens: string;
+  session: string;
+  previously: string;
+  session_started: string;
+  access_prefix: string;
+  access_suffix: string;
+}
+
 export interface ModeConfig {
   name: string;
   description: string;
@@ -69,4 +88,5 @@ export interface ModeConfig {
   observation_types: ObservationType[];
   observation_concepts: ObservationConcept[];
   prompts: ModePrompts;
+  context_labels?: Partial<ContextLabels>;
 }

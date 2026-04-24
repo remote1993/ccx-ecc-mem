@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import type { Settings } from '../types';
 import { TerminalPreview } from './TerminalPreview';
 import { useContextPreview } from '../hooks/useContextPreview';
+import type { ViewerLabels } from '../i18n';
 
 interface ContextSettingsModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface ContextSettingsModalProps {
   onSave: (settings: Settings) => void;
   isSaving: boolean;
   saveStatus: string;
+  labels: ViewerLabels;
 }
 
 // Collapsible section component
@@ -126,7 +128,8 @@ export function ContextSettingsModal({
   settings,
   onSave,
   isSaving,
-  saveStatus
+  saveStatus,
+  labels
 }: ContextSettingsModalProps) {
   const [formState, setFormState] = useState<Settings>(settings);
 
@@ -181,10 +184,10 @@ export function ContextSettingsModal({
       <div className="context-settings-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
-          <h2>Settings</h2>
+          <h2>{labels.settings}</h2>
           <div className="header-controls">
             <label className="preview-selector">
-              Source:
+              {labels.source}:
               <select
                 value={selectedSource || ''}
                 onChange={(e) => setSelectedSource(e.target.value)}
@@ -196,7 +199,7 @@ export function ContextSettingsModal({
               </select>
             </label>
             <label className="preview-selector">
-              Project:
+              {labels.project}:
               <select
                 value={selectedProject || ''}
                 onChange={(e) => setSelectedProject(e.target.value)}
@@ -210,7 +213,7 @@ export function ContextSettingsModal({
             <button
               onClick={onClose}
               className="modal-close-btn"
-              title="Close (Esc)"
+              title={labels.closeEsc}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -227,10 +230,10 @@ export function ContextSettingsModal({
             <div className="preview-content">
               {error ? (
                 <div style={{ color: '#ff6b6b' }}>
-                  Error loading preview: {error}
+                  {labels.errorLoadingPreview}: {error}
                 </div>
               ) : (
-                <TerminalPreview content={preview} isLoading={isLoading} />
+                <TerminalPreview content={preview} isLoading={isLoading} labels={labels} />
               )}
             </div>
           </div>
@@ -239,12 +242,12 @@ export function ContextSettingsModal({
           <div className="settings-column">
             {/* Section 1: Loading */}
             <CollapsibleSection
-              title="Loading"
-              description="How many observations to inject"
+              title={labels.loading}
+              description={labels.loadingDescription}
             >
               <FormField
-                label="Observations"
-                tooltip="Number of recent observations to include in context (1-200)"
+                label={labels.observations}
+                tooltip={labels.observationsTooltip}
               >
                 <input
                   type="number"
@@ -255,8 +258,8 @@ export function ContextSettingsModal({
                 />
               </FormField>
               <FormField
-                label="Sessions"
-                tooltip="Number of recent sessions to pull observations from (1-50)"
+                label={labels.sessions}
+                tooltip={labels.sessionsTooltip}
               >
                 <input
                   type="number"
@@ -270,14 +273,14 @@ export function ContextSettingsModal({
 
             {/* Section 2: Display */}
             <CollapsibleSection
-              title="Display"
-              description="What to show in context tables"
+              title={labels.display}
+              description={labels.displayDescription}
             >
               <div className="display-subsection">
-                <span className="subsection-label">Full Observations</span>
+                <span className="subsection-label">{labels.fullObservations}</span>
                 <FormField
-                  label="Count"
-                  tooltip="How many observations show expanded details (0-20)"
+                  label={labels.count}
+                  tooltip={labels.countTooltip}
                 >
                   <input
                     type="number"
@@ -288,40 +291,40 @@ export function ContextSettingsModal({
                   />
                 </FormField>
                 <FormField
-                  label="Field"
-                  tooltip="Which field to expand for full observations"
+                  label={labels.field}
+                  tooltip={labels.fieldTooltip}
                 >
                   <select
                     value={formState.CLAUDE_MEM_CONTEXT_FULL_FIELD || 'narrative'}
                     onChange={(e) => updateSetting('CLAUDE_MEM_CONTEXT_FULL_FIELD', e.target.value)}
                   >
-                    <option value="narrative">Narrative</option>
-                    <option value="facts">Facts</option>
+                    <option value="narrative">{labels.narrative}</option>
+                    <option value="facts">{labels.facts}</option>
                   </select>
                 </FormField>
               </div>
 
               <div className="display-subsection">
-                <span className="subsection-label">Token Economics</span>
+                <span className="subsection-label">{labels.tokenEconomics}</span>
                 <div className="toggle-group">
                   <ToggleSwitch
                     id="show-read-tokens"
-                    label="Read cost"
-                    description="Tokens to read this observation"
+                    label={labels.readCost}
+                    description={labels.readCostDescription}
                     checked={formState.CLAUDE_MEM_CONTEXT_SHOW_READ_TOKENS === 'true'}
                     onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_READ_TOKENS')}
                   />
                   <ToggleSwitch
                     id="show-work-tokens"
-                    label="Work investment"
-                    description="Tokens spent creating this observation"
+                    label={labels.workInvestment}
+                    description={labels.workInvestmentDescription}
                     checked={formState.CLAUDE_MEM_CONTEXT_SHOW_WORK_TOKENS === 'true'}
                     onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_WORK_TOKENS')}
                   />
                   <ToggleSwitch
                     id="show-savings-amount"
-                    label="Savings"
-                    description="Total tokens saved by reusing context"
+                    label={labels.savings}
+                    description={labels.savingsDescription}
                     checked={formState.CLAUDE_MEM_CONTEXT_SHOW_SAVINGS_AMOUNT === 'true'}
                     onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_SAVINGS_AMOUNT')}
                   />
@@ -331,24 +334,24 @@ export function ContextSettingsModal({
 
             {/* Section 4: Advanced */}
             <CollapsibleSection
-              title="Advanced"
-              description="Custom third-party API settings"
+              title={labels.advanced}
+              description={labels.advancedDescription}
               defaultOpen={false}
             >
               <FormField
-                label="Custom API Key"
-                tooltip="API key for your custom third-party endpoint"
+                label={labels.customApiKey}
+                tooltip={labels.customApiKeyTooltip}
               >
                 <input
                   type="password"
                   value={formState.CLAUDE_MEM_CUSTOM_API_KEY || ''}
                   onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_API_KEY', e.target.value)}
-                  placeholder="Enter API key..."
+                  placeholder={labels.enterApiKey}
                 />
               </FormField>
               <FormField
-                label="Custom Base URL"
-                tooltip="OpenAI-compatible chat completions endpoint"
+                label={labels.customBaseUrl}
+                tooltip={labels.customBaseUrlTooltip}
               >
                 <input
                   type="text"
@@ -358,8 +361,8 @@ export function ContextSettingsModal({
                 />
               </FormField>
               <FormField
-                label="Custom Model"
-                tooltip="Model identifier sent to the custom API"
+                label={labels.customModel}
+                tooltip={labels.customModelTooltip}
               >
                 <input
                   type="text"
@@ -369,8 +372,8 @@ export function ContextSettingsModal({
                 />
               </FormField>
               <FormField
-                label="App Name (Optional)"
-                tooltip="Optional application name sent to the provider"
+                label={labels.appNameOptional}
+                tooltip={labels.appNameOptionalTooltip}
               >
                 <input
                   type="text"
@@ -380,8 +383,8 @@ export function ContextSettingsModal({
                 />
               </FormField>
               <FormField
-                label="Context Messages"
-                tooltip="Maximum recent messages kept before sending to the custom API (1-100)"
+                label={labels.contextMessages}
+                tooltip={labels.contextMessagesTooltip}
               >
                 <input
                   type="number"
@@ -392,8 +395,8 @@ export function ContextSettingsModal({
                 />
               </FormField>
               <FormField
-                label="Context Tokens"
-                tooltip="Estimated token budget for truncated custom API context (1000-1000000)"
+                label={labels.contextTokens}
+                tooltip={labels.contextTokensTooltip}
               >
                 <input
                   type="number"
@@ -405,8 +408,8 @@ export function ContextSettingsModal({
                 />
               </FormField>
               <FormField
-                label="Request Timeout (ms)"
-                tooltip="Abort custom API requests after this many milliseconds (1000-600000)"
+                label={labels.requestTimeout}
+                tooltip={labels.requestTimeoutTooltip}
               >
                 <input
                   type="number"
@@ -418,8 +421,8 @@ export function ContextSettingsModal({
                 />
               </FormField>
               <FormField
-                label="Temperature"
-                tooltip="Sampling temperature sent to the custom API (0-2)"
+                label={labels.temperature}
+                tooltip={labels.temperatureTooltip}
               >
                 <input
                   type="number"
@@ -432,8 +435,8 @@ export function ContextSettingsModal({
               </FormField>
 
               <FormField
-                label="Worker Port"
-                tooltip="Port for the background worker service"
+                label={labels.workerPort}
+                tooltip={labels.workerPortTooltip}
               >
                 <input
                   type="number"
@@ -447,15 +450,15 @@ export function ContextSettingsModal({
               <div className="toggle-group" style={{ marginTop: '12px' }}>
                 <ToggleSwitch
                   id="show-last-summary"
-                  label="Include last summary"
-                  description="Add previous session's summary to context"
+                  label={labels.includeLastSummary}
+                  description={labels.includeLastSummaryDescription}
                   checked={formState.CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY === 'true'}
                   onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY')}
                 />
                 <ToggleSwitch
                   id="show-last-message"
-                  label="Include last message"
-                  description="Add previous session's final message"
+                  label={labels.includeLastMessage}
+                  description={labels.includeLastMessageDescription}
                   checked={formState.CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE === 'true'}
                   onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE')}
                 />
@@ -474,7 +477,7 @@ export function ContextSettingsModal({
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? labels.saving : labels.save}
           </button>
         </div>
       </div>

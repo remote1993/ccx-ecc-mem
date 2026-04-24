@@ -69,6 +69,7 @@ export interface ProjectCatalog {
 
 export interface Settings {
   CLAUDE_MEM_MODEL: string;
+  CLAUDE_MEM_MODE?: string;
   CLAUDE_MEM_CONTEXT_OBSERVATIONS: string;
   CLAUDE_MEM_WORKER_PORT: string;
   CLAUDE_MEM_WORKER_HOST: string;

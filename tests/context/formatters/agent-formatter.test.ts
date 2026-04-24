@@ -1,5 +1,7 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
 
+let activeContextLabels: Record<string, string> | undefined;
+
 // Mock the ModeManager before importing the formatter
 mock.module('../../../src/services/domain/ModeManager.js', () => ({
   ModeManager: {
@@ -13,6 +15,7 @@ mock.module('../../../src/services/domain/ModeManager.js', () => ({
           { id: 'discovery', emoji: 'I' },
         ],
         observation_concepts: [],
+        context_labels: activeContextLabels,
       }),
       getTypeIcon: (type: string) => {
         const icons: Record<string, string> = {
@@ -98,6 +101,9 @@ function createTestConfig(overrides: Partial<ContextConfig> = {}): ContextConfig
 }
 
 describe('AgentFormatter', () => {
+  beforeEach(() => {
+    activeContextLabels = undefined;
+  });
   describe('renderAgentHeader', () => {
     it('should produce valid markdown header with project name', () => {
       const result = renderAgentHeader('my-project');
@@ -113,10 +119,12 @@ describe('AgentFormatter', () => {
       expect(result[0]).toContain('project-with-special_chars.v2');
     });
 
-    it('should handle empty project name', () => {
-      const result = renderAgentHeader('');
+    it('uses mode context labels when provided', () => {
+      activeContextLabels = { recent_context: '近期上下文' };
 
-      expect(result[0]).toMatch(/^# \[\] recent context, \d{4}-\d{2}-\d{2} \d{1,2}:\d{2}[ap]m [A-Z]{3,4}$/);
+      const result = renderAgentHeader('my-project');
+
+      expect(result[0]).toContain('# [my-project] 近期上下文,');
     });
   });
 
@@ -129,10 +137,19 @@ describe('AgentFormatter', () => {
       expect(result[3]).toBe('');
     });
 
-    it('should include session in legend', () => {
+    it('uses translated legend labels when provided', () => {
+      activeContextLabels = {
+        legend: '图例',
+        format: '格式',
+        fetch_details: '获取详情',
+        session: '会话',
+      };
+
       const result = renderAgentLegend();
 
-      expect(result[0]).toContain('session');
+      expect(result[0]).toContain('图例: 🎯会话');
+      expect(result[1]).toContain('格式:');
+      expect(result[2]).toContain('获取详情:');
     });
   });
 
@@ -203,14 +220,23 @@ describe('AgentFormatter', () => {
       expect(joined).toContain('85% savings');
     });
 
-    it('should not show savings when discovery tokens is 0', () => {
-      const economics = createTestEconomics({ totalDiscoveryTokens: 0, savings: 0, savingsPercent: 0 });
-      const config = createTestConfig({ showSavingsAmount: true, showSavingsPercent: true });
+    it('uses translated economics labels when provided', () => {
+      activeContextLabels = {
+        stats: '统计',
+        observations_short: '条观察',
+        read_tokens_short: 't 阅读',
+        work_tokens_short: 't 工作',
+        savings: '节省',
+      };
+      const economics = createTestEconomics({ totalObservations: 25, totalReadTokens: 1500, totalDiscoveryTokens: 10000, savingsPercent: 85 });
+      const config = createTestConfig({ showSavingsAmount: false, showSavingsPercent: true });
 
       const result = renderAgentContextEconomics(economics, config);
       const joined = result.join('\n');
 
-      expect(joined).not.toContain('savings');
+      expect(joined).toContain('统计: 25 条观察 (1,500t 阅读)');
+      expect(joined).toContain('10,000t 工作');
+      expect(joined).toContain('85% 节省');
     });
   });
 
@@ -353,13 +379,14 @@ describe('AgentFormatter', () => {
       expect(joined).toContain('Build authentication');
     });
 
-    it('should use "Session started" when request is null', () => {
+    it('uses translated fallback when request is null', () => {
+      activeContextLabels = { session_started: '会话已开始' };
       const summary = { id: 1, request: null };
 
       const result = renderAgentSummaryItem(summary, '10:00');
       const joined = result.join('\n');
 
-      expect(joined).toContain('Session started');
+      expect(joined).toContain('会话已开始');
     });
   });
 
@@ -411,16 +438,17 @@ describe('AgentFormatter', () => {
       expect(result).toHaveLength(0);
     });
 
-    it('should include separator', () => {
+    it('uses translated section label when provided', () => {
+      activeContextLabels = { previously: '之前' };
       const priorMessages: PriorMessages = {
         userMessage: '',
-        assistantMessage: 'Some message',
+        assistantMessage: 'I completed the task successfully.',
       };
 
       const result = renderAgentPreviouslySection(priorMessages);
       const joined = result.join('\n');
 
-      expect(joined).toContain('---');
+      expect(joined).toContain('**之前**');
     });
   });
 
@@ -463,10 +491,16 @@ describe('AgentFormatter', () => {
       expect(result.startsWith('#')).toBe(true);
     });
 
-    it('should handle empty project name', () => {
-      const result = renderAgentEmptyState('');
+    it('uses translated empty state labels when provided', () => {
+      activeContextLabels = {
+        recent_context: '近期上下文',
+        no_previous_sessions: '未找到过往会话。',
+      };
 
-      expect(result).toContain('# [] recent context,');
+      const result = renderAgentEmptyState('my-project');
+
+      expect(result).toContain('# [my-project] 近期上下文,');
+      expect(result).toContain('未找到过往会话。');
     });
   });
 });

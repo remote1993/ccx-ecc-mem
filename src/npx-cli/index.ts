@@ -4,7 +4,7 @@
  * Usage:
  *   npx claude-mem                     → interactive install
  *   npx claude-mem install             → interactive install
- *   npx claude-mem install --ide <id>  → direct host setup
+ *   npx claude-mem install --ide <id|all> → direct host setup
  *   npx claude-mem update              → update to latest version
  *   npx claude-mem uninstall           → remove plugin and Codex config
  *   npx claude-mem version             → print version
@@ -41,7 +41,8 @@ ${pc.bold('claude-mem')} v${version} — persistent memory for AI coding assista
 ${pc.bold('Install Commands')} (no Bun required):
   ${pc.cyan('npx claude-mem')}                     Interactive install
   ${pc.cyan('npx claude-mem install')}              Interactive install
-  ${pc.cyan('npx claude-mem install --ide <id>')}   Install for specific host
+  ${pc.cyan('npx claude-mem install --ide <id|all>')} Install for specific host(s)
+  ${pc.cyan('npx claude-mem install --mode <mode>')} Set injected-context language
   ${pc.cyan('npx claude-mem update')}               Update to latest version
   ${pc.cyan('npx claude-mem uninstall')}            Remove plugin and Codex config
   ${pc.cyan('npx claude-mem version')}              Print version
@@ -56,8 +57,25 @@ ${pc.bold('Runtime Commands')} (requires Bun, delegates to installed plugin):
   ${pc.cyan('npx claude-mem transcript watch')}     Start transcript watcher
 
 ${pc.bold('IDE Identifiers')}:
-  claude-code, codex-cli
+  claude-code, codex-cli, all
+
+${pc.bold('Language Modes')}:
+  code, code--zh, code--ja, code--ko, code--es, code--fr, code--de, code--pt-br
 `);
+}
+
+function readOptionValue(flag: string): string | undefined {
+  const index = args.indexOf(flag);
+  if (index === -1) return undefined;
+
+  const value = args[index + 1];
+  if (!value || value.startsWith('--')) {
+    console.error(pc.red(`Missing value for ${flag}`));
+    console.error(`Run ${pc.bold('npx claude-mem --help')} for usage information.`);
+    process.exit(1);
+  }
+
+  return value;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,11 +93,11 @@ async function main(): Promise<void> {
 
     // -- Install -----------------------------------------------------------
     case 'install': {
-      const ideIndex = args.indexOf('--ide');
-      const ideValue = ideIndex !== -1 ? args[ideIndex + 1] : undefined;
+      const ideValue = readOptionValue('--ide');
+      const modeValue = readOptionValue('--mode');
 
       const { runInstallCommand } = await import('./commands/install.js');
-      await runInstallCommand({ ide: ideValue });
+      await runInstallCommand({ ide: ideValue, mode: modeValue });
       break;
     }
 

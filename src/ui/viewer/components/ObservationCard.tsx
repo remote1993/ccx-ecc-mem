@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Observation } from '../types';
 import { formatDate } from '../utils/formatters';
+import type { ViewerLabels } from '../i18n';
 
 interface ObservationCardProps {
   observation: Observation;
+  labels: ViewerLabels;
 }
 
 // Helper to strip project root from file paths
@@ -30,7 +32,7 @@ function stripProjectRoot(filePath: string): string {
   return parts.length > 3 ? parts.slice(-3).join('/') : filePath;
 }
 
-export function ObservationCard({ observation }: ObservationCardProps) {
+export function ObservationCard({ observation, labels }: ObservationCardProps) {
   const [showFacts, setShowFacts] = useState(false);
   const [showNarrative, setShowNarrative] = useState(false);
   const date = formatDate(observation.created_at_epoch);
@@ -57,8 +59,8 @@ export function ObservationCard({ observation }: ObservationCardProps) {
           </span>
           <span className="card-project">{observation.project}</span>
           {observation.merged_into_project && (
-            <span className="card-merged-badge" title={`Merged into ${observation.merged_into_project}`}>
-              merged → {observation.merged_into_project}
+            <span className="card-merged-badge" title={`${labels.mergedInto} ${observation.merged_into_project}`}>
+              {labels.mergedInto} → {observation.merged_into_project}
             </span>
           )}
         </div>
@@ -75,7 +77,7 @@ export function ObservationCard({ observation }: ObservationCardProps) {
                 <polyline points="9 11 12 14 22 4"></polyline>
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
               </svg>
-              <span>facts</span>
+              <span>{labels.facts}</span>
             </button>
           )}
           {observation.narrative && (
@@ -92,14 +94,14 @@ export function ObservationCard({ observation }: ObservationCardProps) {
                 <line x1="16" y1="13" x2="8" y2="13"></line>
                 <line x1="16" y1="17" x2="8" y2="17"></line>
               </svg>
-              <span>narrative</span>
+              <span>{labels.narrative}</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Title */}
-      <div className="card-title">{observation.title || 'Untitled'}</div>
+      <div className="card-title">{observation.title || labels.untitled}</div>
 
       {/* Content based on toggle state */}
       <div className="view-mode-content">
@@ -139,12 +141,12 @@ export function ObservationCard({ observation }: ObservationCardProps) {
             ))}
             {filesRead.length > 0 && (
               <span className="meta-files">
-                <span className="file-label">read:</span> {filesRead.join(', ')}
+                <span className="file-label">{labels.read}:</span> {filesRead.join(', ')}
               </span>
             )}
             {filesModified.length > 0 && (
               <span className="meta-files">
-                <span className="file-label">modified:</span> {filesModified.join(', ')}
+                <span className="file-label">{labels.modified}:</span> {filesModified.join(', ')}
               </span>
             )}
           </div>

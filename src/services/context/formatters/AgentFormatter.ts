@@ -12,8 +12,33 @@ import type {
   TokenEconomics,
   PriorMessages,
 } from '../types.js';
+import type { ContextLabels } from '../../domain/types.js';
 import { ModeManager } from '../../domain/ModeManager.js';
 import { formatObservationTokenDisplay } from '../TokenCalculator.js';
+
+const defaultContextLabels: ContextLabels = {
+  recent_context: 'recent context',
+  no_previous_sessions: 'No previous sessions found.',
+  legend: 'Legend',
+  format: 'Format',
+  fetch_details: 'Fetch details',
+  stats: 'Stats',
+  observations_short: 'obs',
+  read_tokens_short: 't read',
+  work_tokens_short: 't work',
+  savings: 'savings',
+  saved_tokens: 't saved',
+  session: 'session',
+  previously: 'Previously',
+  session_started: 'Session started',
+  access_prefix: 'Access',
+  access_suffix: 'tokens of past work via get_observations([IDs]) or mem-search skill.',
+};
+
+function getContextLabels(): ContextLabels {
+  const mode = ModeManager.getInstance().getActiveMode();
+  return { ...defaultContextLabels, ...mode.context_labels };
+}
 
 /**
  * Format current date/time for header display
@@ -34,8 +59,9 @@ function formatHeaderDateTime(): string {
  * Render agent header
  */
 export function renderAgentHeader(project: string): string[] {
+  const labels = getContextLabels();
   return [
-    `# [${project}] recent context, ${formatHeaderDateTime()}`,
+    `# [${project}] ${labels.recent_context}, ${formatHeaderDateTime()}`,
     ''
   ];
 }
@@ -45,12 +71,13 @@ export function renderAgentHeader(project: string): string[] {
  */
 export function renderAgentLegend(): string[] {
   const mode = ModeManager.getInstance().getActiveMode();
+  const labels = getContextLabels();
   const typeLegendItems = mode.observation_types.map(t => `${t.emoji}${t.id}`).join(' ');
 
   return [
-    `Legend: 🎯session ${typeLegendItems}`,
-    `Format: ID TIME TYPE TITLE`,
-    `Fetch details: get_observations([IDs]) | Search: mem-search skill`,
+    `${labels.legend}: 🎯${labels.session} ${typeLegendItems}`,
+    `${labels.format}: ID TIME TYPE TITLE`,
+    `${labels.fetch_details}: get_observations([IDs]) | mem-search skill`,
     ''
   ];
 }
@@ -78,20 +105,21 @@ export function renderAgentContextEconomics(
 ): string[] {
   const output: string[] = [];
 
+  const labels = getContextLabels();
   const parts: string[] = [
-    `${economics.totalObservations} obs (${economics.totalReadTokens.toLocaleString()}t read)`,
-    `${economics.totalDiscoveryTokens.toLocaleString()}t work`
+    `${economics.totalObservations} ${labels.observations_short} (${economics.totalReadTokens.toLocaleString()}${labels.read_tokens_short})`,
+    `${economics.totalDiscoveryTokens.toLocaleString()}${labels.work_tokens_short}`
   ];
 
   if (economics.totalDiscoveryTokens > 0 && (config.showSavingsAmount || config.showSavingsPercent)) {
     if (config.showSavingsPercent) {
-      parts.push(`${economics.savingsPercent}% savings`);
+      parts.push(`${economics.savingsPercent}% ${labels.savings}`);
     } else if (config.showSavingsAmount) {
-      parts.push(`${economics.savings.toLocaleString()}t saved`);
+      parts.push(`${economics.savings.toLocaleString()}${labels.saved_tokens}`);
     }
   }
 
-  output.push(`Stats: ${parts.join(' | ')}`);
+  output.push(`${labels.stats}: ${parts.join(' | ')}`);
   output.push('');
 
   return output;
@@ -178,8 +206,9 @@ export function renderAgentSummaryItem(
   summary: { id: number; request: string | null },
   formattedTime: string
 ): string[] {
+  const labels = getContextLabels();
   return [
-    `S${summary.id} ${summary.request || 'Session started'} (${formattedTime})`,
+    `S${summary.id} ${summary.request || labels.session_started} (${formattedTime})`,
   ];
 }
 
@@ -197,11 +226,12 @@ export function renderAgentSummaryField(label: string, value: string | null): st
 export function renderAgentPreviouslySection(priorMessages: PriorMessages): string[] {
   if (!priorMessages.assistantMessage) return [];
 
+  const labels = getContextLabels();
   return [
     '',
     '---',
     '',
-    `**Previously**`,
+    `**${labels.previously}**`,
     '',
     `A: ${priorMessages.assistantMessage}`,
     ''
@@ -212,10 +242,11 @@ export function renderAgentPreviouslySection(priorMessages: PriorMessages): stri
  * Render agent footer
  */
 export function renderAgentFooter(totalDiscoveryTokens: number, totalReadTokens: number): string[] {
+  const labels = getContextLabels();
   const workTokensK = Math.round(totalDiscoveryTokens / 1000);
   return [
     '',
-    `Access ${workTokensK}k tokens of past work via get_observations([IDs]) or mem-search skill.`
+    `${labels.access_prefix} ${workTokensK}k ${labels.access_suffix}`
   ];
 }
 
@@ -223,5 +254,6 @@ export function renderAgentFooter(totalDiscoveryTokens: number, totalReadTokens:
  * Render agent empty state
  */
 export function renderAgentEmptyState(project: string): string {
-  return `# [${project}] recent context, ${formatHeaderDateTime()}\n\nNo previous sessions found.`;
+  const labels = getContextLabels();
+  return `# [${project}] ${labels.recent_context}, ${formatHeaderDateTime()}\n\n${labels.no_previous_sessions}`;
 }

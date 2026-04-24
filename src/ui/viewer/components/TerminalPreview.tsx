@@ -1,11 +1,13 @@
 import React, { useMemo, useRef, useLayoutEffect, useState } from 'react';
 import AnsiToHtml from 'ansi-to-html';
 import DOMPurify from 'dompurify';
+import type { ViewerLabels } from '../i18n';
 
 interface TerminalPreviewProps {
   content: string;
   isLoading?: boolean;
   className?: string;
+  labels: ViewerLabels;
 }
 
 const ansiConverter = new AnsiToHtml({
@@ -16,7 +18,7 @@ const ansiConverter = new AnsiToHtml({
   stream: false
 });
 
-export function TerminalPreview({ content, isLoading = false, className = '' }: TerminalPreviewProps) {
+export function TerminalPreview({ content, isLoading = false, className = '', labels }: TerminalPreviewProps) {
   const preRef = useRef<HTMLPreElement>(null);
   const scrollTopRef = useRef(0);
   const [wordWrap, setWordWrap] = useState(true);
@@ -110,9 +112,9 @@ export function TerminalPreview({ content, isLoading = false, className = '' }: 
             e.currentTarget.style.borderColor = wordWrap ? 'var(--color-border-primary)' : 'var(--color-accent-primary)';
             e.currentTarget.style.color = wordWrap ? 'var(--color-text-secondary)' : 'var(--color-accent-primary)';
           }}
-          title={wordWrap ? 'Disable word wrap (scroll horizontally)' : 'Enable word wrap'}
+          title={wordWrap ? labels.disableWordWrap : labels.enableWordWrap}
         >
-          {wordWrap ? '⤢ Wrap' : '⇄ Scroll'}
+          {wordWrap ? `⤢ ${labels.wrap}` : `⇄ ${labels.scroll}`}
         </button>
       </div>
 
@@ -126,7 +128,7 @@ export function TerminalPreview({ content, isLoading = false, className = '' }: 
             color: 'var(--color-text-secondary)'
           }}
         >
-          Loading preview...
+          {labels.loadingPreview}
         </div>
       ) : (
         <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
