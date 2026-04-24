@@ -32,6 +32,15 @@ describe('Hook Execution E2E', () => {
   let testPort: number;
   let mockOptions: ServerOptions;
 
+  async function startServer(serverInstance: Server): Promise<void> {
+    await serverInstance.listen(0, '127.0.0.1');
+    const address = serverInstance.getHttpServer()?.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('Failed to resolve listening port');
+    }
+    testPort = address.port;
+  }
+
   beforeEach(() => {
     loggerSpies = [
       spyOn(logger, 'info').mockImplementation(() => {}),
@@ -47,13 +56,13 @@ describe('Hook Execution E2E', () => {
       onRestart: mock(() => Promise.resolve()),
       workerPath: '/test/worker-service.cjs',
       getAiStatus: () => ({
-        provider: 'claude',
+        runtime: 'custom-api',
         authMethod: 'cli',
         lastInteraction: null,
       }),
     };
 
-    testPort = 40000 + Math.floor(Math.random() * 10000);
+    testPort = 0;
   });
 
   afterEach(async () => {
@@ -72,7 +81,7 @@ describe('Hook Execution E2E', () => {
   describe('health and readiness endpoints', () => {
     it('should return 200 with status ok from /api/health', async () => {
       server = new Server(mockOptions);
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/health`);
       expect(response.status).toBe(200);
@@ -81,13 +90,14 @@ describe('Hook Execution E2E', () => {
       expect(body.status).toBe('ok');
       expect(body.initialized).toBe(true);
       expect(body.mcpReady).toBe(true);
+      expect(body.ai.runtime).toBe('custom-api');
       expect(body.platform).toBeDefined();
       expect(typeof body.pid).toBe('number');
     });
 
     it('should return 200 with status ready from /api/readiness when initialized', async () => {
       server = new Server(mockOptions);
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/readiness`);
       expect(response.status).toBe(200);
@@ -103,11 +113,11 @@ describe('Hook Execution E2E', () => {
         onShutdown: mock(() => Promise.resolve()),
         onRestart: mock(() => Promise.resolve()),
         workerPath: '/test/worker-service.cjs',
-        getAiStatus: () => ({ provider: 'claude', authMethod: 'cli', lastInteraction: null }),
+        getAiStatus: () => ({ runtime: 'custom-api', authMethod: 'cli', lastInteraction: null }),
       };
 
       server = new Server(uninitializedOptions);
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/readiness`);
       expect(response.status).toBe(503);
@@ -119,7 +129,7 @@ describe('Hook Execution E2E', () => {
 
     it('should return version from /api/version', async () => {
       server = new Server(mockOptions);
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/version`);
       expect(response.status).toBe(200);
@@ -133,7 +143,7 @@ describe('Hook Execution E2E', () => {
   describe('server lifecycle', () => {
     it('should start and stop cleanly', async () => {
       server = new Server(mockOptions);
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       const httpServer = server.getHttpServer();
       expect(httpServer).not.toBeNull();
@@ -166,11 +176,11 @@ describe('Hook Execution E2E', () => {
         onShutdown: mock(() => Promise.resolve()),
         onRestart: mock(() => Promise.resolve()),
         workerPath: '/test/worker-service.cjs',
-        getAiStatus: () => ({ provider: 'claude', authMethod: 'cli', lastInteraction: null }),
+        getAiStatus: () => ({ runtime: 'custom-api', authMethod: 'cli', lastInteraction: null }),
       };
 
       server = new Server(dynamicOptions);
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       // Check when not initialized
       let response = await fetch(`http://127.0.0.1:${testPort}/api/health`);
@@ -191,7 +201,7 @@ describe('Hook Execution E2E', () => {
     it('should return 404 for unknown routes after finalizeRoutes', async () => {
       server = new Server(mockOptions);
       server.finalizeRoutes();
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/nonexistent`);
       expect(response.status).toBe(404);
@@ -203,7 +213,7 @@ describe('Hook Execution E2E', () => {
     it('should accept JSON content type for POST requests', async () => {
       server = new Server(mockOptions);
       server.finalizeRoutes();
-      await server.listen(testPort, '127.0.0.1');
+      await startServer(server);
 
       // Even though this endpoint doesn't exist, verify JSON handling
       const response = await fetch(`http://127.0.0.1:${testPort}/api/test-json`, {

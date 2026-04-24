@@ -2,154 +2,133 @@
 
 ## Overview
 
-The Worker Service is an Express HTTP server that handles all claude-mem operations. It runs on port 37777 (configurable via `CLAUDE_MEM_WORKER_PORT`) and is managed by PM2.
+The Worker Service is the local Express HTTP server that backs Claude-Mem's current runtime. It runs on port 37777 by default (configurable via `CLAUDE_MEM_WORKER_PORT`) and serves as the main orchestration layer for session lifecycle handling, search, settings, viewer APIs, and async extraction.
 
-## Request Flow
+## Current Request Flow
 
+```text
+unified hook entry or direct local HTTP request
+  → worker-service
+    → route handler
+      → service / manager layer
+        → SQLite / optional Chroma / SDK process helpers
 ```
-Hook (plugin/scripts/*-hook.js)
-  → HTTP Request to Worker (localhost:37777)
-    → Route Handler (http/routes/*.ts)
-      → MCP Server Tool (for search) OR Service Layer (for session/data)
-        → Database (SQLite3 + Chroma vector DB)
-```
+
+For the current architecture, treat the worker HTTP API as the source of truth. Legacy MCP endpoints may still exist as compatibility surfaces, but they are not the main runtime model.
 
 ## Directory Structure
 
-```
+```text
 src/services/worker/
-├── README.md                     # This file
-├── WorkerService.ts              # Slim orchestrator (~150 lines)
-├── http/                         # HTTP layer
-│   ├── middleware.ts             # Shared middleware (logging, CORS, etc.)
-│   └── routes/                   # Route handlers organized by feature area
-│       ├── SessionRoutes.ts      # Session lifecycle (init, observations, summarize, complete)
-│       ├── DataRoutes.ts         # Data retrieval (get observations, summaries, prompts, stats)
-│       ├── SearchRoutes.ts       # Search/MCP proxy (all search endpoints)
-│       ├── SettingsRoutes.ts     # Settings, MCP toggle, branch switching
-│       └── ViewerRoutes.ts       # Health check, viewer UI, SSE stream
-└── services/                     # Business logic services (existing, NO CHANGES in Phase 1)
-    ├── DatabaseManager.ts        # SQLite connection management
-    ├── SessionManager.ts         # Session state tracking
-    ├── SDKAgent.ts               # Claude Agent SDK for observations/summaries
-    ├── SSEBroadcaster.ts         # Server-Sent Events for real-time updates
-    ├── PaginationHelper.ts       # Query pagination utilities
-    ├── SettingsManager.ts        # User settings CRUD
-    └── BranchManager.ts          # Git branch operations
+├── README.md
+├── SDKAgent.ts
+├── CustomApiAgent.ts
+├── SessionManager.ts
+├── SearchManager.ts
+├── SettingsManager.ts
+├── ProcessRegistry.ts
+├── agents/
+│   ├── ResponseProcessor.ts
+│   ├── ObservationBroadcaster.ts
+│   ├── FallbackErrorHandler.ts
+│   └── ...
+├── domain/
+├── events/
+└── http/
+    ├── BaseRouteHandler.ts
+    └── routes/
+        ├── SessionRoutes.ts
+        ├── DataRoutes.ts
+        ├── SearchRoutes.ts
+        ├── SettingsRoutes.ts
+        ├── ViewerRoutes.ts
+        ├── LogsRoutes.ts
+        ├── MemoryRoutes.ts
+        └── CorpusRoutes.ts
 ```
 
 ## Route Organization
 
-### ViewerRoutes.ts
-- `GET /health` - Health check endpoint
-- `GET /` - Serve viewer UI (React app)
-- `GET /stream` - SSE stream for real-time updates
+### ViewerRoutes
+- `GET /health` - Worker health check
+- `GET /` - Serve the viewer UI
+- `GET /stream` - SSE stream for live updates
 
-### SessionRoutes.ts
-Session lifecycle operations (use service layer directly):
-- `POST /sessions/init` - Initialize new session
-- `POST /sessions/:sessionId/observations` - Add tool usage observations
-- `POST /sessions/:sessionId/summarize` - Trigger session summary
-- `GET /sessions/:sessionId/status` - Get session status
-- `DELETE /sessions/:sessionId` - Delete session
-- `POST /sessions/:sessionId/complete` - Mark session complete
-- `POST /sessions/claude-id/:claudeId/observations` - Add observations by claude_id
-- `POST /sessions/claude-id/:claudeId/summarize` - Summarize by claude_id
-- `POST /sessions/claude-id/:claudeId/complete` - Complete by claude_id
+### SessionRoutes
+Current session lifecycle endpoints such as:
+- `POST /api/sessions/init`
+- `POST /api/sessions/observations`
+- `POST /api/sessions/summarize`
+- `POST /api/sessions/complete`
 
-### DataRoutes.ts
-Data retrieval operations (use service layer directly):
-- `GET /observations` - List observations (paginated)
-- `GET /summaries` - List session summaries (paginated)
-- `GET /prompts` - List user prompts (paginated)
-- `GET /observations/:id` - Get observation by ID
-- `GET /sessions/:sessionId` - Get session by ID
-- `GET /prompts/:id` - Get prompt by ID
-- `GET /stats` - Get database statistics
-- `GET /projects` - List all projects
-- `GET /processing` - Get processing status
-- `POST /processing` - Set processing status
+These routes support the worker-backed hook lifecycle and runtime session bookkeeping.
 
-### SearchRoutes.ts
-All search operations (proxy to MCP server):
-- `GET /search` - Unified search (observations + sessions + prompts)
-- `GET /timeline` - Unified timeline context
-- `GET /decisions` - Decision-type observations
-- `GET /changes` - Change-related observations
-- `GET /how-it-works` - How-it-works explanations
-- `GET /search/observations` - Search observations
-- `GET /search/sessions` - Search sessions
-- `GET /search/prompts` - Search prompts
-- `GET /search/by-concept` - Find by concept tag
-- `GET /search/by-file` - Find by file path
-- `GET /search/by-type` - Find by observation type
-- `GET /search/recent-context` - Get recent context
-- `GET /search/context-timeline` - Get context timeline
-- `GET /context/preview` - Preview context
-- `GET /context/inject` - Inject context
-- `GET /search/timeline-by-query` - Timeline by search query
-- `GET /search/help` - Search help
+### DataRoutes
+Current data retrieval endpoints such as:
+- `GET /api/observations`
+- `GET /api/summaries`
+- `GET /api/prompts`
+- `GET /api/stats`
+- `GET /api/projects`
 
-### SettingsRoutes.ts
-Settings and configuration (use service layer directly):
-- `GET /settings` - Get user settings
-- `POST /settings` - Update user settings
-- `GET /mcp/status` - Get MCP server status
-- `POST /mcp/toggle` - Toggle MCP server on/off
-- `GET /branch/status` - Get git branch info
-- `POST /branch/switch` - Switch git branch
-- `POST /branch/update` - Pull branch updates
+These read persisted state directly through the worker's service layer.
 
-## Current State (Phase 1)
+### SearchRoutes
+Search and context endpoints are handled through `SearchManager`, including:
+- `GET /api/search`
+- `GET /api/timeline`
+- `GET /api/context/recent`
+- `GET /api/context/timeline`
+- `GET /api/context/preview`
+- `GET /api/context/inject`
 
-**Phase 1** is a pure code reorganization with ZERO functional changes:
-- Extract route handlers from WorkerService.ts monolith
-- Organize into logical route classes
-- Keep all existing behavior identical
+Backward-compatibility search endpoints still exist, but the current model is worker-backed retrieval rather than MCP-first search proxying.
 
-**MCP vs Direct DB Split** (inherited, not changed in Phase 1):
-- Search operations → MCP server (mem-search)
-- Session/data operations → Direct DB access via service layer
+### SettingsRoutes
+Settings routes handle persisted runtime configuration:
+- `GET /api/settings`
+- `POST /api/settings`
 
-## Future Phase 2
+Legacy MCP and branch endpoints remain available as compatibility or operational surfaces where still needed, but they are not the primary architecture story.
 
-Phase 2 will unify the architecture:
-1. Expand MCP server to handle ALL operations (not just search)
-2. Convert all route handlers to proxy through MCP
-3. Move database logic from service layer into MCP tools
-4. Result: Worker becomes pure HTTP → MCP proxy for maximum portability
+## Current Architecture Notes
 
-This separation allows the worker to be deployed anywhere (as a CLI tool, cloud service, etc.) without carrying database dependencies.
+The current baseline is:
+- unified hook entry for supported clients
+- local worker-backed runtime
+- custom API processing as the main extraction path
+- worker-backed retrieval through HTTP routes and service managers
+- compatibility MCP surfaces only where explicitly retained
+
+That means older descriptions such as:
+- per-hook script entrypoints as the main runtime contract
+- search being primarily an MCP proxy
+- a future plan to move the whole worker behind MCP
+- PM2 as the canonical worker manager
+
+should be treated as historical design material unless the code explicitly still depends on them.
 
 ## Adding New Endpoints
 
-1. Choose the appropriate route file based on the endpoint's purpose
-2. Add the route handler method to the class
-3. Register the route in the `setupRoutes()` method
-4. Import any needed services in the constructor
-5. Follow the existing patterns for error handling and logging
+When adding a new endpoint:
+1. choose the route file that matches the feature area
+2. add the handler method
+3. register the route in `setupRoutes()`
+4. call the relevant service or manager directly
+5. follow the existing error-handling and logging style
 
 Example:
-```typescript
-// In DataRoutes.ts
-private async handleGetFoo(req: Request, res: Response): Promise<void> {
-  try {
-    const result = await this.dbManager.getFoo();
-    res.json(result);
-  } catch (error) {
-    logger.failure('WORKER', 'Get foo failed', {}, error as Error);
-    res.status(500).json({ error: (error as Error).message });
-  }
-}
 
-// Register in setupRoutes()
-app.get('/foo', this.handleGetFoo.bind(this));
+```ts
+private handleGetFoo = this.wrapHandler(async (req, res): Promise<void> => {
+  const result = await this.someManager.getFoo(req.query);
+  res.json(result);
+});
 ```
 
-## Key Design Principles
+## Design Principles
 
-1. **Progressive Disclosure**: Navigate from high-level (WorkerService.ts) to specific routes to implementation details
-2. **Single Responsibility**: Each route class handles one feature area
-3. **Dependency Injection**: Route classes receive only the services they need
-4. **Consistent Error Handling**: All handlers use try/catch with logger.failure()
-5. **Bound Methods**: All route handlers use `.bind(this)` to preserve context
+1. **Worker-backed truth**: prefer the local worker HTTP + service layer when describing the runtime
+2. **Progressive disclosure**: show compact search/context first, then narrower detail fetches
+3. **Single responsibility**: keep route handlers thin and delegate logic to services/managers
+4. **Compatibility boundaries stay explicit**: if a route exists only for legacy reasons, document it that way

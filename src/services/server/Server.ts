@@ -35,10 +35,10 @@ export interface RouteHandler {
 }
 
 /**
- * AI provider status for health endpoint
+ * Worker AI status for the health endpoint
  */
 export interface AiStatus {
-  provider: string;
+  runtime: string;
   authMethod: string;
   lastInteraction: {
     timestamp: number;
@@ -61,7 +61,7 @@ export interface ServerOptions {
   onRestart: () => Promise<void>;
   /** Filesystem path to the worker entry point */
   workerPath: string;
-  /** Callback to get current AI provider status */
+  /** Callback to get current AI runtime status */
   getAiStatus: () => AiStatus;
 }
 

@@ -5,6 +5,8 @@
  * pending messages after just 3 restarts over any timeframe (#2053).
  */
 
+import { logger } from '../../utils/logger.js';
+
 const RESTART_WINDOW_MS = 60_000;      // Only count restarts within last 60 seconds
 const MAX_WINDOWED_RESTARTS = 10;      // 10 restarts in 60s = runaway loop
 const DECAY_AFTER_SUCCESS_MS = 5 * 60_000; // Clear history after 5min of uninterrupted success
@@ -25,6 +27,7 @@ export class RestartGuard {
         && now - this.lastSuccessfulProcessing >= DECAY_AFTER_SUCCESS_MS) {
       this.restartTimestamps = [];
       this.lastSuccessfulProcessing = null;
+      logger.debug('SESSION', 'Restart guard history decayed after sustained success');
     }
 
     // Prune old timestamps outside the window

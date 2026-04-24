@@ -29,7 +29,7 @@ describe('Stale AbortController Guard (#1099)', () => {
         cumulativeOutputTokens: 0,
         earliestPendingTimestamp: null,
         conversationHistory: [],
-        currentProvider: null,
+        currentRuntime: null,
         consecutiveRestarts: 0,
         processingMessageIds: [],
         lastGeneratorActivity: Date.now()

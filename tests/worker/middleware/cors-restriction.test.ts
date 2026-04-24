@@ -5,7 +5,7 @@
  * and that preflight responses include the correct methods and headers (#1029).
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
@@ -37,6 +37,30 @@ function buildProductionCorsMiddleware() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: false
   });
+}
+
+async function startServerWithRetries(app: express.Application, attempts: number = 10): Promise<{ server: http.Server; port: number }> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const candidatePort = 41000 + Math.floor(Math.random() * 10000);
+
+    try {
+      const server = await new Promise<http.Server>((resolve, reject) => {
+        const candidate = app.listen(candidatePort, '127.0.0.1', () => resolve(candidate));
+        candidate.once('error', reject);
+      });
+      return { server, port: candidatePort };
+    } catch (error) {
+      lastError = error;
+      const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+      if (code !== 'EADDRINUSE') {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Failed to bind test server after retries');
 }
 
 describe('CORS Restriction', () => {
@@ -89,7 +113,7 @@ describe('CORS Restriction', () => {
     let server: http.Server;
     let testPort: number;
 
-    beforeEach(async () => {
+    beforeAll(async () => {
       app = express();
       app.use(express.json());
       app.use(buildProductionCorsMiddleware());
@@ -99,18 +123,16 @@ describe('CORS Restriction', () => {
         res.json({ ok: true });
       });
 
-      testPort = 41000 + Math.floor(Math.random() * 10000);
-      await new Promise<void>((resolve) => {
-        server = app.listen(testPort, '127.0.0.1', resolve);
-      });
+      const started = await startServerWithRetries(app);
+      server = started.server;
+      testPort = started.port;
     });
 
-    afterEach(async () => {
-      if (server) {
-        await new Promise<void>((resolve, reject) => {
-          server.close(err => err ? reject(err) : resolve());
-        });
-      }
+    afterAll(async () => {
+      if (!server?.listening) return;
+      await new Promise<void>((resolve, reject) => {
+        server.close(err => err ? reject(err) : resolve());
+      });
     });
 
     it('preflight response includes PUT in allowed methods', async () => {

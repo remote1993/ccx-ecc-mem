@@ -4,9 +4,9 @@
  * Usage:
  *   npx claude-mem                     → interactive install
  *   npx claude-mem install             → interactive install
- *   npx claude-mem install --ide <id>  → direct IDE setup
+ *   npx claude-mem install --ide <id>  → direct host setup
  *   npx claude-mem update              → update to latest version
- *   npx claude-mem uninstall           → remove plugin and IDE configs
+ *   npx claude-mem uninstall           → remove plugin and Codex config
  *   npx claude-mem version             → print version
  *   npx claude-mem start               → start worker service
  *   npx claude-mem stop                → stop worker service
@@ -41,9 +41,9 @@ ${pc.bold('claude-mem')} v${version} — persistent memory for AI coding assista
 ${pc.bold('Install Commands')} (no Bun required):
   ${pc.cyan('npx claude-mem')}                     Interactive install
   ${pc.cyan('npx claude-mem install')}              Interactive install
-  ${pc.cyan('npx claude-mem install --ide <id>')}   Install for specific IDE
+  ${pc.cyan('npx claude-mem install --ide <id>')}   Install for specific host
   ${pc.cyan('npx claude-mem update')}               Update to latest version
-  ${pc.cyan('npx claude-mem uninstall')}            Remove plugin and configs
+  ${pc.cyan('npx claude-mem uninstall')}            Remove plugin and Codex config
   ${pc.cyan('npx claude-mem version')}              Print version
 
 ${pc.bold('Runtime Commands')} (requires Bun, delegates to installed plugin):
@@ -56,9 +56,7 @@ ${pc.bold('Runtime Commands')} (requires Bun, delegates to installed plugin):
   ${pc.cyan('npx claude-mem transcript watch')}     Start transcript watcher
 
 ${pc.bold('IDE Identifiers')}:
-  claude-code, cursor, gemini-cli, opencode, openclaw,
-  windsurf, codex-cli, copilot-cli, antigravity, goose,
-  crush, roo-code, warp
+  claude-code, codex-cli
 `);
 }
 

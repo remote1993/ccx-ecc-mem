@@ -56,7 +56,7 @@ describe('Zombie Agent Prevention', () => {
       cumulativeOutputTokens: 0,
       earliestPendingTimestamp: null,
       conversationHistory: [],
-      currentProvider: null,
+      currentRuntime: null,
       processingMessageIds: [],  // CLAIM-CONFIRM pattern: track message IDs being processed
       ...overrides,
     };

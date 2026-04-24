@@ -73,15 +73,15 @@ export interface Settings {
   CLAUDE_MEM_WORKER_PORT: string;
   CLAUDE_MEM_WORKER_HOST: string;
 
-  // AI Provider Configuration
-  CLAUDE_MEM_PROVIDER?: string;  // 'claude' | 'gemini' | 'openrouter'
-  CLAUDE_MEM_GEMINI_API_KEY?: string;
-  CLAUDE_MEM_GEMINI_MODEL?: string;
-  CLAUDE_MEM_GEMINI_RATE_LIMITING_ENABLED?: string;  // 'true' | 'false'
-  CLAUDE_MEM_OPENROUTER_API_KEY?: string;
-  CLAUDE_MEM_OPENROUTER_MODEL?: string;
-  CLAUDE_MEM_OPENROUTER_SITE_URL?: string;
-  CLAUDE_MEM_OPENROUTER_APP_NAME?: string;
+  // Custom API Configuration
+  CLAUDE_MEM_CUSTOM_API_KEY?: string;
+  CLAUDE_MEM_CUSTOM_MODEL?: string;
+  CLAUDE_MEM_CUSTOM_BASE_URL?: string;
+  CLAUDE_MEM_CUSTOM_APP_NAME?: string;
+  CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES?: string;
+  CLAUDE_MEM_CUSTOM_MAX_TOKENS?: string;
+  CLAUDE_MEM_CUSTOM_TIMEOUT_MS?: string;
+  CLAUDE_MEM_CUSTOM_TEMPERATURE?: string;
 
   // Token Economics Display
   CLAUDE_MEM_CONTEXT_SHOW_READ_TOKENS?: string;
@@ -97,6 +97,15 @@ export interface Settings {
   // Feature Toggles
   CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY?: string;
   CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE?: string;
+  CLAUDE_MEM_CONTEXT_SHOW_TERMINAL_OUTPUT?: string;
+  CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED?: string;
+  CLAUDE_MEM_FOLDER_USE_LOCAL_MD?: string;
+  CLAUDE_MEM_TRANSCRIPTS_ENABLED?: string;
+  CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH?: string;
+
+  // Exclusion Settings
+  CLAUDE_MEM_EXCLUDED_PROJECTS?: string;
+  CLAUDE_MEM_FOLDER_MD_EXCLUDE?: string;
 }
 
 export interface WorkerStats {

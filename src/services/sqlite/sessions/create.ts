@@ -100,7 +100,7 @@ export function createSDKSession(
 
 /**
  * Update the memory session ID for a session
- * Called by SDKAgent when it captures the session ID from the first SDK message
+ * Called when the worker runtime captures or resets the processing session ID.
  * Also used to RESET to null on stale resume failures (worker-service.ts)
  */
 export function updateMemorySessionId(

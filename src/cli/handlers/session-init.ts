@@ -128,9 +128,7 @@ export const sessionInitHandler: EventHandler = {
       });
     }
 
-    // Only initialize SDK agent for Claude Code (not Cursor)
-    // Cursor doesn't use the SDK agent - it only needs session/observation storage
-    if (!skipAgentInit && input.platform !== 'cursor' && sessionDbId) {
+    if (!skipAgentInit && sessionDbId) {
       // Strip leading slash from commands for memory agent
       // /review 101 -> review 101 (more semantic for observations)
       const cleanedPrompt = prompt.startsWith('/') ? prompt.substring(1) : prompt;
@@ -148,8 +146,6 @@ export const sessionInitHandler: EventHandler = {
         // Log but don't throw - SDK agent failure should not block the user's prompt
         logger.failure('HOOK', `SDK agent start failed: ${response.status}`, { sessionDbId, promptNumber });
       }
-    } else if (!skipAgentInit && input.platform === 'cursor') {
-      logger.debug('HOOK', 'session-init: Skipping SDK agent init for Cursor platform', { sessionDbId, promptNumber });
     }
 
     // Semantic context injection: query Chroma for relevant past observations

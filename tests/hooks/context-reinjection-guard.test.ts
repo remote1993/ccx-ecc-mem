@@ -7,7 +7,7 @@
  * - SessionManager.getSession returns undefined for uninitialized sessions
  * - SessionManager.getSession returns session after initialization
  */
-import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn, mock } from 'bun:test';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -20,7 +20,7 @@ mock.module('../../src/shared/SettingsDefaultsManager.js', () => ({
       return '';
     },
     getInt: () => 0,
-    loadFromFile: () => ({ CLAUDE_MEM_EXCLUDED_PROJECTS: [] }),
+    loadFromFile: () => ({ CLAUDE_MEM_EXCLUDED_PROJECTS: '' }),
   },
 }));
 
@@ -36,10 +36,6 @@ mock.module('../../src/shared/worker-utils.js', () => ({
       body: options?.body,
     });
   },
-}));
-
-mock.module('../../src/utils/project-filter.js', () => ({
-  isProjectExcluded: () => false,
 }));
 
 // Now import after mocks
@@ -60,6 +56,10 @@ beforeEach(() => {
 
 afterEach(() => {
   loggerSpies.forEach(spy => spy.mockRestore());
+});
+
+afterAll(() => {
+  mock.restore();
 });
 
 describe('Context Re-Injection Guard (#1079)', () => {

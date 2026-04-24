@@ -33,6 +33,8 @@ class Logger {
   private useColor: boolean;
   private logFilePath: string | null = null;
   private logFileInitialized: boolean = false;
+  private fileLoggingDisabled: boolean = false;
+  private logFileErrorReported: boolean = false;
 
   constructor() {
     // Disable colors when output is not a TTY (e.g., PM2 logs)
@@ -44,7 +46,7 @@ class Logger {
    * Initialize log file path and ensure directory exists (lazy initialization)
    */
   private ensureLogFileInitialized(): void {
-    if (this.logFileInitialized) return;
+    if (this.logFileInitialized || this.fileLoggingDisabled) return;
     this.logFileInitialized = true;
 
     try {
@@ -61,10 +63,34 @@ class Logger {
       const date = new Date().toISOString().split('T')[0];
       this.logFilePath = join(logsDir, `claude-mem-${date}.log`);
     } catch (error: unknown) {
-      // [ANTI-PATTERN IGNORED]: Logger cannot log its own failures, using stderr/console as last resort
-      console.error('[LOGGER] Failed to initialize log file:', error instanceof Error ? error.message : String(error));
-      this.logFilePath = null;
+      this.disableFileLogging(error, 'initialize');
     }
+  }
+
+  private isPermissionLikeLogError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === 'EROFS' || code === 'EACCES' || code === 'EPERM';
+  }
+
+  private disableFileLogging(error: unknown, phase: 'initialize' | 'write'): void {
+    this.fileLoggingDisabled = true;
+    this.logFilePath = null;
+
+    if (this.logFileErrorReported) return;
+    this.logFileErrorReported = true;
+
+    // Read-only / permission-limited environments are expected in tests and
+    // some containerized setups. Silently degrade instead of spamming stderr.
+    if (this.isPermissionLikeLogError(error)) {
+      return;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    const prefix = phase === 'initialize'
+      ? '[LOGGER] Failed to initialize log file'
+      : '[LOGGER] Failed to write to log file';
+    process.stderr.write(`${prefix}: ${message}\n`);
   }
 
   /**
@@ -291,11 +317,9 @@ class Logger {
       try {
         appendFileSync(this.logFilePath, logLine + '\n', 'utf8');
       } catch (error: unknown) {
-        // [ANTI-PATTERN IGNORED]: Logger cannot log its own failures, using stderr/console as last resort
-        // This is expected during disk full / permission errors
-        process.stderr.write(`[LOGGER] Failed to write to log file: ${error instanceof Error ? error.message : String(error)}\n`);
+        this.disableFileLogging(error, 'write');
       }
-    } else {
+    } else if (!this.fileLoggingDisabled) {
       // If no log file available, write to stderr as fallback
       process.stderr.write(logLine + '\n');
     }

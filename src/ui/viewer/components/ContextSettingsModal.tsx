@@ -332,123 +332,104 @@ export function ContextSettingsModal({
             {/* Section 4: Advanced */}
             <CollapsibleSection
               title="Advanced"
-              description="AI provider and model selection"
+              description="Custom third-party API settings"
               defaultOpen={false}
             >
               <FormField
-                label="AI Provider"
-                tooltip="Choose between Claude (via Agent SDK), Gemini (via REST API), or OpenRouter (OpenAI-compatible API)"
+                label="Custom API Key"
+                tooltip="API key for your custom third-party endpoint"
               >
-                <select
-                  value={formState.CLAUDE_MEM_PROVIDER || 'claude'}
-                  onChange={(e) => updateSetting('CLAUDE_MEM_PROVIDER', e.target.value)}
-                >
-                  <option value="claude">Claude (uses your Claude account)</option>
-                  <option value="gemini">Gemini (uses API key)</option>
-                  <option value="openrouter">OpenRouter (multi-model)</option>
-                </select>
+                <input
+                  type="password"
+                  value={formState.CLAUDE_MEM_CUSTOM_API_KEY || ''}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_API_KEY', e.target.value)}
+                  placeholder="Enter API key..."
+                />
               </FormField>
-
-              {formState.CLAUDE_MEM_PROVIDER === 'claude' && (
-                <FormField
-                  label="Claude Model"
-                  tooltip="Claude model used for generating observations"
-                >
-                  <select
-                    value={formState.CLAUDE_MEM_MODEL || 'haiku'}
-                    onChange={(e) => updateSetting('CLAUDE_MEM_MODEL', e.target.value)}
-                  >
-                    <option value="haiku">haiku (fastest)</option>
-                    <option value="sonnet">sonnet (balanced)</option>
-                    <option value="opus">opus (highest quality)</option>
-                  </select>
-                </FormField>
-              )}
-
-              {formState.CLAUDE_MEM_PROVIDER === 'gemini' && (
-                <>
-                  <FormField
-                    label="Gemini API Key"
-                    tooltip="Your Google AI Studio API key (or set GEMINI_API_KEY env var)"
-                  >
-                    <input
-                      type="password"
-                      value={formState.CLAUDE_MEM_GEMINI_API_KEY || ''}
-                      onChange={(e) => updateSetting('CLAUDE_MEM_GEMINI_API_KEY', e.target.value)}
-                      placeholder="Enter Gemini API key..."
-                    />
-                  </FormField>
-                  <FormField
-                    label="Gemini Model"
-                    tooltip="Gemini model identifier used for generating observations"
-                  >
-                    <input
-                      type="text"
-                      value={formState.CLAUDE_MEM_GEMINI_MODEL || 'gemini-2.5-flash-lite'}
-                      onChange={(e) => updateSetting('CLAUDE_MEM_GEMINI_MODEL', e.target.value)}
-                      placeholder="e.g., gemini-2.5-flash-lite or gemini-2.5-pro"
-                    />
-                  </FormField>
-                  <div className="toggle-group" style={{ marginTop: '8px' }}>
-                    <ToggleSwitch
-                      id="gemini-rate-limiting"
-                      label="Rate Limiting"
-                      description="Enable for free tier (10-30 RPM). Disable if you have billing set up (1000+ RPM)."
-                      checked={formState.CLAUDE_MEM_GEMINI_RATE_LIMITING_ENABLED === 'true'}
-                      onChange={(checked) => updateSetting('CLAUDE_MEM_GEMINI_RATE_LIMITING_ENABLED', checked ? 'true' : 'false')}
-                    />
-                  </div>
-                </>
-              )}
-
-              {formState.CLAUDE_MEM_PROVIDER === 'openrouter' && (
-                <>
-                  <FormField
-                    label="OpenRouter API Key"
-                    tooltip="Your OpenRouter API key from openrouter.ai (or set OPENROUTER_API_KEY env var)"
-                  >
-                    <input
-                      type="password"
-                      value={formState.CLAUDE_MEM_OPENROUTER_API_KEY || ''}
-                      onChange={(e) => updateSetting('CLAUDE_MEM_OPENROUTER_API_KEY', e.target.value)}
-                      placeholder="Enter OpenRouter API key..."
-                    />
-                  </FormField>
-                  <FormField
-                    label="OpenRouter Model"
-                    tooltip="Model identifier from OpenRouter (e.g., anthropic/claude-3.5-sonnet, google/gemini-2.0-flash-thinking-exp)"
-                  >
-                    <input
-                      type="text"
-                      value={formState.CLAUDE_MEM_OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free'}
-                      onChange={(e) => updateSetting('CLAUDE_MEM_OPENROUTER_MODEL', e.target.value)}
-                      placeholder="e.g., xiaomi/mimo-v2-flash:free"
-                    />
-                  </FormField>
-                  <FormField
-                    label="Site URL (Optional)"
-                    tooltip="Your site URL for OpenRouter analytics (optional)"
-                  >
-                    <input
-                      type="text"
-                      value={formState.CLAUDE_MEM_OPENROUTER_SITE_URL || ''}
-                      onChange={(e) => updateSetting('CLAUDE_MEM_OPENROUTER_SITE_URL', e.target.value)}
-                      placeholder="https://yoursite.com"
-                    />
-                  </FormField>
-                  <FormField
-                    label="App Name (Optional)"
-                    tooltip="Your app name for OpenRouter analytics (optional)"
-                  >
-                    <input
-                      type="text"
-                      value={formState.CLAUDE_MEM_OPENROUTER_APP_NAME || 'claude-mem'}
-                      onChange={(e) => updateSetting('CLAUDE_MEM_OPENROUTER_APP_NAME', e.target.value)}
-                      placeholder="claude-mem"
-                    />
-                  </FormField>
-                </>
-              )}
+              <FormField
+                label="Custom Base URL"
+                tooltip="OpenAI-compatible chat completions endpoint"
+              >
+                <input
+                  type="text"
+                  value={formState.CLAUDE_MEM_CUSTOM_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_BASE_URL', e.target.value)}
+                  placeholder="https://your-provider.example/v1/chat/completions"
+                />
+              </FormField>
+              <FormField
+                label="Custom Model"
+                tooltip="Model identifier sent to the custom API"
+              >
+                <input
+                  type="text"
+                  value={formState.CLAUDE_MEM_CUSTOM_MODEL || 'xiaomi/mimo-v2-flash:free'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_MODEL', e.target.value)}
+                  placeholder="e.g., xiaomi/mimo-v2-flash:free"
+                />
+              </FormField>
+              <FormField
+                label="App Name (Optional)"
+                tooltip="Optional application name sent to the provider"
+              >
+                <input
+                  type="text"
+                  value={formState.CLAUDE_MEM_CUSTOM_APP_NAME || 'claude-mem'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_APP_NAME', e.target.value)}
+                  placeholder="claude-mem"
+                />
+              </FormField>
+              <FormField
+                label="Context Messages"
+                tooltip="Maximum recent messages kept before sending to the custom API (1-100)"
+              >
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={formState.CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES || '20'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES', e.target.value)}
+                />
+              </FormField>
+              <FormField
+                label="Context Tokens"
+                tooltip="Estimated token budget for truncated custom API context (1000-1000000)"
+              >
+                <input
+                  type="number"
+                  min="1000"
+                  max="1000000"
+                  step="1000"
+                  value={formState.CLAUDE_MEM_CUSTOM_MAX_TOKENS || '100000'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_MAX_TOKENS', e.target.value)}
+                />
+              </FormField>
+              <FormField
+                label="Request Timeout (ms)"
+                tooltip="Abort custom API requests after this many milliseconds (1000-600000)"
+              >
+                <input
+                  type="number"
+                  min="1000"
+                  max="600000"
+                  step="1000"
+                  value={formState.CLAUDE_MEM_CUSTOM_TIMEOUT_MS || '120000'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_TIMEOUT_MS', e.target.value)}
+                />
+              </FormField>
+              <FormField
+                label="Temperature"
+                tooltip="Sampling temperature sent to the custom API (0-2)"
+              >
+                <input
+                  type="number"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={formState.CLAUDE_MEM_CUSTOM_TEMPERATURE || '0.3'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_TEMPERATURE', e.target.value)}
+                />
+              </FormField>
 
               <FormField
                 label="Worker Port"

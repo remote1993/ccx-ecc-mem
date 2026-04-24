@@ -52,8 +52,14 @@ export abstract class BaseRouteHandler {
    * Returns true if all required params present, sends 400 error otherwise
    */
   protected validateRequired(req: Request, res: Response, params: string[]): boolean {
+    const body = req.body as Record<string, unknown> | undefined;
+    if (!body || typeof body !== 'object') {
+      this.badRequest(res, 'Missing request body');
+      return false;
+    }
+
     for (const param of params) {
-      if (req.body[param] === undefined || req.body[param] === null) {
+      if (body[param] === undefined || body[param] === null) {
         this.badRequest(res, `Missing ${param}`);
         return false;
       }

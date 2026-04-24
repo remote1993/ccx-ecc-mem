@@ -32,16 +32,16 @@ npm run build
 The build process uses esbuild to compile TypeScript:
 
 1. Compiles TypeScript to JavaScript
-2. Creates standalone executables for each hook in `plugin/scripts/`
-3. Bundles MCP search server to `plugin/scripts/mcp-server.cjs`
-4. Bundles worker service to `plugin/scripts/worker-service.cjs`
-5. Bundles web viewer UI to `plugin/ui/viewer.html`
+2. Bundles the unified hook/worker entry to `plugin/scripts/worker-service.cjs`
+3. Bundles the legacy MCP compatibility server to `plugin/scripts/mcp-server.cjs`
+4. Bundles web viewer UI to `plugin/ui/viewer.html`
+5. Syncs supporting runtime scripts such as `bun-runner.js` and `smart-install.js`
 
 **Build Output**:
-- Hook executables: `*-hook.js` (ESM format)
+- Unified hook + worker entry: `worker-service.cjs` (CJS format)
 - Smart installer: `smart-install.js` (ESM format)
-- Worker service: `worker-service.cjs` (CJS format)
-- MCP server: `mcp-server.cjs` (CJS format)
+- Bun bootstrap wrapper: `bun-runner.js` (ESM format)
+- MCP compatibility server: `mcp-server.cjs` (CJS format)
 - Viewer UI: `viewer.html` (self-contained HTML bundle)
 
 ### Build Scripts
@@ -64,10 +64,11 @@ Edit TypeScript source files in `src/`:
 
 ```
 src/
-├── hooks/           # Hook implementations (entry points + logic)
-├── services/        # Worker service and database
-├── servers/         # MCP search server
-├── sdk/             # Claude Agent SDK integration
+├── cli/             # Hook adapters, unified entry, and lifecycle handlers
+├── hooks/           # Lightweight shared hook response helpers
+├── services/        # Worker service, HTTP routes, search, and database
+├── servers/         # Legacy MCP compatibility server
+├── sdk/             # Structured prompt / response helpers
 ├── shared/          # Shared utilities
 ├── ui/
 │   └── viewer/      # React web viewer UI components
@@ -108,8 +109,8 @@ npm run worker:status
 # View logs
 npm run worker:logs
 
-# Test hooks manually
-echo '{"session_id":"test-123","cwd":"'$(pwd)'","source":"startup"}' | node plugin/scripts/context-hook.js
+# Test the unified hook entry manually
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code context
 ```
 
 ### 5. Iterate
@@ -223,43 +224,17 @@ import { YourCard } from './cards/YourCard';
 
 ## Adding New Features
 
-### Adding a New Hook
+### Adding or Changing Hook Behavior
 
-1. Create hook implementation in `src/hooks/your-hook.ts`:
+Current hook behavior should be implemented through the unified entry and lifecycle handlers.
 
-```typescript
-#!/usr/bin/env node
-import { readStdin } from '../shared/stdin';
+1. Update the relevant handler in `src/cli/handlers/`
+2. If needed, update dispatch logic in `src/cli/hook-command.ts`
+3. If the runtime wiring changes, update `plugin/hooks/hooks.json`
+4. Rebuild and test through `plugin/scripts/worker-service.cjs hook claude-code <event>`
 
-async function main() {
-  const input = await readStdin();
+**Note**: `src/hooks/` is no longer the main hook implementation area. It mainly contains lightweight shared hook response helpers.
 
-  // Hook implementation
-  const result = {
-    hookSpecificOutput: 'Optional output'
-  };
-
-  console.log(JSON.stringify(result));
-}
-
-main().catch(console.error);
-```
-
-**Note**: As of v4.3.1, hooks are self-contained files. The shebang will be added automatically by esbuild during the build process.
-
-2. Add to `plugin/hooks/hooks.json`:
-
-```json
-{
-  "YourHook": [{
-    "hooks": [{
-      "type": "command",
-      "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/your-hook.js",
-      "timeout": 120
-    }]
-  }]
-}
-```
 
 4. Rebuild:
 
@@ -340,29 +315,17 @@ export function parseObservation(xml: string): ParsedObservation {
 npm test
 ```
 
-### Adding MCP Search Tools
+### Extending Search or Retrieval Behavior
 
-1. Add tool definition in `src/servers/mcp-server.ts`:
+For current development, extend the worker-backed retrieval stack directly.
 
-```typescript
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === 'your_new_tool') {
-    // Implement tool logic
-    const results = await search.yourNewSearch(params);
-    return formatResults(results);
-  }
-});
-```
+Typical touch points are:
+1. search logic in `src/services/worker/SearchManager.ts`
+2. HTTP wiring in `src/services/worker/http/routes/SearchRoutes.ts`
+3. persistence/query support in `src/services/sqlite/SessionSearch.ts` or related SQLite modules
+4. response formatting in the worker or context-generation layer where needed
 
-2. Add search method in `src/services/sqlite/SessionSearch.ts`:
-
-```typescript
-yourNewSearch(params: YourParams): SearchResult[] {
-  // Implement FTS5 search
-}
-```
-
-3. Rebuild and test:
+Rebuild and test:
 
 ```bash
 npm run build
@@ -434,11 +397,11 @@ sqlite3 ~/.claude-mem/claude-mem.db "PRAGMA integrity_check;"
 
 **Hook Testing**:
 ```bash
-# Test context hook manually
-echo '{"session_id":"test-123","cwd":"'$(pwd)'","source":"startup"}' | node plugin/scripts/context-hook.js
+# Test the unified hook entry for context injection
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code context
 
-# Test new hook
-echo '{"session_id":"test-123","cwd":"'$(pwd)'","prompt":"test"}' | node plugin/scripts/new-hook.js
+# Test the unified hook entry for prompt intake
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code user-prompt-submit
 ```
 
 **Data Verification**:
@@ -590,14 +553,14 @@ ORDER BY created_at;
 
 ### Debug Hooks
 
-Run hooks manually with test input:
+Run the unified hook entry manually with test input:
 
 ```bash
-# Test context hook
-echo '{"session_id":"test-123","cwd":"'$(pwd)'","source":"startup"}' | node plugin/scripts/context-hook.js
+# Test context injection path
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code context
 
-# Test new hook
-echo '{"session_id":"test-123","cwd":"'$(pwd)'","prompt":"test"}' | node plugin/scripts/new-hook.js
+# Test prompt-submission path
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code user-prompt-submit
 ```
 
 ## Publishing

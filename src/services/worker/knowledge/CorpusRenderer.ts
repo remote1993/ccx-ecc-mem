@@ -6,12 +6,17 @@
  */
 
 import type { CorpusFile, CorpusObservation, CorpusFilter } from './types.js';
+import { logger } from '../../../utils/logger.js';
 
 export class CorpusRenderer {
   /**
    * Render all observations into a structured prompt string
    */
   renderCorpus(corpus: CorpusFile): string {
+    logger.debug('WORKER', 'Rendering knowledge corpus', {
+      corpus: corpus.name,
+      observations: corpus.stats.observation_count,
+    });
     const sections: string[] = [];
 
     sections.push(`# Knowledge Corpus: ${corpus.name}`);

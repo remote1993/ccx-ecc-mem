@@ -138,6 +138,16 @@ describe('Sessions Module', () => {
       expect(session?.platform_source).toBe('claude');
     });
 
+    it('should normalize transcript alias to codex for the same session', () => {
+      const sessionId = createSDKSession(db, 'session-platform-codex', 'project', 'prompt', undefined, 'transcript');
+      let session = getSessionById(db, sessionId);
+      expect(session?.platform_source).toBe('codex');
+
+      createSDKSession(db, 'session-platform-codex', 'project', 'prompt', undefined, 'codex-cli');
+      session = getSessionById(db, sessionId);
+      expect(session?.platform_source).toBe('codex');
+    });
+
     it('should preserve a non-default platform_source for legacy callers that omit platformSource', () => {
       const sessionId = createSDKSession(db, 'session-platform-2', 'project', 'prompt', undefined, 'codex');
       let session = getSessionById(db, sessionId);

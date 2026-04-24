@@ -45,14 +45,14 @@
   <a href="docs/i18n/README.no.md">🇳🇴 Norsk</a>
 </p>
 
-<h4 align="center">Persistent memory compression system built for <a href="https://claude.com/claude-code" target="_blank">Claude Code</a>.</h4>
+<h4 align="center">Persistent memory system built around a local worker runtime, custom third-party API extraction, and focused host integrations for Claude Code and Codex CLI.</h4>
 
 <p align="center">
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License">
   </a>
   <a href="package.json">
-    <img src="https://img.shields.io/badge/version-6.5.0-green.svg" alt="Version">
+    <img src="https://img.shields.io/badge/version-12.3.8-green.svg" alt="Version">
   </a>
   <a href="package.json">
     <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node">
@@ -133,15 +133,10 @@ Install with a single command:
 npx claude-mem install
 ```
 
-Or install for Gemini CLI (auto-detects `~/.gemini`):
+Install for Codex CLI transcript ingestion:
 
 ```bash
-npx claude-mem install --ide gemini-cli
-```
-Or install for OpenCode:
-
-```bash
-npx claude-mem install --ide opencode
+npx claude-mem install --ide codex-cli
 ```
 
 Or install from the plugin marketplace inside Claude Code:
@@ -152,27 +147,21 @@ Or install from the plugin marketplace inside Claude Code:
 /plugin install claude-mem
 ```
 
-Restart Claude Code or Gemini CLI. Context from previous sessions will automatically appear in new sessions.
+Current supported host integrations:
 
-> **Note:** Claude-Mem is also published on npm, but `npm install -g claude-mem` installs the **SDK/library only** — it does not register the plugin hooks or set up the worker service. Always install via `npx claude-mem install` or the `/plugin` commands above.
+- Claude Code: local plugin registration and worker-backed context/search
+- Codex CLI: transcript watching plus workspace `AGENTS.md` context sync
 
-### 🦞 OpenClaw Gateway
+Restart your host client after installation. Claude Code picks up the local plugin state, and Codex CLI starts feeding memory once the worker is running and transcript watching is enabled.
 
-Install claude-mem as a persistent memory plugin on [OpenClaw](https://openclaw.ai) gateways with a single command:
-
-```bash
-curl -fsSL https://install.cmem.ai/openclaw.sh | bash
-```
-
-The installer handles dependencies, plugin setup, AI provider configuration, worker startup, and optional real-time observation feeds to Telegram, Discord, Slack, and more. See the [OpenClaw Integration Guide](https://docs.claude-mem.ai/openclaw-integration) for details.
+> **Note:** Claude-Mem is also published on npm, but `npm install -g claude-mem` installs the **SDK/library only** — it does not register the Claude Code plugin state or configure Codex transcript watching. Always install via `npx claude-mem install`, `npx claude-mem install --ide codex-cli`, or the `/plugin` commands above.
 
 **Key Features:**
 
 - 🧠 **Persistent Memory** - Context survives across sessions
 - 📊 **Progressive Disclosure** - Layered memory retrieval with token cost visibility
-- 🔍 **Skill-Based Search** - Query your project history with mem-search skill
+- 🔍 **Worker-Backed Retrieval** - Query your project history through the current retrieval surfaces
 - 🖥️ **Web Viewer UI** - Real-time memory stream at http://localhost:37777
-- 💻 **Claude Desktop Skill** - Search memory from Claude Desktop conversations
 - 🔒 **Privacy Control** - Use `<private>` tags to exclude sensitive content from storage
 - ⚙️ **Context Configuration** - Fine-grained control over what context gets injected
 - 🤖 **Automatic Operation** - No manual intervention required
@@ -188,7 +177,7 @@ The installer handles dependencies, plugin setup, AI provider configuration, wor
 ### Getting Started
 
 - **[Installation Guide](https://docs.claude-mem.ai/installation)** - Quick start & advanced installation
-- **[Gemini CLI Setup](https://docs.claude-mem.ai/gemini-cli/setup)** - Dedicated guide for Google's Gemini CLI integration
+- **[Platform Integration Guide](https://docs.claude-mem.ai/platform-integration)** - Claude Code hooks and Codex transcript integration model
 - **[Usage Guide](https://docs.claude-mem.ai/usage/getting-started)** - How Claude-Mem works automatically
 - **[Search Tools](https://docs.claude-mem.ai/usage/search-tools)** - Query your project history with natural language
 - **[Beta Features](https://docs.claude-mem.ai/beta-features)** - Try experimental features like Endless Mode
@@ -220,11 +209,11 @@ The installer handles dependencies, plugin setup, AI provider configuration, wor
 
 **Core Components:**
 
-1. **5 Lifecycle Hooks** - SessionStart, UserPromptSubmit, PostToolUse, Stop, SessionEnd (6 hook scripts)
+1. **5 Lifecycle Hooks** - SessionStart, UserPromptSubmit, PostToolUse, Summary, SessionEnd
 2. **Smart Install** - Cached dependency checker (pre-hook script, not a lifecycle hook)
-3. **Worker Service** - HTTP API on port 37777 with web viewer UI and 10 search endpoints, managed by Bun
+3. **Worker Service** - HTTP API on port 37777 with web viewer UI and worker-backed retrieval, managed by Bun
 4. **SQLite Database** - Stores sessions, observations, summaries
-5. **mem-search Skill** - Natural language queries with progressive disclosure
+5. **Retrieval Compatibility Surfaces** - Legacy MCP and skill-based retrieval entry points where still enabled
 6. **Chroma Vector Database** - Hybrid semantic + keyword search for intelligent context retrieval
 
 See [Architecture Overview](https://docs.claude-mem.ai/architecture/overview) for details.
@@ -282,6 +271,7 @@ See **[Beta Features Documentation](https://docs.claude-mem.ai/beta-features)** 
 
 - **Node.js**: 18.0.0 or higher
 - **Claude Code**: Latest version with plugin support
+- **Codex CLI**: Optional, for transcript-based memory capture
 - **Bun**: JavaScript runtime and process manager (auto-installed if missing)
 - **uv**: Python package manager for vector search (auto-installed if missing)
 - **SQLite 3**: For persistent storage (bundled)
@@ -413,10 +403,20 @@ See the [LICENSE](LICENSE) file for full details.
 
 ---
 
-**Built with Claude Agent SDK** | **Powered by Claude Code** | **Made with TypeScript**
+**Powered by the local worker runtime** | **Custom API extraction path** | **Made with TypeScript**
 
 ---
 
 ### What About $CMEM?
 
 $CMEM is a solana token created by a 3rd party without Claude-Mem's prior consent, but officially embraced by the creator of Claude-Mem (Alex Newman, @thedotmack). The token acts as a community catalyst for growth and a vehicle for bringing real-time agent data to the developers and knowledge workers that need it most. $CMEM: 2TsmuYUrsctE57VLckZBYEEzdokUF8j8e1GavekWBAGS
+
+## Integration Model
+
+Claude-Mem now follows this rule:
+
+- each host integrates through its native mechanism
+- internal processing converges on the local worker runtime
+- observation extraction and summaries converge on the custom API path
+
+See `docs/integration-capability-matrix.md` for the current host capability matrix.

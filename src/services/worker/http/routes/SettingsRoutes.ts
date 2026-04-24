@@ -1,7 +1,8 @@
 /**
  * Settings Routes
  *
- * Handles settings management, MCP toggle, and branch switching.
+ * Handles persisted runtime settings for the worker and viewer.
+ * Legacy MCP and branch endpoints remain available as compatibility surfaces.
  * Settings are stored in ~/.claude-mem/settings.json
  */
 
@@ -84,48 +85,8 @@ export class SettingsRoutes extends BaseRouteHandler {
       }
     }
 
-    // Update all settings from request body
-    const settingKeys = [
-      'CLAUDE_MEM_MODEL',
-      'CLAUDE_MEM_CONTEXT_OBSERVATIONS',
-      'CLAUDE_MEM_WORKER_PORT',
-      'CLAUDE_MEM_WORKER_HOST',
-      // AI Provider Configuration
-      'CLAUDE_MEM_PROVIDER',
-      'CLAUDE_MEM_GEMINI_API_KEY',
-      'CLAUDE_MEM_GEMINI_MODEL',
-      'CLAUDE_MEM_GEMINI_RATE_LIMITING_ENABLED',
-      'CLAUDE_MEM_GEMINI_MAX_CONTEXT_MESSAGES',
-      'CLAUDE_MEM_GEMINI_MAX_TOKENS',
-      // OpenRouter Configuration
-      'CLAUDE_MEM_OPENROUTER_API_KEY',
-      'CLAUDE_MEM_OPENROUTER_MODEL',
-      'CLAUDE_MEM_OPENROUTER_SITE_URL',
-      'CLAUDE_MEM_OPENROUTER_APP_NAME',
-      'CLAUDE_MEM_OPENROUTER_MAX_CONTEXT_MESSAGES',
-      'CLAUDE_MEM_OPENROUTER_MAX_TOKENS',
-      // System Configuration
-      'CLAUDE_MEM_DATA_DIR',
-      'CLAUDE_MEM_LOG_LEVEL',
-      'CLAUDE_MEM_PYTHON_VERSION',
-      'CLAUDE_CODE_PATH',
-      // Token Economics
-      'CLAUDE_MEM_CONTEXT_SHOW_READ_TOKENS',
-      'CLAUDE_MEM_CONTEXT_SHOW_WORK_TOKENS',
-      'CLAUDE_MEM_CONTEXT_SHOW_SAVINGS_AMOUNT',
-      'CLAUDE_MEM_CONTEXT_SHOW_SAVINGS_PERCENT',
-      // Observation Filtering
-      'CLAUDE_MEM_CONTEXT_OBSERVATION_TYPES',
-      'CLAUDE_MEM_CONTEXT_OBSERVATION_CONCEPTS',
-      // Display Configuration
-      'CLAUDE_MEM_CONTEXT_FULL_COUNT',
-      'CLAUDE_MEM_CONTEXT_FULL_FIELD',
-      'CLAUDE_MEM_CONTEXT_SESSION_COUNT',
-      // Feature Toggles
-      'CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY',
-      'CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE',
-      'CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED',
-    ];
+    // Update all known settings from request body
+    const settingKeys = Object.keys(SettingsDefaultsManager.getAllDefaults());
 
     for (const key of settingKeys) {
       if (req.body[key] !== undefined) {
@@ -235,35 +196,47 @@ export class SettingsRoutes extends BaseRouteHandler {
    * Validate all settings from request body (single source of truth)
    */
   private validateSettings(settings: any): { valid: boolean; error?: string } {
-    // Validate CLAUDE_MEM_PROVIDER
-    if (settings.CLAUDE_MEM_PROVIDER) {
-    const validProviders = ['claude', 'gemini', 'openrouter'];
-    if (!validProviders.includes(settings.CLAUDE_MEM_PROVIDER)) {
-      return { valid: false, error: 'CLAUDE_MEM_PROVIDER must be "claude", "gemini", or "openrouter"' };
-      }
-    }
-
-    // Validate CLAUDE_MEM_GEMINI_MODEL
-    if (settings.CLAUDE_MEM_GEMINI_MODEL) {
-      const model = String(settings.CLAUDE_MEM_GEMINI_MODEL).trim();
+    if (settings.CLAUDE_MEM_CUSTOM_MODEL) {
+      const model = String(settings.CLAUDE_MEM_CUSTOM_MODEL).trim();
       if (!model) {
-        return { valid: false, error: 'CLAUDE_MEM_GEMINI_MODEL must not be empty' };
+        return { valid: false, error: 'CLAUDE_MEM_CUSTOM_MODEL must not be empty' };
       }
     }
 
-    // Validate CLAUDE_MEM_GEMINI_MAX_CONTEXT_MESSAGES
-    if (settings.CLAUDE_MEM_GEMINI_MAX_CONTEXT_MESSAGES) {
-      const count = parseInt(settings.CLAUDE_MEM_GEMINI_MAX_CONTEXT_MESSAGES, 10);
+    if (settings.CLAUDE_MEM_CUSTOM_BASE_URL) {
+      try {
+        new URL(settings.CLAUDE_MEM_CUSTOM_BASE_URL);
+      } catch (error) {
+        logger.debug('SETTINGS', 'Invalid URL format', { url: settings.CLAUDE_MEM_CUSTOM_BASE_URL, error: error instanceof Error ? error.message : String(error) });
+        return { valid: false, error: 'CLAUDE_MEM_CUSTOM_BASE_URL must be a valid URL' };
+      }
+    }
+
+    if (settings.CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES) {
+      const count = parseInt(settings.CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES, 10);
       if (isNaN(count) || count < 1 || count > 100) {
-        return { valid: false, error: 'CLAUDE_MEM_GEMINI_MAX_CONTEXT_MESSAGES must be between 1 and 100' };
+        return { valid: false, error: 'CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES must be between 1 and 100' };
       }
     }
 
-    // Validate CLAUDE_MEM_GEMINI_MAX_TOKENS
-    if (settings.CLAUDE_MEM_GEMINI_MAX_TOKENS) {
-      const tokens = parseInt(settings.CLAUDE_MEM_GEMINI_MAX_TOKENS, 10);
+    if (settings.CLAUDE_MEM_CUSTOM_MAX_TOKENS) {
+      const tokens = parseInt(settings.CLAUDE_MEM_CUSTOM_MAX_TOKENS, 10);
       if (isNaN(tokens) || tokens < 1000 || tokens > 1000000) {
-        return { valid: false, error: 'CLAUDE_MEM_GEMINI_MAX_TOKENS must be between 1000 and 1000000' };
+        return { valid: false, error: 'CLAUDE_MEM_CUSTOM_MAX_TOKENS must be between 1000 and 1000000' };
+      }
+    }
+
+    if (settings.CLAUDE_MEM_CUSTOM_TIMEOUT_MS) {
+      const timeout = parseInt(settings.CLAUDE_MEM_CUSTOM_TIMEOUT_MS, 10);
+      if (isNaN(timeout) || timeout < 1000 || timeout > 600000) {
+        return { valid: false, error: 'CLAUDE_MEM_CUSTOM_TIMEOUT_MS must be between 1000 and 600000' };
+      }
+    }
+
+    if (settings.CLAUDE_MEM_CUSTOM_TEMPERATURE) {
+      const temperature = parseFloat(settings.CLAUDE_MEM_CUSTOM_TEMPERATURE);
+      if (isNaN(temperature) || temperature < 0 || temperature > 2) {
+        return { valid: false, error: 'CLAUDE_MEM_CUSTOM_TEMPERATURE must be between 0 and 2' };
       }
     }
 
@@ -348,32 +321,6 @@ export class SettingsRoutes extends BaseRouteHandler {
       }
     }
 
-    // Validate CLAUDE_MEM_OPENROUTER_MAX_CONTEXT_MESSAGES
-    if (settings.CLAUDE_MEM_OPENROUTER_MAX_CONTEXT_MESSAGES) {
-      const count = parseInt(settings.CLAUDE_MEM_OPENROUTER_MAX_CONTEXT_MESSAGES, 10);
-      if (isNaN(count) || count < 1 || count > 100) {
-        return { valid: false, error: 'CLAUDE_MEM_OPENROUTER_MAX_CONTEXT_MESSAGES must be between 1 and 100' };
-      }
-    }
-
-    // Validate CLAUDE_MEM_OPENROUTER_MAX_TOKENS
-    if (settings.CLAUDE_MEM_OPENROUTER_MAX_TOKENS) {
-      const tokens = parseInt(settings.CLAUDE_MEM_OPENROUTER_MAX_TOKENS, 10);
-      if (isNaN(tokens) || tokens < 1000 || tokens > 1000000) {
-        return { valid: false, error: 'CLAUDE_MEM_OPENROUTER_MAX_TOKENS must be between 1000 and 1000000' };
-      }
-    }
-
-    // Validate CLAUDE_MEM_OPENROUTER_SITE_URL if provided
-    if (settings.CLAUDE_MEM_OPENROUTER_SITE_URL) {
-      try {
-        new URL(settings.CLAUDE_MEM_OPENROUTER_SITE_URL);
-      } catch (error) {
-        // Invalid URL format
-        logger.debug('SETTINGS', 'Invalid URL format', { url: settings.CLAUDE_MEM_OPENROUTER_SITE_URL, error: error instanceof Error ? error.message : String(error) });
-        return { valid: false, error: 'CLAUDE_MEM_OPENROUTER_SITE_URL must be a valid URL' };
-      }
-    }
 
     // Skip observation types validation - any type string is valid since modes define their own types
     // The database accepts any TEXT value, and mode-specific validation happens at parse time

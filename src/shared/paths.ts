@@ -54,7 +54,19 @@ function resolveDataDir(): string {
   return defaultDataDir;
 }
 
-export const DATA_DIR = resolveDataDir();
+export function getDataDir(): string {
+  return resolveDataDir();
+}
+
+export function getUserSettingsPath(): string {
+  return join(getDataDir(), 'settings.json');
+}
+
+export function getDbPath(): string {
+  return join(getDataDir(), 'claude-mem.db');
+}
+
+export const DATA_DIR = getDataDir();
 // Note: CLAUDE_CONFIG_DIR is a Claude Code setting, not claude-mem, so leave as env var
 export const CLAUDE_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
 
@@ -67,8 +79,8 @@ export const LOGS_DIR = join(DATA_DIR, 'logs');
 export const TRASH_DIR = join(DATA_DIR, 'trash');
 export const BACKUPS_DIR = join(DATA_DIR, 'backups');
 export const MODES_DIR = join(DATA_DIR, 'modes');
-export const USER_SETTINGS_PATH = join(DATA_DIR, 'settings.json');
-export const DB_PATH = join(DATA_DIR, 'claude-mem.db');
+export const USER_SETTINGS_PATH = getUserSettingsPath();
+export const DB_PATH = getDbPath();
 export const VECTOR_DB_DIR = join(DATA_DIR, 'vector-db');
 
 // Observer sessions directory - used as cwd for SDK queries

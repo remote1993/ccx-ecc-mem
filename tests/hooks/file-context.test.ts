@@ -1,5 +1,5 @@
 // Tests for file-context cache validation fix (#1719)
-import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn, mock } from 'bun:test';
 import { mkdtempSync, writeFileSync, utimesSync, rmSync } from 'fs';
 import { tmpdir, homedir } from 'os';
 import { join } from 'path';
@@ -12,7 +12,7 @@ mock.module('../../src/shared/SettingsDefaultsManager.js', () => ({
       return '';
     },
     getInt: () => 0,
-    loadFromFile: () => ({ CLAUDE_MEM_EXCLUDED_PROJECTS: [] }),
+    loadFromFile: () => ({ CLAUDE_MEM_EXCLUDED_PROJECTS: '' }),
   },
 }));
 
@@ -27,15 +27,6 @@ mock.module('../../src/shared/worker-utils.js', () => ({
       body: options?.body,
     });
   },
-}));
-
-mock.module('../../src/utils/project-name.js', () => ({
-  getProjectName: () => 'test-project',
-  getProjectContext: () => ({ allProjects: ['test-project'] }),
-}));
-
-mock.module('../../src/utils/project-filter.js', () => ({
-  isProjectExcluded: () => false,
 }));
 
 // Import after mocks
@@ -87,6 +78,10 @@ afterEach(() => {
     fetchSpy = null;
   }
   try { rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+});
+
+afterAll(() => {
+  mock.restore();
 });
 
 describe('fileContextHandler — cache validation fix (#1719)', () => {

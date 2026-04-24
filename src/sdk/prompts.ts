@@ -1,6 +1,6 @@
 /**
  * SDK Prompts Module
- * Generates prompts for the Claude Agent SDK memory worker
+ * Generates structured extraction prompts for the worker runtime
  */
 
 import { logger } from '../utils/logger.js';
@@ -38,7 +38,7 @@ export interface SDKSession {
 }
 
 /**
- * Build initial prompt to initialize the SDK agent
+ * Build initial prompt to initialize the session runtime
  */
 export function buildInitPrompt(project: string, sessionId: string, userPrompt: string, mode: ModeConfig): string {
   return `${mode.prompts.system_identity}
@@ -100,7 +100,7 @@ ${mode.prompts.header_memory_start}`;
 }
 
 /**
- * Build prompt to send tool observation to SDK agent
+ * Build prompt to send tool observation to the session runtime
  */
 export function buildObservationPrompt(obs: Observation): string {
   // Safely parse tool_input and tool_output - they're already JSON strings

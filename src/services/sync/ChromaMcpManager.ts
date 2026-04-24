@@ -14,7 +14,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -30,6 +30,49 @@ const MCP_CONNECTION_TIMEOUT_MS = 30_000;
 const RECONNECT_BACKOFF_MS = 10_000; // Don't retry connections faster than this after failure
 const DEFAULT_CHROMA_DATA_DIR = path.join(os.homedir(), '.claude-mem', 'chroma');
 const CHROMA_SUPERVISOR_ID = 'chroma-mcp';
+
+function parseMajorMinorVersion(version: string): { major: number; minor: number } | null {
+  const match = version.match(/^(\d+)\.(\d{1,2})$/);
+  if (!match) return null;
+  return {
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
+  };
+}
+
+function resolveLocalPythonForUv(configuredVersion: string): string | null {
+  const exactBinary = `python${configuredVersion}`;
+  const exactResult = spawnSync(exactBinary, ['--version'], {
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  });
+  if (exactResult.status === 0) {
+    return exactBinary;
+  }
+
+  const python3Result = spawnSync('python3', ['-c', 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")'], {
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  });
+  if (python3Result.status !== 0) {
+    return null;
+  }
+
+  const detectedVersion = python3Result.stdout.trim();
+  const configured = parseMajorMinorVersion(configuredVersion);
+  const detected = parseMajorMinorVersion(detectedVersion);
+  if (!configured || !detected) {
+    return 'python3';
+  }
+
+  // Reuse any locally-installed Python 3.x when the requested version is unavailable.
+  // This avoids uv downloading python-build-standalone on first launch.
+  if (detected.major === configured.major && detected.minor <= configured.minor) {
+    return 'python3';
+  }
+
+  return null;
+}
 
 export class ChromaMcpManager {
   private static instance: ChromaMcpManager | null = null;
@@ -201,6 +244,15 @@ export class ChromaMcpManager {
     const settings = SettingsDefaultsManager.loadFromFile(USER_SETTINGS_PATH);
     const chromaMode = settings.CLAUDE_MEM_CHROMA_MODE || 'local';
     const pythonVersion = process.env.CLAUDE_MEM_PYTHON_VERSION || settings.CLAUDE_MEM_PYTHON_VERSION || '3.13';
+    const localPython = resolveLocalPythonForUv(pythonVersion);
+    const pythonArgs = localPython ? ['--python', localPython] : ['--python', pythonVersion];
+
+    if (localPython && localPython !== `python${pythonVersion}`) {
+      logger.info('CHROMA_MCP', 'Using local Python fallback for chroma-mcp', {
+        requestedVersion: pythonVersion,
+        selectedPython: localPython
+      });
+    }
 
     if (chromaMode === 'remote') {
       const chromaHost = settings.CLAUDE_MEM_CHROMA_HOST || '127.0.0.1';
@@ -211,7 +263,7 @@ export class ChromaMcpManager {
       const chromaApiKey = settings.CLAUDE_MEM_CHROMA_API_KEY || '';
 
       const args = [
-        '--python', pythonVersion,
+        ...pythonArgs,
         'chroma-mcp',
         '--client-type', 'http',
         '--host', chromaHost,
@@ -237,7 +289,7 @@ export class ChromaMcpManager {
 
     // Local mode: persistent client with data directory
     return [
-      '--python', pythonVersion,
+      ...pythonArgs,
       'chroma-mcp',
       '--client-type', 'persistent',
       '--data-dir', DEFAULT_CHROMA_DATA_DIR.replace(/\\/g, '/')
@@ -464,6 +516,11 @@ export class ChromaMcpManager {
    * Otherwise returns a plain string-keyed copy of process.env.
    */
   private getSpawnEnv(): Record<string, string> {
+    const settings = SettingsDefaultsManager.loadFromFile(USER_SETTINGS_PATH);
+    const dataDir = settings.CLAUDE_MEM_DATA_DIR || path.join(os.homedir(), '.claude-mem');
+    const uvCacheDir = path.join(dataDir, 'uv-cache');
+    fs.mkdirSync(uvCacheDir, { recursive: true });
+
     const baseEnv: Record<string, string> = {};
     for (const [key, value] of Object.entries(sanitizeEnv(process.env))) {
       if (value !== undefined) {
@@ -473,7 +530,11 @@ export class ChromaMcpManager {
 
     const combinedCertPath = this.getCombinedCertPath();
     if (!combinedCertPath) {
-      return baseEnv;
+      return {
+        ...baseEnv,
+        UV_CACHE_DIR: uvCacheDir,
+        XDG_CACHE_HOME: baseEnv.XDG_CACHE_HOME || path.join(dataDir, '.cache')
+      };
     }
 
     logger.info('CHROMA_MCP', 'Using combined SSL certificates for enterprise compatibility', {
@@ -482,6 +543,8 @@ export class ChromaMcpManager {
 
     return {
       ...baseEnv,
+      UV_CACHE_DIR: uvCacheDir,
+      XDG_CACHE_HOME: baseEnv.XDG_CACHE_HOME || path.join(dataDir, '.cache'),
       SSL_CERT_FILE: combinedCertPath,
       REQUESTS_CA_BUNDLE: combinedCertPath,
       CURL_CA_BUNDLE: combinedCertPath,

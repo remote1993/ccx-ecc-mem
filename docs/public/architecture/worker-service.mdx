@@ -1,695 +1,288 @@
 ---
 title: "Worker Service"
-description: "HTTP API and Bun process management"
+description: "Current HTTP API, initialization flow, and Bun-managed worker runtime"
 ---
 
 # Worker Service
 
-The worker service is a long-running HTTP API built with Express.js and managed natively by Bun. It processes observations through the Claude Agent SDK separately from hook execution to prevent timeout issues.
+The worker service is the long-running local HTTP runtime for Claude-Mem. It is built with Express.js, started through the Bun-managed worker path, and keeps hook execution lightweight by moving session orchestration, storage, search, settings, SSE updates, and custom API extraction into a separate process.
 
 ## Overview
 
 - **Technology**: Express.js HTTP server
-- **Runtime**: Bun (auto-installed if missing)
-- **Process Manager**: Native Bun process management via ProcessManager
-- **Port**: Fixed port 37777 (configurable via `CLAUDE_MEM_WORKER_PORT`)
-- **Location**: `src/services/worker-service.ts`
-- **Built Output**: `plugin/scripts/worker-service.cjs`
-- **Model**: Configurable via `CLAUDE_MEM_MODEL` environment variable (default: sonnet)
+- **Runtime**: Bun-managed worker process
+- **Primary entrypoint**: `src/services/worker-service.ts`
+- **HTTP server wrapper**: `src/services/server/Server.ts`
+- **Built output**: `plugin/scripts/worker-service.cjs`
+- **Default bind**: `127.0.0.1:37777` unless overridden by settings / env
+- **AI runtime**: custom API only (`CustomApiAgent`)
 
-## REST API Endpoints
+## Runtime Shape
 
-The worker service exposes 22 HTTP endpoints organized into six categories:
+The current runtime is organized as:
 
-### Viewer & Health Endpoints
-
-#### 1. Viewer UI
+```text
+worker-service.ts
+  → Server
+  → DatabaseManager / SessionManager / SearchManager
+  → route modules
+  → CustomApiAgent
+  → SQLite / optional Chroma
 ```
+
+The worker starts the HTTP server first, then finishes slower background initialization such as database setup, search route registration, transcript watcher startup, and optional Chroma backfill.
+
+## Initialization Model
+
+The worker does **not** become fully ready all at once.
+
+### Startup sequence
+
+```text
+start HTTP server
+  → write PID / register supervisor state
+  → run background initialization
+  → initialize DB
+  → register search + corpus routes
+  → mark readiness complete
+  → continue optional best-effort startup work
+```
+
+### Why this matters
+
+- `/api/health` is available even while initialization is still in progress
+- `/api/readiness` is the endpoint that tells callers whether the worker is fully ready
+- `/api/context/inject` explicitly fails open with empty context until search is ready
+- most other `/api/*` routes wait for initialization and otherwise return `503`
+
+## Route Organization
+
+The current HTTP API is split by responsibility instead of being best understood as one flat endpoint list.
+
+### Core system routes
+
+Implemented in `src/services/server/Server.ts`:
+
+```text
+GET  /api/health
+GET  /api/readiness
+GET  /api/version
+GET  /api/instructions
+POST /api/admin/restart
+POST /api/admin/shutdown
+GET  /api/admin/doctor
+```
+
+### Viewer and stream routes
+
+Primarily registered through `ViewerRoutes`:
+
+```text
 GET /
-```
-
-**Purpose**: Serves the web-based viewer UI (v5.1.0+)
-
-**Response**: HTML page with embedded React application
-
-**Features**:
-- Real-time memory stream visualization
-- Infinite scroll pagination
-- Project filtering
-- SSE-based live updates
-- Theme toggle (light/dark mode) as of v5.1.2
-
-#### 2. Health Check
-```
-GET /health
-```
-
-**Purpose**: Worker health status check
-
-**Response**:
-```json
-{
-  "status": "ok",
-  "uptime": 12345,
-  "port": 37777
-}
-```
-
-#### 3. Server-Sent Events Stream
-```
 GET /stream
 ```
 
-**Purpose**: Real-time updates for viewer UI
+These power the built-in viewer UI and live updates.
 
-**Response**: SSE stream with events:
-- `observation-created`: New observation added
-- `session-summary-created`: New summary generated
-- `user-prompt-created`: New prompt recorded
+### Session lifecycle routes
 
-**Event Format**:
-```
-event: observation-created
-data: {"id": 123, "title": "...", ...}
-```
+Implemented in `src/services/worker/http/routes/SessionRoutes.ts`:
 
-### Data Retrieval Endpoints
-
-#### 4. Get Prompts
-```
-GET /api/prompts?project=my-project&limit=20&offset=0
+```text
+POST /api/sessions/init
+POST /api/sessions/observations
+POST /api/sessions/summarize
+POST /api/sessions/complete
+GET  /api/sessions/status
 ```
 
-**Purpose**: Retrieve paginated user prompts
+Legacy `POST /sessions/:sessionDbId/...` routes still exist as compatibility surfaces, but the worker-centered lifecycle used by current hook handlers targets the `/api/sessions/*` routes.
 
-**Query Parameters**:
-- `project` (optional): Filter by project name
-- `limit` (default: 20): Number of results
-- `offset` (default: 0): Pagination offset
+### Search and context routes
 
-**Response**:
-```json
-{
-  "prompts": [{
-    "id": 1,
-    "session_id": "abc123",
-    "prompt": "User's prompt text",
-    "prompt_number": 1,
-    "created_at": "2025-11-06T10:30:00Z"
-  }],
-  "total": 150,
-  "hasMore": true
-}
+Implemented in `src/services/worker/http/routes/SearchRoutes.ts`:
+
+```text
+GET  /api/search
+GET  /api/timeline
+GET  /api/decisions
+GET  /api/changes
+GET  /api/how-it-works
+GET  /api/context/recent
+GET  /api/context/timeline
+GET  /api/context/preview
+GET  /api/context/inject
+POST /api/context/semantic
 ```
 
-#### 5. Get Observations
-```
-GET /api/observations?project=my-project&limit=20&offset=0
-```
+Additional backward-compatibility search routes remain available under `/api/search/*`.
 
-**Purpose**: Retrieve paginated observations
+### Data and queue routes
 
-**Query Parameters**:
-- `project` (optional): Filter by project name
-- `limit` (default: 20): Number of results
-- `offset` (default: 0): Pagination offset
+Implemented in `src/services/worker/http/routes/DataRoutes.ts`:
 
-**Response**:
-```json
-{
-  "observations": [{
-    "id": 123,
-    "title": "Fix authentication bug",
-    "type": "bugfix",
-    "narrative": "...",
-    "created_at": "2025-11-06T10:30:00Z"
-  }],
-  "total": 500,
-  "hasMore": true
-}
-```
-
-#### 6. Get Summaries
-```
-GET /api/summaries?project=my-project&limit=20&offset=0
+```text
+GET    /api/observations
+GET    /api/summaries
+GET    /api/prompts
+GET    /api/observation/:id
+GET    /api/observations/by-file
+POST   /api/observations/batch
+GET    /api/session/:id
+POST   /api/sdk-sessions/batch
+GET    /api/prompt/:id
+GET    /api/stats
+GET    /api/projects
+GET    /api/processing-status
+POST   /api/processing
+GET    /api/pending-queue
+POST   /api/pending-queue/process
+DELETE /api/pending-queue/failed
+DELETE /api/pending-queue/all
+POST   /api/import
 ```
 
-**Purpose**: Retrieve paginated session summaries
+### Settings and compatibility-control routes
 
-**Query Parameters**:
-- `project` (optional): Filter by project name
-- `limit` (default: 20): Number of results
-- `offset` (default: 0): Pagination offset
+Implemented in `src/services/worker/http/routes/SettingsRoutes.ts`:
 
-**Response**:
-```json
-{
-  "summaries": [{
-    "id": 456,
-    "session_id": "abc123",
-    "request": "User's original request",
-    "completed": "Work finished",
-    "created_at": "2025-11-06T10:30:00Z"
-  }],
-  "total": 100,
-  "hasMore": true
-}
-```
-
-#### 7. Get Observation by ID
-```
-GET /api/observation/:id
-```
-
-**Purpose**: Retrieve a single observation by its ID
-
-**Path Parameters**:
-- `id` (required): Observation ID
-
-**Response**:
-```json
-{
-  "id": 123,
-  "sdk_session_id": "abc123",
-  "project": "my-project",
-  "type": "bugfix",
-  "title": "Fix authentication bug",
-  "narrative": "...",
-  "created_at": "2025-11-06T10:30:00Z",
-  "created_at_epoch": 1730886600000
-}
-```
-
-**Error Response** (404):
-```json
-{
-  "error": "Observation #123 not found"
-}
-```
-
-#### 8. Get Observations by IDs (Batch)
-```
-POST /api/observations/batch
-```
-
-**Purpose**: Retrieve multiple observations by their IDs in a single request
-
-**Request Body**:
-```json
-{
-  "ids": [123, 456, 789],
-  "orderBy": "date_desc",
-  "limit": 10,
-  "project": "my-project"
-}
-```
-
-**Body Parameters**:
-- `ids` (required): Array of observation IDs
-- `orderBy` (optional): Sort order - `date_desc` or `date_asc` (default: `date_desc`)
-- `limit` (optional): Maximum number of results to return
-- `project` (optional): Filter by project name
-
-**Response**:
-```json
-[
-  {
-    "id": 789,
-    "sdk_session_id": "abc123",
-    "project": "my-project",
-    "type": "feature",
-    "title": "Add new feature",
-    "narrative": "...",
-    "created_at": "2025-11-06T12:00:00Z",
-    "created_at_epoch": 1730891400000
-  },
-  {
-    "id": 456,
-    "sdk_session_id": "abc124",
-    "project": "my-project",
-    "type": "bugfix",
-    "title": "Fix authentication bug",
-    "narrative": "...",
-    "created_at": "2025-11-06T10:30:00Z",
-    "created_at_epoch": 1730886600000
-  }
-]
-```
-
-**Error Responses**:
-- `400 Bad Request`: `{"error": "ids must be an array of numbers"}`
-- `400 Bad Request`: `{"error": "All ids must be integers"}`
-
-**Use Case**: This endpoint is used by the `get_observations` MCP tool to efficiently retrieve multiple observations in a single request, avoiding the overhead of multiple individual requests.
-
-#### 9. Get Session by ID
-```
-GET /api/session/:id
-```
-
-**Purpose**: Retrieve a single session by its ID
-
-**Path Parameters**:
-- `id` (required): Session ID
-
-**Response**:
-```json
-{
-  "id": 456,
-  "sdk_session_id": "abc123",
-  "project": "my-project",
-  "request": "User's original request",
-  "completed": "Work finished",
-  "created_at": "2025-11-06T10:30:00Z"
-}
-```
-
-**Error Response** (404):
-```json
-{
-  "error": "Session #456 not found"
-}
-```
-
-#### 10. Get Prompt by ID
-```
-GET /api/prompt/:id
-```
-
-**Purpose**: Retrieve a single user prompt by its ID
-
-**Path Parameters**:
-- `id` (required): Prompt ID
-
-**Response**:
-```json
-{
-  "id": 1,
-  "session_id": "abc123",
-  "prompt": "User's prompt text",
-  "prompt_number": 1,
-  "created_at": "2025-11-06T10:30:00Z"
-}
-```
-
-**Error Response** (404):
-```json
-{
-  "error": "Prompt #1 not found"
-}
-```
-
-#### 12. Get Stats
-```
-GET /api/stats
-```
-
-**Purpose**: Get database statistics by project
-
-**Response**:
-```json
-{
-  "byProject": {
-    "my-project": {
-      "observations": 245,
-      "summaries": 12,
-      "prompts": 48
-    },
-    "other-project": {
-      "observations": 156,
-      "summaries": 8,
-      "prompts": 32
-    }
-  },
-  "total": {
-    "observations": 401,
-    "summaries": 20,
-    "prompts": 80,
-    "sessions": 20
-  }
-}
-```
-
-#### 13. Get Projects
-```
-GET /api/projects
-```
-
-**Purpose**: Get list of distinct projects from observations
-
-**Response**:
-```json
-{
-  "projects": ["my-project", "other-project", "test-project"]
-}
-```
-
-### Settings Endpoints
-
-#### 14. Get Settings
-```
-GET /api/settings
-```
-
-**Purpose**: Retrieve user settings
-
-**Response**:
-```json
-{
-  "sidebarOpen": true,
-  "selectedProject": "my-project",
-  "theme": "dark"
-}
-```
-
-#### 15. Save Settings
-```
+```text
+GET  /api/settings
 POST /api/settings
+GET  /api/mcp/status
+POST /api/mcp/toggle
+GET  /api/branch/status
+POST /api/branch/switch
+POST /api/branch/update
 ```
 
-**Purpose**: Persist user settings
+The MCP and branch endpoints are compatibility / operational surfaces. They should not be treated as the primary architecture of the worker runtime.
 
-**Request Body**:
-```json
-{
-  "sidebarOpen": false,
-  "selectedProject": "other-project",
-  "theme": "light"
-}
+## Health, Readiness, and Locality
+
+### Health endpoint
+
+`GET /api/health` returns basic liveness plus worker metadata such as:
+- built version
+- uptime
+- PID
+- initialization state
+- MCP loopback readiness state
+- current AI provider status
+
+### Readiness endpoint
+
+`GET /api/readiness` returns `200` only after core initialization completes.
+
+### Local-only expectation
+
+Admin endpoints are localhost-protected, and the worker is intended to run as a local companion service rather than a shared remote API.
+
+## Session Processing Model
+
+The worker owns asynchronous session processing.
+
+### Flow
+
+```text
+hook / client request
+  → /api/sessions/init or /api/sessions/observations or /api/sessions/summarize
+  → SessionManager queue
+  → generator/session runtime
+  → CustomApiAgent
+  → ResponseProcessor
+  → SQLite / optional Chroma sync
 ```
 
-**Response**:
-```json
-{
-  "success": true
-}
-```
+### Important runtime behavior
 
-### Queue Management Endpoints
+- session lifecycle requests are idempotent around `contentSessionId`
+- observations are queued, not fully processed inline in the hook request
+- the worker ensures a generator is running when queued work exists
+- summarize / complete are separate operations
+- privacy-tag stripping happens before or during worker intake so private content is not stored
 
-#### 16. Get Pending Queue Status
-```
-GET /api/pending-queue
-```
+## Search and Context Role
 
-**Purpose**: View current processing queue status and identify stuck messages
+The worker is also the source of truth for retrieval.
 
-**Response**:
-```json
-{
-  "queue": {
-    "messages": [
-      {
-        "id": 123,
-        "session_db_id": 45,
-        "claude_session_id": "abc123",
-        "message_type": "observation",
-        "status": "pending",
-        "retry_count": 0,
-        "created_at_epoch": 1730886600000,
-        "started_processing_at_epoch": null,
-        "completed_at_epoch": null
-      }
-    ],
-    "totalPending": 5,
-    "totalProcessing": 2,
-    "totalFailed": 0,
-    "stuckCount": 1
-  },
-  "recentlyProcessed": [
-    {
-      "id": 122,
-      "session_db_id": 44,
-      "status": "processed",
-      "completed_at_epoch": 1730886500000
-    }
-  ],
-  "sessionsWithPendingWork": [44, 45, 46]
-}
-```
+Relevant routes include:
+- `/api/search`
+- `/api/timeline`
+- `/api/context/inject`
+- `/api/observations/batch`
 
-**Status Definitions**:
-- `pending`: Message queued, not yet processed
-- `processing`: Message currently being processed by SDK agent
-- `processed`: Message completed successfully
-- `failed`: Message failed after max retry attempts (3 by default)
+This means the worker service is not just an extraction daemon; it is also the central local API for context injection, search, viewer data, and queue inspection.
 
-**Stuck Detection**: Messages in `processing` status for >5 minutes are considered stuck and included in `stuckCount`
+## Custom API Integration
 
-**Use Case**: Check queue health after worker crashes or restarts to identify unprocessed observations
+The current processing path is custom-only.
 
-#### 17. Trigger Manual Recovery
-```
-POST /api/pending-queue/process
-```
+### Main components
 
-**Purpose**: Manually trigger processing of pending queues (replaces automatic recovery in v5.x+)
+- `src/services/worker/CustomApiAgent.ts`
+- `src/services/worker/agents/ResponseProcessor.ts`
+- `src/services/worker/http/routes/SessionRoutes.ts`
 
-**Request Body**:
-```json
-{
-  "sessionLimit": 10
-}
-```
+### Relevant settings
 
-**Body Parameters**:
-- `sessionLimit` (optional): Maximum number of sessions to process (default: 10, max: 100)
+- `CLAUDE_MEM_CUSTOM_BASE_URL`
+- `CLAUDE_MEM_CUSTOM_API_KEY`
+- `CLAUDE_MEM_CUSTOM_MODEL`
 
-**Response**:
-```json
-{
-  "success": true,
-  "totalPendingSessions": 15,
-  "sessionsStarted": 10,
-  "sessionsSkipped": 2,
-  "startedSessionIds": [44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
-}
-```
+If custom API configuration is missing, session-processing routes can reject processing requests instead of silently falling back to older provider paths.
 
-**Response Fields**:
-- `totalPendingSessions`: Total sessions with pending messages in database
-- `sessionsStarted`: Number of sessions we started processing this request
-- `sessionsSkipped`: Sessions already actively processing (not restarted)
-- `startedSessionIds`: Database IDs of sessions started
+## Bun and Process Management
 
-**Behavior**:
-- Processes up to `sessionLimit` sessions with pending work
-- Skips sessions already actively processing (prevents duplicate agents)
-- Starts non-blocking SDK agents for each session
-- Returns immediately with status (processing continues in background)
+The worker is started and managed through the Bun-based runtime path used by the plugin scripts.
 
-**Use Case**: Manually recover stuck observations after worker crashes, or when automatic recovery was disabled
+### Process-management responsibilities
 
-**Recovery Strategy Note**: As of v5.x, automatic recovery on worker startup is disabled by default. Users must manually trigger recovery using this endpoint or the CLI tool (`bun scripts/check-pending-queue.ts`) to maintain explicit control over reprocessing.
+- start the worker daemon
+- write and verify PID ownership
+- wait for health / readiness
+- handle graceful shutdown
+- clean stale PID or startup state when possible
 
-### Session Management Endpoints
-
-#### 19. Initialize Session
-```
-POST /sessions/:sessionDbId/init
-```
-
-**Request Body**:
-```json
-{
-  "sdk_session_id": "abc-123",
-  "project": "my-project"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "session_id": "abc-123"
-}
-```
-
-#### 20. Add Observation
-```
-POST /sessions/:sessionDbId/observations
-```
-
-**Request Body**:
-```json
-{
-  "tool_name": "Read",
-  "tool_input": {...},
-  "tool_result": "...",
-  "correlation_id": "xyz-789"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "observation_id": 123
-}
-```
-
-#### 21. Generate Summary
-```
-POST /sessions/:sessionDbId/summarize
-```
-
-**Request Body**:
-```json
-{
-  "trigger": "stop"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "summary_id": 456
-}
-```
-
-#### 22. Session Status
-```
-GET /sessions/:sessionDbId/status
-```
-
-**Response**:
-```json
-{
-  "session_id": "abc-123",
-  "status": "active",
-  "observation_count": 42,
-  "summary_count": 1
-}
-```
-
-#### 23. Delete Session
-```
-DELETE /sessions/:sessionDbId
-```
-
-**Response**:
-```json
-{
-  "success": true
-}
-```
-
-**Note**: As of v4.1.0, the cleanup hook no longer calls this endpoint. Sessions are marked complete instead of deleted to allow graceful worker shutdown.
-
-## Bun Process Management
-
-### Overview
-
-The worker is managed by the native `ProcessManager` class which handles:
-- Process spawning with Bun runtime
-- PID file tracking at `~/.claude-mem/worker.pid`
-- Health checks with automatic retry
-- Graceful shutdown with SIGTERM/SIGKILL fallback
-
-### Commands
-
-```bash
-# Start worker (auto-starts on first session)
-npm run worker:start
-
-# Stop worker
-npm run worker:stop
-
-# Restart worker
-npm run worker:restart
-
-# View logs
-npm run worker:logs
-
-# Check status
-npm run worker:status
-```
-
-### Auto-Start Behavior
-
-The worker service auto-starts when the SessionStart hook fires. Manual start is optional.
-
-### Bun Requirement
-
-Bun is required to run the worker service. If Bun is not installed, the smart-install script will automatically install it on first run:
-
-- **Windows**: `powershell -c "irm bun.sh/install.ps1 | iex"`
-- **macOS/Linux**: `curl -fsSL https://bun.sh/install | bash`
-
-You can also install manually via:
-- `winget install Oven-sh.Bun` (Windows)
-- `brew install oven-sh/bun/bun` (macOS)
-
-## Claude Agent SDK Integration
-
-The worker service routes observations to the Claude Agent SDK for AI-powered processing:
-
-### Processing Flow
-
-1. **Observation Queue**: Observations accumulate in memory
-2. **SDK Processing**: Observations sent to Claude via Agent SDK
-3. **XML Parsing**: Responses parsed for structured data
-4. **Database Storage**: Processed observations stored in SQLite
-
-### SDK Components
-
-- **Prompts** (`src/sdk/prompts.ts`): Builds XML-structured prompts
-- **Parser** (`src/sdk/parser.ts`): Parses Claude's XML responses
-- **Worker** (`src/sdk/worker.ts`): Main SDK agent loop
-
-### Model Configuration
-
-Set the AI model used for processing via environment variable:
-
-```bash
-export CLAUDE_MEM_MODEL=sonnet
-```
-
-Available shorthand models (forward to latest version):
-- `haiku` - Fast, cost-efficient
-- `sonnet` - Balanced (default)
-- `opus` - Most capable
-
-## Port Allocation
-
-The worker uses a fixed port (37777 by default) for consistent communication:
-
-- **Default**: Port 37777
-- **Override**: Set `CLAUDE_MEM_WORKER_PORT` environment variable
-- **Port File**: `${CLAUDE_PLUGIN_ROOT}/data/worker.port` tracks current port
-
-If port 37777 is in use, the worker will fail to start. Set a custom port via environment variable.
+Implementation lives primarily in:
+- `src/services/infrastructure/ProcessManager.ts`
+- `src/services/infrastructure/HealthMonitor.ts`
+- `src/services/infrastructure/GracefulShutdown.ts`
 
 ## Data Storage
 
-The worker service stores data in the user data directory:
+The worker persists local state under `~/.claude-mem/`, including:
 
-```
+```text
 ~/.claude-mem/
-├── claude-mem.db           # SQLite database (bun:sqlite)
-├── worker.pid              # PID file for process tracking
-├── settings.json           # User settings
+├── claude-mem.db
+├── worker.pid
+├── settings.json
 └── logs/
-    └── worker-YYYY-MM-DD.log  # Daily rotating logs
 ```
 
-## Error Handling
+SQLite is the durable system of record. Chroma remains optional and is used as a semantic retrieval layer rather than as the primary store.
 
-The worker implements graceful degradation:
+## Compatibility Notes
 
-- **Database Errors**: Logged but don't crash the service
-- **SDK Errors**: Retried with exponential backoff
-- **Network Errors**: Logged and skipped
-- **Invalid Input**: Validated and rejected with error response
+Some older routes and operational surfaces still exist for backward compatibility:
+- legacy `/sessions/:sessionDbId/*` session routes
+- MCP toggle/status endpoints
+- branch-switching endpoints
+- backward-compatibility search endpoints under `/api/search/*`
 
-## Performance
+These compatibility surfaces should be described as compatibility surfaces, not as the main runtime shape.
 
-- **Async Processing**: Observations processed asynchronously
-- **In-Memory Queue**: Fast observation accumulation
-- **Batch Processing**: Multiple observations processed together
-- **Connection Pooling**: SQLite connections reused
+## Practical Guidance
+
+When updating the worker architecture docs or implementation, check these in order:
+1. `src/services/worker-service.ts`
+2. `src/services/server/Server.ts`
+3. `src/services/worker/http/routes/SessionRoutes.ts`
+4. `src/services/worker/http/routes/SearchRoutes.ts`
+5. `src/services/worker/http/routes/DataRoutes.ts`
+6. `src/services/worker/http/routes/SettingsRoutes.ts`
 
 ## Troubleshooting
 
-See [Troubleshooting - Worker Issues](../troubleshooting.md#worker-service-issues) for common problems and solutions.
+See [Troubleshooting - Worker Issues](../troubleshooting.md#worker-service-issues) for operational debugging guidance.

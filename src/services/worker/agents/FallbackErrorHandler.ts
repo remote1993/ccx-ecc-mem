@@ -1,26 +1,12 @@
 /**
- * FallbackErrorHandler: Error detection for provider fallback
- *
- * Responsibility:
- * - Determine if an error should trigger fallback to Claude SDK
- * - Provide consistent error classification across Gemini and OpenRouter
+ * Error detection for retryable failures in the session runtime.
  */
 
 import { FALLBACK_ERROR_PATTERNS } from './types.js';
 import { logger } from '../../../utils/logger.js';
 
 /**
- * Check if an error should trigger fallback to Claude SDK
- *
- * Errors that trigger fallback:
- * - 429: Rate limit exceeded
- * - 500/502/503: Server errors
- * - ECONNREFUSED: Connection refused (server down)
- * - ETIMEDOUT: Request timeout
- * - fetch failed: Network failure
- *
- * @param error - Error object to check
- * @returns true if the error should trigger fallback to Claude
+ * Check if an error matches retryable session-runtime failure patterns.
  */
 export function shouldFallbackToClaude(error: unknown): boolean {
   const message = getErrorMessage(error);

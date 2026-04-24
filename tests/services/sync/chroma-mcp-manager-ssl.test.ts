@@ -60,6 +60,14 @@ mock.module('../../../src/utils/logger.js', () => ({
   },
 }));
 
+mock.module('../../../src/supervisor/index.js', () => ({
+  getSupervisor: () => ({
+    assertCanSpawn: () => {},
+    registerProcess: () => {},
+    unregisterProcess: () => {},
+  }),
+}));
+
 // ── Now import the module under test ───────────────────────────────────
 import { ChromaMcpManager } from '../../../src/services/sync/ChromaMcpManager.js';
 

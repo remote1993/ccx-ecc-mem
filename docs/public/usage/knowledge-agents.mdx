@@ -137,29 +137,26 @@ Use these parameters when building a corpus to control which observations are in
 ## Architecture
 
 ```
-                MCP Tools                    HTTP API
-            (mcp-server.ts)            (worker on :37777)
-                  |                          |
-   build_corpus ──┤                          |
-   list_corpora ──┤                          |
-   prime_corpus ──┤── callWorkerAPIPost() ──>|
-   query_corpus ──┤                          |
-rebuild_corpus ──┤                          |
-reprime_corpus ──┘                          |
-                                             v
-                                       CorpusRoutes
-                                       (8 endpoints)
-                                        /    |    \
-                              CorpusBuilder  |  KnowledgeAgent
-                                  |          |       |
-                        SearchOrchestrator   |   Agent SDK V1
-                        SessionStore         |   query() + resume
-                                             |
-                                        CorpusStore
-                                    (~/.claude-mem/corpora/)
+knowledge-agent UI or command
+          |
+          v
+   worker HTTP API
+   (localhost:37777)
+          |
+          v
+      CorpusRoutes
+      /    |    \
+     /     |     \
+CorpusBuilder | KnowledgeAgent
+     |         |      |
+Search stack   |   Agent SDK V1
+SessionStore   |   query() + resume
+               |
+          CorpusStore
+     (~/.claude-mem/corpora/)
 ```
 
-**Key insight:** The Agent SDK's `resume` option lets you prime a session once (upload the corpus), save the `session_id`, and resume it for every future question. The corpus stays in context permanently -- no re-uploading, no prompt caching tricks. The 1M token context window makes this viable: 2,000 observations at ~300 tokens each fits comfortably.
+**Key insight:** the worker HTTP API is the current entry surface for corpus operations. If compatibility MCP tools still exist in some environments, treat them as optional wrappers rather than the main architecture story.
 
 ---
 

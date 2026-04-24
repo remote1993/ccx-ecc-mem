@@ -1,11 +1,11 @@
 ---
 title: "Introduction"
-description: "Persistent memory compression system for Claude Code"
+description: "Persistent memory system for Claude Code and Codex CLI"
 ---
 
 # Claude-Mem
 
-**Persistent memory compression system for Claude Code**
+**Persistent memory system for Claude Code and Codex CLI**
 
 Claude-Mem seamlessly preserves context across sessions by automatically capturing tool usage observations, generating semantic summaries, and making them available to future sessions. This enables Claude to maintain continuity of knowledge about projects even after sessions end or reconnect.
 
@@ -17,6 +17,12 @@ Install with a single command:
 npx claude-mem install
 ```
 
+Install only the Codex CLI integration directly:
+
+```bash
+npx claude-mem install --ide codex-cli
+```
+
 Or install from the plugin marketplace inside Claude Code:
 
 ```bash
@@ -24,7 +30,7 @@ Or install from the plugin marketplace inside Claude Code:
 /plugin install claude-mem
 ```
 
-Restart Claude Code. Context from previous sessions will automatically appear in new sessions.
+For Claude Code, restart the client after installation. For Codex CLI, start the worker with `npx claude-mem start` and work from your project directory so transcript watching can capture sessions.
 
 ## Key Features
 
@@ -45,7 +51,7 @@ Restart Claude Code. Context from previous sessions will automatically appear in
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Session Start → Inject context from last 10 sessions       │
+│ Session Start → Inject context from recent sessions         │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -53,11 +59,11 @@ Restart Claude Code. Context from previous sessions will automatically appear in
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Tool Executions → Capture observations (Read, Write, etc.)  │
+│ Tool Executions → Capture observations (Read, Write, etc.) │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Worker Processes → Extract learnings via Claude Agent SDK   │
+│ Worker Processes → Run structured extraction asynchronously │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -66,11 +72,11 @@ Restart Claude Code. Context from previous sessions will automatically appear in
 ```
 
 **Core Components:**
-1. **4 Lifecycle Hooks** - SessionStart, UserPromptSubmit, PostToolUse, Stop
+1. **Hook Entry Layer** - `src/cli/` adapters and handlers translate lifecycle events into worker requests
 2. **Smart Install** - Cached dependency checker (pre-hook script)
 3. **Worker Service** - HTTP API on port 37777 managed by Bun
 4. **SQLite Database** - Stores sessions, observations, summaries with FTS5 search
-5. **MCP Search Tools** - Query historical context with natural language
+5. **Retrieval Surfaces** - Worker-backed retrieval with legacy MCP compatibility where enabled
 6. **Web Viewer UI** - Real-time visualization with SSE and infinite scroll
 
 See [Architecture Overview](architecture/overview) for details.
@@ -79,7 +85,9 @@ See [Architecture Overview](architecture/overview) for details.
 
 - **Node.js**: 18.0.0 or higher
 - **Claude Code**: Latest version with plugin support
+- **Codex CLI**: Optional, for transcript-based integration
 - **Bun**: JavaScript runtime and process manager (auto-installed if missing)
+- **uv**: Python package manager for vector search (auto-installed if missing)
 - **SQLite 3**: For persistent storage (bundled)
 
 ## What's New

@@ -1,140 +1,148 @@
 # claude-mem Architecture Overview
 
-## System Layers
+## Current Runtime Baseline
 
 ```text
-+-----------------------------------------------------------+
-|  Claude Code (host)                                       |
-|  +-- Hook System (5 events)                               |
-|  +-- MCP Client (search tools)                            |
-+-----------------------------------------------------------+
-|  CLI Layer (Bun)                                          |
-|  +-- bun-runner.js (Node->Bun bridge)                     |
-|  +-- hook-command.ts (orchestrator)                        |
-|  +-- handlers/ (context, session-init, observation,        |
-|                 summarize, session-complete)               |
-+-----------------------------------------------------------+
-|  Worker Daemon (Express, port 37777)                      |
-|  +-- SessionManager (session lifecycle)                   |
-|  +-- SDKAgent (Claude Agent SDK)                          |
-|  +-- SearchManager (search orchestration)                 |
-|  +-- ProcessRegistry (subprocess management)              |
-|  +-- ChromaSync (embedding synchronization)               |
-+-----------------------------------------------------------+
-|  Storage Layer                                            |
-|  +-- SQLite (claude-mem.db) -- structured data            |
-|  +-- ChromaDB (chroma.sqlite3) -- vector embeddings       |
-|  +-- MCP Server (interface for Claude Code)               |
-+-----------------------------------------------------------+
++----------------------------------------------------------------+
+| Host integrations                                              |
+| +-- Claude Code hooks                                          |
+| +-- Codex CLI transcript watch + AGENTS.md context             |
++----------------------------------------------------------------+
+| Unified CLI hook entry                                         |
+| +-- worker-service.cjs hook <platform> <event>                 |
+| +-- src/cli/hook-command.ts                                    |
+| +-- src/cli/adapters/* normalize host payloads                 |
+| +-- src/cli/handlers/* call the local worker API               |
++----------------------------------------------------------------+
+| Local worker runtime                                           |
+| +-- Express HTTP server                                        |
+| +-- Session lifecycle + async observation queue                |
+| +-- CustomApiAgent                                             |
+| +-- Search / timeline / settings / viewer routes               |
+| +-- Transcript ingestion / SSE / process supervision           |
++----------------------------------------------------------------+
+| Storage and retrieval                                          |
+| +-- SQLite (durable structured storage)                        |
+| +-- Optional Chroma sync (semantic retrieval)                  |
+| +-- MCP server (optional compatibility/search surface)         |
++----------------------------------------------------------------+
 ```
 
-## Hook Lifecycle
+## Core Direction
 
-| Event | Handler | What it does | Timeout |
-|-------|---------|-------------|---------|
-| Setup | setup.sh | Install system dependencies | 300s |
-| SessionStart | smart-install.js + context | Install deps + start worker + inject context | 60s |
-| UserPromptSubmit | session-init | Register session + start SDK agent + semantic injection | 60s |
-| PostToolUse | observation | Capture tool usage -> enqueue in worker | 120s |
-| Summary | summarize | Request session summary from SDK agent | 120s |
-| SessionEnd | session-complete | End session + drain pending messages | 30s |
+The current repository direction is:
 
-## Data Flow
+- a single worker-backed runtime
+- a single custom API extraction path
+- focused host integrations for Claude Code and Codex CLI
+- transcript watching retained for Codex-side session capture
+
+This means the system should be understood as **worker-first**, not provider-first and not MCP-first.
+
+## Hook and Request Flow
+
+### Hook-driven flow
 
 ```text
-User prompt -> session-init -> /api/sessions/init + /api/context/semantic
-  |
-Tool use -> observation -> /api/sessions/observations
-  |                              |
-  |                    PendingMessageStore.enqueue()
-  |                              |
-  |                    SDKAgent.startSession()
-  |                              |
-  |                    Claude Agent SDK -> ResponseProcessor
-  |                              |
-  |                    +-- storeObservations() -> SQLite
-  |                    +-- chromaSync.sync() -> ChromaDB
-  |                    +-- broadcastObservation() -> SSE/UI
-  |
-Stop -> summarize -> /api/sessions/summarize
-     -> session-complete -> /api/sessions/complete + drain
+Host lifecycle event
+  → worker-service.cjs hook <platform> <event>
+  → adapter normalizes stdin payload
+  → handler maps event to worker HTTP call
+  → worker enqueues / processes session data
+  → CustomApiAgent extracts observations and summaries
+  → SQLite stores durable state
+  → optional SSE / Chroma / MCP surfaces update
 ```
 
-## Key Patterns
-
-### CLAIM-CONFIRM (PendingMessageStore)
+### Direct worker flow
 
 ```text
-enqueue()           -> INSERT status='pending'
-claimNextMessage()  -> UPDATE status='processing' (atomic)
-confirmProcessed()  -> DELETE (success)
-markFailed()        -> UPDATE status='failed' (retry < 3)
-
-Self-healing: messages in 'processing' for >60s reset to 'pending'
+Viewer / integration / script
+  → local worker HTTP API
+  → session, search, settings, data, logs, memory routes
+  → SQLite / optional Chroma
 ```
 
-### Circuit-Breaker (SessionRoutes)
+## Current AI Processing Path
+
+### Custom API only
+
+Observation extraction and summarization currently run through `CustomApiAgent` using an OpenAI-compatible chat completions interface.
 
 ```text
-Generator crash -> retry 1 (1s) -> retry 2 (2s) -> retry 3 (4s)
-  -> consecutiveRestarts > 3 -> CIRCUIT-BREAKER
-  -> markAllSessionMessagesAbandoned(sessionDbId)
-  -> Stop. No infinite loop.
+worker session
+  → CustomApiAgent
+  → custom API endpoint
+  → XML-like extraction response
+  → response processor
+  → SQLite / optional Chroma sync
 ```
 
-Counter resets to 0 when generator completes work naturally.
+Important implications:
 
-### Graceful Degradation (hook-command.ts)
+- there is no active multi-provider runtime in the main path
+- old Gemini/OpenRouter provider narratives are historical unless reintroduced in code
+- stateless custom APIs use a synthetic `memorySessionId` generated locally by the worker
 
-```text
-Transport errors (ECONNREFUSED, timeout, 5xx) -> exit 0 (never block Claude Code)
-Client bugs (4xx, TypeError, ReferenceError)  -> exit 2 (blocking, needs fix)
-```
+## Session Model
 
-The worker being unavailable NEVER blocks the user's Claude Code session.
+Two identifiers still matter:
 
-### Deduplication (observations)
+- `contentSessionId` — host-side session identifier from the calling integration
+- `memorySessionId` — worker-side memory identifier used for storage relationships
 
-```text
-SHA256(memory_session_id + title + narrative)[:16] -> content_hash (16 hex chars)
-If hash exists within 30s window -> return existing ID (no insert)
-```
-
-### Two Types of Session ID
-
-- `contentSessionId` — from Claude Code, invariant during the session
-- `memorySessionId` — from SDK Agent, changes on each worker restart
-
-The conversion between them is handled by SessionStore and is critical for FK constraints.
+For stateless custom APIs, the worker synthesizes `memorySessionId` locally to keep storage and retrieval consistent.
 
 ## Storage
 
-### SQLite (claude-mem.db)
+### SQLite
 
-| Table | Key fields | Purpose |
-|-------|-----------|---------|
-| sdk_sessions | content_session_id, memory_session_id, status | Session lifecycle |
-| observations | memory_session_id, type, title, narrative, content_hash | Tool usage observations |
-| session_summaries | memory_session_id, request, learned, completed | Session summaries |
-| user_prompts | content_session_id, prompt_text | User prompt history |
-| pending_messages | session_db_id, status, message_type | CLAIM-CONFIRM queue |
-| observation_feedback | observation_id, signal_type | Usage tracking |
+Primary durable store for:
 
-### ChromaDB (chroma.sqlite3)
+- sessions
+- observations
+- summaries
+- prompts
+- pending messages
+- viewer settings
 
-Vector embeddings for semantic search. Each observation generates multiple documents:
+### Chroma
+
+Optional semantic retrieval layer synchronized from stored observations.
+
+### MCP
+
+Optional interface layer for compatible clients and search workflows. It is useful, but it is not the primary runtime model.
+
+## Reliability Patterns
+
+### Graceful degradation in hook execution
 
 ```text
-obs_{id}_narrative  -> main text
-obs_{id}_fact_0     -> first fact
-obs_{id}_fact_1     -> second fact
-...
+Transport / timeout / 5xx / 429
+  → treat as worker unavailable
+  → exit 0 so host workflow is not blocked
+
+4xx / programming error
+  → treat as blocking bug
+  → exit 2
 ```
 
-Accessed via chroma-mcp (MCP process), communication over stdio.
+### Queue-based observation processing
 
-## Process Management
+Observation intake is decoupled from extraction through the pending message queue so host-side hooks stay lightweight.
 
-- **ProcessRegistry:** Tracks all Claude SDK subprocesses, manages PID lifecycle
-- **Orphan Reaper (5min):** Kills processes with no active session
-- **GracefulShutdown:** 7-step shutdown (PID file, children, HTTP server, sessions, MCP, DB, force-kill)
+### Detached worker startup
+
+Hook commands ensure the worker is running, but the hook process does not become the worker process. This avoids host sandbox lifecycle issues.
+
+## Integration Boundary
+
+If you are extending claude-mem today, prefer this order of abstraction:
+
+1. integrate a host into the unified hook entry
+2. normalize host payloads with a platform adapter or transcript schema
+3. reuse the worker HTTP API and existing handlers
+4. keep the public install surface limited to Claude Code and Codex CLI
+
+This keeps new CLI and tool integrations aligned with the current architecture.

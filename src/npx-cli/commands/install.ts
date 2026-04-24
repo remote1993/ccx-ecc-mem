@@ -113,91 +113,14 @@ function enablePluginInClaudeSettings(): void {
 // IDE setup dispatcher
 // ---------------------------------------------------------------------------
 
-/** Returns a list of IDE IDs that failed setup. */
+/** Returns a list of host IDs that failed setup. */
 async function setupIDEs(selectedIDEs: string[]): Promise<string[]> {
   const failedIDEs: string[] = [];
 
   for (const ideId of selectedIDEs) {
     switch (ideId) {
       case 'claude-code': {
-        // Claude Code uses its native plugin CLI — two commands handle
-        // marketplace registration, plugin installation, and enablement.
-        try {
-          execSync(
-            'claude plugin marketplace add thedotmack/claude-mem && claude plugin install claude-mem',
-            { stdio: 'inherit' },
-          );
-          log.success('Claude Code: plugin installed via CLI.');
-        } catch (error: unknown) {
-          console.error('[install] Claude Code plugin install error:', error instanceof Error ? error.message : String(error));
-          log.error('Claude Code: plugin install failed. Is `claude` CLI on your PATH?');
-          failedIDEs.push(ideId);
-        }
-        break;
-      }
-
-      case 'cursor': {
-        const { installCursorHooks, configureCursorMcp } = await import('../../services/integrations/CursorHooksInstaller.js');
-        const cursorResult = await installCursorHooks('user');
-        if (cursorResult === 0) {
-          const mcpResult = configureCursorMcp('user');
-          if (mcpResult === 0) {
-            log.success('Cursor: hooks + MCP installed.');
-          } else {
-            log.success('Cursor: hooks installed (MCP setup failed — run `npx claude-mem cursor mcp` to retry).');
-          }
-        } else {
-          log.error('Cursor: hook installation failed.');
-          failedIDEs.push(ideId);
-        }
-        break;
-      }
-
-      case 'gemini-cli': {
-        const { installGeminiCliHooks } = await import('../../services/integrations/GeminiCliHooksInstaller.js');
-        const geminiResult = await installGeminiCliHooks();
-        if (geminiResult === 0) {
-          log.success('Gemini CLI: hooks installed.');
-        } else {
-          log.error('Gemini CLI: hook installation failed.');
-          failedIDEs.push(ideId);
-        }
-        break;
-      }
-
-      case 'opencode': {
-        const { installOpenCodeIntegration } = await import('../../services/integrations/OpenCodeInstaller.js');
-        const openCodeResult = await installOpenCodeIntegration();
-        if (openCodeResult === 0) {
-          log.success('OpenCode: plugin installed.');
-        } else {
-          log.error('OpenCode: plugin installation failed.');
-          failedIDEs.push(ideId);
-        }
-        break;
-      }
-
-      case 'windsurf': {
-        const { installWindsurfHooks } = await import('../../services/integrations/WindsurfHooksInstaller.js');
-        const windsurfResult = await installWindsurfHooks();
-        if (windsurfResult === 0) {
-          log.success('Windsurf: hooks installed.');
-        } else {
-          log.error('Windsurf: hook installation failed.');
-          failedIDEs.push(ideId);
-        }
-        break;
-      }
-
-      case 'openclaw': {
-        const { installOpenClawIntegration } = await import('../../services/integrations/OpenClawInstaller.js');
-        const openClawResult = await installOpenClawIntegration();
-        if (openClawResult === 0) {
-          log.success('OpenClaw: plugin installed.');
-        } else {
-          log.error('OpenClaw: plugin installation failed.');
-          failedIDEs.push(ideId);
-        }
+        log.success('Claude Code: plugin files registered locally.');
         break;
       }
 
@@ -213,35 +136,9 @@ async function setupIDEs(selectedIDEs: string[]): Promise<string[]> {
         break;
       }
 
-      case 'copilot-cli':
-      case 'antigravity':
-      case 'goose':
-      case 'crush':
-      case 'roo-code':
-      case 'warp': {
-        const { MCP_IDE_INSTALLERS } = await import('../../services/integrations/McpIntegrations.js');
-        const mcpInstaller = MCP_IDE_INSTALLERS[ideId];
-        if (mcpInstaller) {
-          const mcpResult = await mcpInstaller();
-          const allIDEs = detectInstalledIDEs();
-          const ideInfo = allIDEs.find((i) => i.id === ideId);
-          const ideLabel = ideInfo?.label ?? ideId;
-          if (mcpResult === 0) {
-            log.success(`${ideLabel}: MCP integration installed.`);
-          } else {
-            log.error(`${ideLabel}: MCP integration failed.`);
-            failedIDEs.push(ideId);
-          }
-        }
-        break;
-      }
-
       default: {
-        const allIDEs = detectInstalledIDEs();
-        const ide = allIDEs.find((i) => i.id === ideId);
-        if (ide && !ide.supported) {
-          log.warn(`Support for ${ide.label} coming soon.`);
-        }
+        log.error(`Unsupported IDE: ${ideId}`);
+        failedIDEs.push(ideId);
         break;
       }
     }
@@ -297,7 +194,7 @@ function copyPluginToMarketplace(): void {
   ensureDirectoryExists(marketplaceDir);
 
   // Only copy directories/files that are actually needed at runtime.
-  // The npm package ships plugin/, package.json, node_modules/, openclaw/, dist/.
+  // The npm package ships plugin/, package.json, node_modules/, and dist/.
   // When running from a dev checkout, the root contains many extra dirs
   // (.claude, .agents, src, docs, etc.) that must NOT be copied.
   const allowedTopLevelEntries = [
@@ -305,7 +202,6 @@ function copyPluginToMarketplace(): void {
     'package.json',
     'package-lock.json',
     'node_modules',
-    'openclaw',
     'dist',
     'LICENSE',
     'README.md',
@@ -353,6 +249,14 @@ function runNpmInstallInMarketplace(): void {
     stdio: 'pipe',
     ...(IS_WINDOWS ? { shell: true as const } : {}),
   });
+}
+
+function hasMarketplaceDependencies(): boolean {
+  return existsSync(join(marketplaceDirectory(), 'node_modules'));
+}
+
+function hasPackageCacheDependencies(): boolean {
+  return existsSync(join(npmPackageRootDirectory(), 'node_modules'));
 }
 
 // ---------------------------------------------------------------------------
@@ -451,73 +355,75 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
     selectedIDEs = ['claude-code'];
   }
 
-  // Non-Claude-Code IDEs need the manual file copy / registration flow.
-  // Claude Code handles its own installation via `claude plugin install`.
-  const needsManualInstall = selectedIDEs.some((id) => id !== 'claude-code');
+  await runTasks([
+    {
+      title: 'Copying plugin files',
+      task: async (message) => {
+        message('Copying to marketplace directory...');
+        copyPluginToMarketplace();
+        return `Plugin files copied ${pc.green('OK')}`;
+      },
+    },
+    {
+      title: 'Caching plugin version',
+      task: async (message) => {
+        message(`Caching v${version}...`);
+        copyPluginToCache(version);
+        return `Plugin cached (v${version}) ${pc.green('OK')}`;
+      },
+    },
+    {
+      title: 'Registering marketplace',
+      task: async () => {
+        registerMarketplace();
+        return `Marketplace registered ${pc.green('OK')}`;
+      },
+    },
+    {
+      title: 'Registering plugin',
+      task: async () => {
+        registerPlugin(version);
+        return `Plugin registered ${pc.green('OK')}`;
+      },
+    },
+    {
+      title: 'Enabling plugin in Claude settings',
+      task: async () => {
+        enablePluginInClaudeSettings();
+        return `Plugin enabled ${pc.green('OK')}`;
+      },
+    },
+    {
+      title: 'Installing dependencies',
+      task: async (message) => {
+        if (hasMarketplaceDependencies()) {
+          return `Dependencies copied from package cache ${pc.green('OK')}`;
+        }
 
-  if (needsManualInstall) {
-    await runTasks([
-      {
-        title: 'Copying plugin files',
-        task: async (message) => {
-          message('Copying to marketplace directory...');
-          copyPluginToMarketplace();
-          return `Plugin files copied ${pc.green('OK')}`;
-        },
+        if (hasPackageCacheDependencies()) {
+          return `Dependencies available in package cache; reinstall skipped ${pc.green('OK')}`;
+        }
+
+        message('Running npm install...');
+        try {
+          runNpmInstallInMarketplace();
+          return `Dependencies installed ${pc.green('OK')}`;
+        } catch (error: unknown) {
+          console.warn('[install] npm install error:', error instanceof Error ? error.message : String(error));
+          return `Dependencies may need manual install ${pc.yellow('!')}`;
+        }
       },
-      {
-        title: 'Caching plugin version',
-        task: async (message) => {
-          message(`Caching v${version}...`);
-          copyPluginToCache(version);
-          return `Plugin cached (v${version}) ${pc.green('OK')}`;
-        },
+    },
+    {
+      title: 'Setting up Bun and uv',
+      task: async (message) => {
+        message('Running smart-install...');
+        return runSmartInstall()
+          ? `Runtime dependencies ready ${pc.green('OK')}`
+          : `Runtime setup may need attention ${pc.yellow('!')}`;
       },
-      {
-        title: 'Registering marketplace',
-        task: async () => {
-          registerMarketplace();
-          return `Marketplace registered ${pc.green('OK')}`;
-        },
-      },
-      {
-        title: 'Registering plugin',
-        task: async () => {
-          registerPlugin(version);
-          return `Plugin registered ${pc.green('OK')}`;
-        },
-      },
-      {
-        title: 'Enabling plugin in Claude settings',
-        task: async () => {
-          enablePluginInClaudeSettings();
-          return `Plugin enabled ${pc.green('OK')}`;
-        },
-      },
-      {
-        title: 'Installing dependencies',
-        task: async (message) => {
-          message('Running npm install...');
-          try {
-            runNpmInstallInMarketplace();
-            return `Dependencies installed ${pc.green('OK')}`;
-          } catch (error: unknown) {
-            console.warn('[install] npm install error:', error instanceof Error ? error.message : String(error));
-            return `Dependencies may need manual install ${pc.yellow('!')}`;
-          }
-        },
-      },
-      {
-        title: 'Setting up Bun and uv',
-        task: async (message) => {
-          message('Running smart-install...');
-          return runSmartInstall()
-            ? `Runtime dependencies ready ${pc.green('OK')}`
-            : `Runtime setup may need attention ${pc.yellow('!')}`;
-        },
-      },
-    ]);
-  }
+    },
+  ]);
 
   // IDE-specific setup
   const failedIDEs = await setupIDEs(selectedIDEs);
@@ -541,12 +447,18 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
   }
 
   const workerPort = process.env.CLAUDE_MEM_WORKER_PORT || '37777';
-  const nextSteps = [
-    'Open Claude Code and start a conversation -- memory is automatic!',
-    `View your memories: ${pc.underline(`http://localhost:${workerPort}`)}`,
-    `Search past work: use ${pc.bold('/mem-search')} in Claude Code`,
-    `Start worker: ${pc.bold('npx claude-mem start')}`,
-  ];
+  const nextSteps = [`Start worker: ${pc.bold('npx claude-mem start')}`];
+
+  if (selectedIDEs.includes('claude-code')) {
+    nextSteps.push('Restart Claude Code and start a conversation.');
+    nextSteps.push(`Search past work: use ${pc.bold('/mem-search')} in Claude Code`);
+  }
+
+  if (selectedIDEs.includes('codex-cli')) {
+    nextSteps.push('Run Codex CLI from your project workspace to let transcript watching capture sessions.');
+  }
+
+  nextSteps.push(`View your memories: ${pc.underline(`http://localhost:${workerPort}`)}`);
 
   if (isInteractive) {
     p.note(nextSteps.join('\n'), 'Next Steps');

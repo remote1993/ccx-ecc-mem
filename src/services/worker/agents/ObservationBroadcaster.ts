@@ -6,7 +6,7 @@
  * - Broadcast new summaries to SSE clients
  * - Handle worker reference safely (null checks)
  *
- * BUGFIX: This module fixes the incorrect field names in SDKAgent:
+ * BUGFIX: This module fixes the incorrect field names in the session agent pipeline:
  * - SDKAgent used `obs.files` which doesn't exist - should be `obs.files_read`
  * - SDKAgent used hardcoded `files_modified: JSON.stringify([])` - should use `obs.files_modified`
  */

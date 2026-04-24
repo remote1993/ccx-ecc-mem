@@ -10,6 +10,7 @@ import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import pc from 'picocolors';
+import { buildWorkerUrl } from '../../shared/worker-utils.js';
 import { resolveBunBinaryPath } from '../utils/bun-resolver.js';
 import { isPluginInstalled, marketplaceDirectory } from '../utils/paths.js';
 
@@ -151,8 +152,7 @@ export async function runSearchCommand(queryParts: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const workerPort = process.env.CLAUDE_MEM_WORKER_PORT || '37777';
-  const searchUrl = `http://127.0.0.1:${workerPort}/api/search?query=${encodeURIComponent(query)}`;
+  const searchUrl = buildWorkerUrl(`/api/search?query=${encodeURIComponent(query)}`);
 
   let response: Response;
   try {

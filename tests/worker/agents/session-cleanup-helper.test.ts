@@ -36,7 +36,7 @@ describe('SessionCleanupHelper', () => {
       cumulativeOutputTokens: 50,
       earliestPendingTimestamp: Date.now() - 10000, // 10 seconds ago
       conversationHistory: [],
-      currentProvider: 'claude',
+      currentRuntime: 'custom-api',
       processingMessageIds: [],  // CLAIM-CONFIRM pattern: track message IDs being processed
       ...overrides,
     };

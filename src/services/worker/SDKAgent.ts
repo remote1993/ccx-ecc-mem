@@ -325,8 +325,8 @@ export class SDKAgent {
    *
    * SHARED CONVERSATION HISTORY:
    * - Each user message is added to session.conversationHistory
-   * - This allows provider switching (Claude→Gemini) with full context
-   * - SDK manages its own internal state, but we mirror it for interop
+   * - This preserves session context across queued runtime work
+   * - The SDK runtime manages its own internal state, and we mirror key prompts for continuity
    *
    * CWD TRACKING:
    * - cwdTracker is a mutable object shared with startSession
@@ -354,7 +354,7 @@ export class SDKAgent {
       ? buildInitPrompt(session.project, session.contentSessionId, session.userPrompt, mode)
       : buildContinuationPrompt(session.userPrompt, session.lastPromptNumber, session.contentSessionId, mode);
 
-    // Add to shared conversation history for provider interop
+    // Add to shared conversation history
     session.conversationHistory.push({ role: 'user', content: initPrompt });
 
     // Yield initial user prompt with context (or continuation if prompt #2+)
@@ -403,7 +403,7 @@ export class SDKAgent {
           cwd: message.cwd
         });
 
-        // Add to shared conversation history for provider interop
+        // Add to shared conversation history
         session.conversationHistory.push({ role: 'user', content: obsPrompt });
 
         yield {
@@ -425,7 +425,7 @@ export class SDKAgent {
           last_assistant_message: message.last_assistant_message || ''
         }, mode);
 
-        // Add to shared conversation history for provider interop
+        // Add to shared conversation history
         session.conversationHistory.push({ role: 'user', content: summaryPrompt });
 
         yield {

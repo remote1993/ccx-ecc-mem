@@ -1,31 +1,35 @@
 # Claude-Mem: AI Development Instructions
 
-Claude-mem is a Claude Code plugin providing persistent memory across sessions. It captures tool usage, compresses observations using the Claude Agent SDK, and injects relevant context into future sessions.
+Claude-mem is a Claude Code plugin providing persistent memory across sessions. It captures lifecycle events through a unified hook entry, stores session data in the local worker-backed runtime, and injects relevant context into future sessions.
 
 ## Architecture
 
-**5 Lifecycle Hooks**: SessionStart → UserPromptSubmit → PostToolUse → Summary → SessionEnd
+**任务/架构跟踪文档**：`ARCHITECTURE.md`
+- 当前改造目标与后续任务索引见 `ARCHITECTURE.md` 的“10. 当前改造目标（2026-04-23）”部分。
+- 后续涉及项目方向判断时，优先先核对该节，避免继续沿用原始 claude-mem 的默认目标。
 
-**Hooks** (`src/hooks/*.ts`) - TypeScript → ESM, built to `plugin/scripts/*-hook.js`
+**Hook Entry Layer** (`plugin/hooks/hooks.json` → `plugin/scripts/worker-service.cjs hook claude-code <event>` → `src/cli/hook-command.ts` → `src/cli/handlers/*`) - 当前生命周期事件统一通过这里进入本地 worker HTTP API
 
-**Worker Service** (`src/services/worker-service.ts`) - Express API on port 37777, Bun-managed, handles AI processing asynchronously
+**Lifecycle Coverage** - `Setup` → `SessionStart` → `UserPromptSubmit` → `PostToolUse` → `PreToolUse (Read)` → `Stop` → `SessionEnd`
+
+**Worker Service** (`src/services/worker-service.ts`) - Express API on port 37777, Bun-managed, orchestrates sessions, storage, search, SSE, and custom API processing
 
 **Database** (`src/services/sqlite/`) - SQLite3 at `~/.claude-mem/claude-mem.db`
 
-**Search Skill** (`plugin/skills/mem-search/SKILL.md`) - HTTP API for searching past work, auto-invoked when users ask about history
+**Search Skill** (`plugin/skills/mem-search/SKILL.md`) - Retrieval compatibility surface for searching past work; current primary retrieval path is the worker HTTP API
 
 **Planning Skill** (`plugin/skills/make-plan/SKILL.md`) - Orchestrator instructions for creating phased implementation plans with documentation discovery
 
 **Execution Skill** (`plugin/skills/do/SKILL.md`) - Orchestrator instructions for executing phased plans using subagents
 
-**Chroma** (`src/services/sync/ChromaSync.ts`) - Vector embeddings for semantic search
+**Chroma** (`src/services/sync/ChromaSync.ts`) - Optional vector embeddings for semantic search
 
 **Viewer UI** (`src/ui/viewer/`) - React interface at http://localhost:37777, built to `plugin/ui/viewer.html`
 
 ## Privacy Tags
 - `<private>content</private>` - User-level privacy control (manual, prevents storage)
 
-**Implementation**: Tag stripping happens at hook layer (edge processing) before data reaches worker/database. See `src/utils/tag-stripping.ts` for shared utilities.
+**Implementation**: Tag stripping happens at the hook entry layer before data reaches worker/database. See `src/utils/tag-stripping.ts` for shared utilities.
 
 ## Build Commands
 
@@ -36,6 +40,9 @@ npm run build-and-sync        # Build, sync to marketplace, restart worker
 ## Configuration
 
 Settings are managed in `~/.claude-mem/settings.json`. The file is auto-created with defaults on first run.
+
+- `CLAUDE_MEM_CUSTOM_MODEL` is free-form end-to-end for custom API requests.
+- `ResponseProcessor` treats non-XML agent output as retryable failure: pending messages are `markFailed()` and nothing is stored.
 
 ## File Locations
 

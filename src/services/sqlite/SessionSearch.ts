@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite';
+import { dirname } from 'path';
 import { TableNameRow } from '../../types/database.js';
-import { DATA_DIR, DB_PATH, ensureDir } from '../../shared/paths.js';
+import { ensureDir, getDbPath } from '../../shared/paths.js';
 import { logger } from '../../utils/logger.js';
 import { isDirectChild } from '../../shared/path-utils.js';
 import { AppError } from '../server/ErrorHandler.js';
@@ -25,10 +26,9 @@ export class SessionSearch {
 
   private static readonly MISSING_SEARCH_INPUT_MESSAGE = 'Either query or filters required for search';
 
-  constructor(dbPath?: string) {
-    if (!dbPath) {
-      ensureDir(DATA_DIR);
-      dbPath = DB_PATH;
+  constructor(dbPath: string = getDbPath()) {
+    if (dbPath !== ':memory:') {
+      ensureDir(dirname(dbPath));
     }
     this.db = new Database(dbPath);
     this.db.run('PRAGMA journal_mode = WAL');

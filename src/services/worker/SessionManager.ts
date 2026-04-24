@@ -224,7 +224,7 @@ export class SessionManager {
       cumulativeOutputTokens: 0,
       earliestPendingTimestamp: null,
       conversationHistory: [],  // Initialize empty - will be populated by agents
-      currentProvider: null,  // Will be set when generator starts
+      currentRuntime: null,  // Will be set when the session runtime starts
       consecutiveRestarts: 0,  // DEPRECATED: use restartGuard. Kept for logging compat.
       restartGuard: new RestartGuard(),
       processingMessageIds: [],  // CLAIM-CONFIRM: Track message IDs for confirmProcessed()
@@ -621,7 +621,7 @@ export class SessionManager {
   }
 
   /**
-   * Get message iterator for SDKAgent to consume (event-driven, no polling)
+   * Get message iterator for the session agent to consume (event-driven, no polling)
    * Auto-initializes session if not in memory but exists in database
    *
    * CRITICAL: Uses PendingMessageStore for crash-safe message persistence.

@@ -33,16 +33,12 @@ const BLOCKED_ENV_VARS = [
 // Credential keys that claude-mem manages
 export const MANAGED_CREDENTIAL_KEYS = [
   'ANTHROPIC_API_KEY',
-  'GEMINI_API_KEY',
-  'OPENROUTER_API_KEY',
 ];
 
 export interface ClaudeMemEnv {
   // Credentials (optional - empty means use CLI billing for Claude)
   ANTHROPIC_API_KEY?: string;
   ANTHROPIC_BASE_URL?: string;
-  GEMINI_API_KEY?: string;
-  OPENROUTER_API_KEY?: string;
 }
 
 /**
@@ -117,8 +113,6 @@ export function loadClaudeMemEnv(): ClaudeMemEnv {
     const result: ClaudeMemEnv = {};
     if (parsed.ANTHROPIC_API_KEY) result.ANTHROPIC_API_KEY = parsed.ANTHROPIC_API_KEY;
     if (parsed.ANTHROPIC_BASE_URL) result.ANTHROPIC_BASE_URL = parsed.ANTHROPIC_BASE_URL;
-    if (parsed.GEMINI_API_KEY) result.GEMINI_API_KEY = parsed.GEMINI_API_KEY;
-    if (parsed.OPENROUTER_API_KEY) result.OPENROUTER_API_KEY = parsed.OPENROUTER_API_KEY;
 
     return result;
   } catch (error: unknown) {
@@ -167,20 +161,6 @@ export function saveClaudeMemEnv(env: ClaudeMemEnv): void {
       updated.ANTHROPIC_BASE_URL = env.ANTHROPIC_BASE_URL;
     } else {
       delete updated.ANTHROPIC_BASE_URL;
-    }
-  }
-  if (env.GEMINI_API_KEY !== undefined) {
-    if (env.GEMINI_API_KEY) {
-      updated.GEMINI_API_KEY = env.GEMINI_API_KEY;
-    } else {
-      delete updated.GEMINI_API_KEY;
-    }
-  }
-  if (env.OPENROUTER_API_KEY !== undefined) {
-    if (env.OPENROUTER_API_KEY) {
-      updated.OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
-    } else {
-      delete updated.OPENROUTER_API_KEY;
     }
   }
 
@@ -239,15 +219,6 @@ export function buildIsolatedEnv(includeCredentials: boolean = true): Record<str
     if (credentials.ANTHROPIC_BASE_URL) {
       isolatedEnv.ANTHROPIC_BASE_URL = credentials.ANTHROPIC_BASE_URL;
     }
-    // Note: GEMINI_API_KEY and OPENROUTER_API_KEY pass through from process.env,
-    // but claude-mem's .env takes precedence if configured
-    if (credentials.GEMINI_API_KEY) {
-      isolatedEnv.GEMINI_API_KEY = credentials.GEMINI_API_KEY;
-    }
-    if (credentials.OPENROUTER_API_KEY) {
-      isolatedEnv.OPENROUTER_API_KEY = credentials.OPENROUTER_API_KEY;
-    }
-
     // 4. Pass through Claude CLI's OAuth token if available (fallback for CLI subscription billing)
     // When no ANTHROPIC_API_KEY is configured, the spawned CLI uses subscription billing
     // which requires either ~/.claude/.credentials.json or CLAUDE_CODE_OAUTH_TOKEN.

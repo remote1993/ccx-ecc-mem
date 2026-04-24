@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite';
-import { DATA_DIR, DB_PATH, ensureDir, OBSERVER_SESSIONS_PROJECT } from '../../shared/paths.js';
+import { dirname } from 'path';
+import { ensureDir, OBSERVER_SESSIONS_PROJECT, getDbPath } from '../../shared/paths.js';
 import { logger } from '../../utils/logger.js';
 import {
   TableColumnInfo,
@@ -34,9 +35,9 @@ function resolveCreateSessionArgs(
 export class SessionStore {
   public db: Database;
 
-  constructor(dbPath: string = DB_PATH) {
+  constructor(dbPath: string = getDbPath()) {
     if (dbPath !== ':memory:') {
-      ensureDir(DATA_DIR);
+      ensureDir(dirname(dbPath));
     }
     this.db = new Database(dbPath);
 
@@ -1035,7 +1036,7 @@ export class SessionStore {
 
   /**
    * Update the memory session ID for a session
-   * Called by SDKAgent when it captures the session ID from the first SDK message
+   * Called when the worker runtime captures or resets the processing session ID.
    * Also used to RESET to null on stale resume failures (worker-service.ts)
    */
   updateMemorySessionId(sessionDbId: number, memorySessionId: string | null): void {

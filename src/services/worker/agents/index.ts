@@ -1,13 +1,5 @@
 /**
- * Agent Consolidation Module
- *
- * This module provides shared utilities for SDK, Gemini, and OpenRouter agents.
- * It extracts common patterns to reduce code duplication and ensure consistent behavior.
- *
- * Usage:
- * ```typescript
- * import { processAgentResponse, shouldFallbackToClaude } from './agents/index.js';
- * ```
+ * Agent utilities shared by the worker response-processing pipeline.
  */
 
 // Types
@@ -19,7 +11,7 @@ export type {
   StorageResult,
   ResponseProcessingContext,
   ParsedResponse,
-  FallbackAgent,
+  SessionAgent,
   BaseAgentConfig,
 } from './types.js';
 

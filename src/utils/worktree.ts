@@ -10,6 +10,7 @@
 
 import { statSync, readFileSync } from 'fs';
 import path from 'path';
+import { logger } from './logger.js';
 
 export interface WorktreeInfo {
   isWorktree: boolean;
@@ -41,7 +42,10 @@ export function detectWorktree(cwd: string): WorktreeInfo {
   } catch (error: unknown) {
     // No .git at all - not a git repo (ENOENT is expected, other errors are noteworthy)
     if (error instanceof Error && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      console.warn(`[worktree] Unexpected error checking .git:`, error);
+      logger.warn('SYSTEM', 'Unexpected error checking .git for worktree detection', {
+        cwd,
+        error: error.message
+      });
     }
     return NOT_A_WORKTREE;
   }
@@ -56,7 +60,10 @@ export function detectWorktree(cwd: string): WorktreeInfo {
   try {
     content = readFileSync(gitPath, 'utf-8').trim();
   } catch (error: unknown) {
-    console.warn(`[worktree] Failed to read .git file:`, error instanceof Error ? error.message : String(error));
+    logger.warn('SYSTEM', 'Failed to read .git file during worktree detection', {
+      cwd,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return NOT_A_WORKTREE;
   }
 

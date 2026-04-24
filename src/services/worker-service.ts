@@ -5,7 +5,7 @@
  * Delegates to specialized modules:
  * - src/services/server/ - HTTP server, middleware, error handling
  * - src/services/infrastructure/ - Process management, health monitoring, shutdown
- * - src/services/integrations/ - IDE integrations (Cursor)
+ * - src/services/integrations/ - supported host-specific install helpers
  * - src/services/worker/ - Business logic, routes, agents
  */
 
@@ -65,22 +65,11 @@ import { adoptMergedWorktrees, adoptMergedWorktreesForAllKnownRepos } from './in
 // Server imports
 import { Server } from './server/Server.js';
 
-// Integration imports
-import {
-  updateCursorContextForProject,
-  handleCursorCommand
-} from './integrations/CursorHooksInstaller.js';
-import {
-  handleGeminiCliCommand
-} from './integrations/GeminiCliHooksInstaller.js';
-
 // Service layer imports
 import { DatabaseManager } from './worker/DatabaseManager.js';
 import { SessionManager } from './worker/SessionManager.js';
 import { SSEBroadcaster } from './worker/SSEBroadcaster.js';
-import { SDKAgent } from './worker/SDKAgent.js';
-import { GeminiAgent, isGeminiSelected, isGeminiAvailable } from './worker/GeminiAgent.js';
-import { OpenRouterAgent, isOpenRouterSelected, isOpenRouterAvailable } from './worker/OpenRouterAgent.js';
+import { CustomApiAgent, isCustomApiAvailable } from './worker/CustomApiAgent.js';
 import { PaginationHelper } from './worker/PaginationHelper.js';
 import { SettingsManager } from './worker/SettingsManager.js';
 import { SearchManager } from './worker/SearchManager.js';
@@ -89,6 +78,7 @@ import { TimelineService } from './worker/TimelineService.js';
 import { SessionEventBroadcaster } from './worker/events/SessionEventBroadcaster.js';
 import { DEFAULT_CONFIG_PATH, DEFAULT_STATE_PATH, expandHomePath, loadTranscriptWatchConfig, writeSampleConfig } from './transcripts/config.js';
 import { TranscriptWatcher } from './transcripts/watcher.js';
+import { USER_SETTINGS_PATH } from '../shared/paths.js';
 
 // HTTP route handlers
 import { ViewerRoutes } from './worker/http/routes/ViewerRoutes.js';
@@ -146,9 +136,7 @@ export class WorkerService {
   private dbManager: DatabaseManager;
   private sessionManager: SessionManager;
   private sseBroadcaster: SSEBroadcaster;
-  private sdkAgent: SDKAgent;
-  private geminiAgent: GeminiAgent;
-  private openRouterAgent: OpenRouterAgent;
+  private customApiAgent: CustomApiAgent;
   private paginationHelper: PaginationHelper;
   private settingsManager: SettingsManager;
   private sessionEventBroadcaster: SessionEventBroadcaster;
@@ -177,7 +165,7 @@ export class WorkerService {
   private lastAiInteraction: {
     timestamp: number;
     success: boolean;
-    provider: string;
+    runtime: string;
     error?: string;
   } | null = null;
 
@@ -191,9 +179,7 @@ export class WorkerService {
     this.dbManager = new DatabaseManager();
     this.sessionManager = new SessionManager(this.dbManager);
     this.sseBroadcaster = new SSEBroadcaster();
-    this.sdkAgent = new SDKAgent(this.dbManager, this.sessionManager);
-    this.geminiAgent = new GeminiAgent(this.dbManager, this.sessionManager);
-    this.openRouterAgent = new OpenRouterAgent(this.dbManager, this.sessionManager);
+    this.customApiAgent = new CustomApiAgent(this.dbManager, this.sessionManager);
 
     this.paginationHelper = new PaginationHelper(this.dbManager);
     this.settingsManager = new SettingsManager(this.dbManager);
@@ -221,11 +207,8 @@ export class WorkerService {
       onRestart: () => this.shutdown(),
       workerPath: __filename,
       getAiStatus: () => {
-        let provider = 'claude';
-        if (isOpenRouterSelected() && isOpenRouterAvailable()) provider = 'openrouter';
-        else if (isGeminiSelected() && isGeminiAvailable()) provider = 'gemini';
         return {
-          provider,
+          runtime: isCustomApiAvailable() ? 'custom-api' : 'unconfigured',
           authMethod: getAuthMethodDescription(),
           lastInteraction: this.lastAiInteraction
             ? {
@@ -305,7 +288,7 @@ export class WorkerService {
 
     // Standard routes (registered AFTER guard middleware)
     this.server.registerRoutes(new ViewerRoutes(this.sseBroadcaster, this.dbManager, this.sessionManager));
-    this.server.registerRoutes(new SessionRoutes(this.sessionManager, this.dbManager, this.sdkAgent, this.geminiAgent, this.openRouterAgent, this.sessionEventBroadcaster, this));
+    this.server.registerRoutes(new SessionRoutes(this.sessionManager, this.dbManager, this.customApiAgent, this.sessionEventBroadcaster, this));
     this.server.registerRoutes(new DataRoutes(this.paginationHelper, this.dbManager, this.sessionManager, this.sseBroadcaster, this, this.startTime));
     this.server.registerRoutes(new SettingsRoutes(this.settingsManager));
     this.server.registerRoutes(new LogsRoutes());
@@ -658,22 +641,20 @@ export class WorkerService {
   }
 
   /**
-   * Get the appropriate agent based on provider settings.
+   * Get the custom API agent used by worker-side session processing.
    * Same logic as SessionRoutes.getActiveAgent() for consistency.
    */
-  private getActiveAgent(): SDKAgent | GeminiAgent | OpenRouterAgent {
-    if (isOpenRouterSelected() && isOpenRouterAvailable()) {
-      return this.openRouterAgent;
+  private getActiveAgent(): CustomApiAgent {
+    if (!isCustomApiAvailable()) {
+      throw new Error('Custom API is not configured. Set CLAUDE_MEM_CUSTOM_API_KEY in settings.');
     }
-    if (isGeminiSelected() && isGeminiAvailable()) {
-      return this.geminiAgent;
-    }
-    return this.sdkAgent;
+
+    return this.customApiAgent;
   }
 
   /**
    * Start a session processor
-   * On SDK resume failure (terminated session), falls back to Gemini/OpenRouter if available,
+   * On terminated session errors, re-run processing through the custom API agent,
    * otherwise marks messages abandoned and removes session so queue does not grow unbounded.
    */
   private startSessionProcessor(
@@ -684,7 +665,7 @@ export class WorkerService {
 
     const sid = session.sessionDbId;
     const agent = this.getActiveAgent();
-    const providerName = agent.constructor.name;
+    const runtimeName = 'custom-api';
 
     // Before starting generator, check if AbortController is already aborted
     // This can happen after a previous generator was aborted but the session still has pending work
@@ -699,7 +680,7 @@ export class WorkerService {
     let hadUnrecoverableError = false;
     let sessionFailed = false;
 
-    logger.info('SYSTEM', `Starting generator (${source}) using ${providerName}`, { sessionId: sid });
+    logger.info('SYSTEM', `Starting generator (${source}) using ${runtimeName}`, { sessionId: sid });
 
     // Track generator activity for stale detection (Issue #1099)
     session.lastGeneratorActivity = Date.now();
@@ -720,9 +701,9 @@ export class WorkerService {
           'API key expired',
           'API key not valid',
           'PERMISSION_DENIED',
-          'Gemini API error: 400',
-          'Gemini API error: 401',
-          'Gemini API error: 403',
+          'Custom API error: 400',
+          'Custom API error: 401',
+          'Custom API error: 403',
           'FOREIGN KEY constraint failed',
         ];
         if (unrecoverablePatterns.some(pattern => errorMessage.includes(pattern))) {
@@ -730,7 +711,7 @@ export class WorkerService {
           this.lastAiInteraction = {
             timestamp: Date.now(),
             success: false,
-            provider: providerName,
+            runtime: runtimeName,
             error: errorMessage,
           };
           logger.error('SDK', 'Unrecoverable generator error - will NOT restart', {
@@ -741,7 +722,7 @@ export class WorkerService {
           return;
         }
 
-        // Fallback for terminated SDK sessions (provider abstraction)
+        // Fallback for terminated SDK sessions (runtime abstraction)
         if (this.isSessionTerminatedError(error)) {
           logger.warn('SDK', 'SDK resume failed, falling back to standalone processing', {
             sessionId: session.sessionDbId,
@@ -768,13 +749,13 @@ export class WorkerService {
         logger.error('SDK', 'Session generator failed', {
           sessionId: session.sessionDbId,
           project: session.project,
-          provider: providerName
+          runtime: runtimeName
         }, error as Error);
         sessionFailed = true;
         this.lastAiInteraction = {
           timestamp: Date.now(),
           success: false,
-          provider: providerName,
+          runtime: runtimeName,
           error: errorMessage,
         };
         throw error;
@@ -793,7 +774,7 @@ export class WorkerService {
           this.lastAiInteraction = {
             timestamp: Date.now(),
             success: true,
-            provider: providerName,
+            runtime: runtimeName,
           };
         }
 
@@ -889,8 +870,8 @@ export class WorkerService {
   }
 
   /**
-   * When SDK resume fails due to terminated session: try Gemini then OpenRouter to drain
-   * pending messages; if no fallback available, mark messages abandoned and remove session.
+   * When terminated session recovery runs: retry through the custom API agent.
+   * If the custom API is unavailable or retry fails, mark messages abandoned and remove session.
    */
   private async runFallbackForTerminatedSession(
     session: ReturnType<typeof this.sessionManager.getSession>,
@@ -900,49 +881,30 @@ export class WorkerService {
 
     const sessionDbId = session.sessionDbId;
 
-    // Fallback agents need memorySessionId for storeObservations
+    // Fallback agent needs memorySessionId for storeObservations
     if (!session.memorySessionId) {
       const syntheticId = `fallback-${sessionDbId}-${Date.now()}`;
       session.memorySessionId = syntheticId;
       this.dbManager.getSessionStore().updateMemorySessionId(sessionDbId, syntheticId);
     }
 
-    if (isGeminiAvailable()) {
+    if (isCustomApiAvailable()) {
       try {
-        await this.geminiAgent.startSession(session, this);
+        await this.customApiAgent.startSession(session, this);
         return;
       } catch (e) {
-        // [ANTI-PATTERN IGNORED]: Fallback chain by design — Gemini failure falls through to OpenRouter attempt
         if (e instanceof Error) {
-          logger.warn('WORKER', 'Fallback Gemini failed, trying OpenRouter', {
-            sessionId: sessionDbId,
-          });
-          logger.error('WORKER', 'Gemini fallback error detail', { sessionId: sessionDbId }, e);
+          logger.error('WORKER', 'Custom API recovery failed, will abandon messages', { sessionId: sessionDbId }, e);
         } else {
-          logger.error('WORKER', 'Gemini fallback failed with non-Error', { sessionId: sessionDbId }, new Error(String(e)));
+          logger.error('WORKER', 'Custom API recovery failed with non-Error, will abandon messages', { sessionId: sessionDbId }, new Error(String(e)));
         }
       }
     }
 
-    if (isOpenRouterAvailable()) {
-      try {
-        await this.openRouterAgent.startSession(session, this);
-        return;
-      } catch (e) {
-        // [ANTI-PATTERN IGNORED]: Last fallback in chain — failure falls through to message abandonment, which is the designed terminal behavior
-        if (e instanceof Error) {
-          logger.error('WORKER', 'Fallback OpenRouter failed, will abandon messages', { sessionId: sessionDbId }, e);
-        } else {
-          logger.error('WORKER', 'Fallback OpenRouter failed with non-Error, will abandon messages', { sessionId: sessionDbId }, new Error(String(e)));
-        }
-      }
-    }
-
-    // No fallback or both failed: mark messages abandoned and remove session so queue doesn't grow
     const pendingStore = this.sessionManager.getPendingMessageStore();
     const abandoned = pendingStore.markAllSessionMessagesAbandoned(sessionDbId);
     if (abandoned > 0) {
-      logger.warn('SDK', 'No fallback available; marked pending messages abandoned', {
+      logger.warn('WORKER', 'No custom API recovery available; marked pending messages abandoned', {
         sessionId: sessionDbId,
         abandoned
       });
@@ -1262,19 +1224,6 @@ async function main() {
       break;
     }
 
-    case 'cursor': {
-      const subcommand = process.argv[3];
-      const cursorResult = await handleCursorCommand(subcommand, process.argv.slice(4));
-      process.exit(cursorResult);
-      break;
-    }
-
-    case 'gemini-cli': {
-      const geminiSubcommand = process.argv[3];
-      const geminiResult = await handleGeminiCliCommand(geminiSubcommand, process.argv.slice(4));
-      process.exit(geminiResult);
-      break;
-    }
 
     case 'hook': {
       // Validate CLI args first (before any I/O)
@@ -1282,7 +1231,7 @@ async function main() {
       const event = process.argv[4];
       if (!platform || !event) {
         console.error('Usage: claude-mem hook <platform> <event>');
-        console.error('Platforms: claude-code, cursor, gemini-cli, raw');
+        console.error('Platforms: claude-code, codex-cli, raw');
         console.error('Events: context, session-init, observation, summarize, session-complete, user-message');
         process.exit(1);
       }

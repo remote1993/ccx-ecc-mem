@@ -19,6 +19,30 @@ describe('Server', () => {
   let server: Server;
   let mockOptions: ServerOptions;
 
+  async function listenOnRandomPort(serverInstance: Server): Promise<number> {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidatePort = 40000 + Math.floor(Math.random() * 10000);
+      try {
+        await serverInstance.listen(candidatePort, '127.0.0.1');
+        return candidatePort;
+      } catch (error) {
+        lastError = error;
+        const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+        if (code !== 'EADDRINUSE') {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Failed to bind test server after retries');
+  }
+
+  async function listenOnEphemeralPort(serverInstance: Server): Promise<number> {
+    return listenOnRandomPort(serverInstance);
+  }
+
   beforeEach(() => {
     loggerSpies = [
       spyOn(logger, 'info').mockImplementation(() => {}),
@@ -34,7 +58,7 @@ describe('Server', () => {
       onRestart: mock(() => Promise.resolve()),
       workerPath: '/test/worker-service.cjs',
       getAiStatus: () => ({
-        provider: 'claude',
+        runtime: 'custom-api',
         authMethod: 'cli',
         lastInteraction: null,
       }),
@@ -78,11 +102,7 @@ describe('Server', () => {
   describe('listen', () => {
     it('should start server on specified port', async () => {
       server = new Server(mockOptions);
-
-      // Use a random high port to avoid conflicts
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      await listenOnEphemeralPort(server);
 
       // Server should now be listening
       const httpServer = server.getHttpServer();
@@ -93,11 +113,7 @@ describe('Server', () => {
     it('should reject if port is already in use', async () => {
       server = new Server(mockOptions);
       const server2 = new Server(mockOptions);
-
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      // Start first server
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnEphemeralPort(server);
 
       // Second server should fail on same port
       await expect(server2.listen(testPort, '127.0.0.1')).rejects.toThrow();
@@ -113,9 +129,7 @@ describe('Server', () => {
   describe('close', () => {
     it('should stop server from listening after close', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      await listenOnEphemeralPort(server);
 
       // Server should exist and be listening
       const httpServerBefore = server.getHttpServer();
@@ -149,9 +163,7 @@ describe('Server', () => {
 
     it('should allow starting a new server on same port after close', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnEphemeralPort(server);
 
       // Close the server
       try {
@@ -190,9 +202,7 @@ describe('Server', () => {
 
     it('should return http.Server after listen', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      await listenOnEphemeralPort(server);
 
       const httpServer = server.getHttpServer();
       expect(httpServer).not.toBeNull();
@@ -243,9 +253,7 @@ describe('Server', () => {
   describe('health endpoint', () => {
     it('should return 200 with status ok', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/health`);
 
@@ -257,9 +265,7 @@ describe('Server', () => {
 
     it('should include initialization status', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/health`);
       const body = await response.json();
@@ -276,13 +282,11 @@ describe('Server', () => {
         onShutdown: mock(() => Promise.resolve()),
         onRestart: mock(() => Promise.resolve()),
         workerPath: '/test/worker-service.cjs',
-        getAiStatus: () => ({ provider: 'claude', authMethod: 'cli', lastInteraction: null }),
+        getAiStatus: () => ({ runtime: 'custom-api', authMethod: 'cli', lastInteraction: null }),
       };
 
       server = new Server(dynamicOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       // Check when not initialized
       let response = await fetch(`http://127.0.0.1:${testPort}/api/health`);
@@ -300,9 +304,7 @@ describe('Server', () => {
 
     it('should include platform and pid', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/health`);
       const body = await response.json();
@@ -316,9 +318,7 @@ describe('Server', () => {
   describe('readiness endpoint', () => {
     it('should return 200 when initialized', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/readiness`);
 
@@ -335,13 +335,11 @@ describe('Server', () => {
         onShutdown: mock(() => Promise.resolve()),
         onRestart: mock(() => Promise.resolve()),
         workerPath: '/test/worker-service.cjs',
-        getAiStatus: () => ({ provider: 'claude', authMethod: 'cli', lastInteraction: null }),
+        getAiStatus: () => ({ runtime: 'custom-api', authMethod: 'cli', lastInteraction: null }),
       };
 
       server = new Server(uninitializedOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/readiness`);
 
@@ -356,9 +354,7 @@ describe('Server', () => {
   describe('version endpoint', () => {
     it('should return 200 with version', async () => {
       server = new Server(mockOptions);
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/version`);
 
@@ -375,8 +371,7 @@ describe('Server', () => {
       server = new Server(mockOptions);
       server.finalizeRoutes();
 
-      const testPort = 40000 + Math.floor(Math.random() * 10000);
-      await server.listen(testPort, '127.0.0.1');
+      const testPort = await listenOnRandomPort(server);
 
       const response = await fetch(`http://127.0.0.1:${testPort}/api/nonexistent`);
 

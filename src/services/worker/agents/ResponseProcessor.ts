@@ -8,15 +8,13 @@
  * - Broadcast to SSE clients
  * - Clean up processed messages
  *
- * This module extracts 150+ lines of duplicate code from SDKAgent, GeminiAgent, and OpenRouterAgent.
+ * This module extracts 150+ lines of duplicate code from SDKAgent and custom API agents.
  */
 
 import { logger } from '../../../utils/logger.js';
 import { parseObservations, parseSummary, type ParsedObservation, type ParsedSummary } from '../../../sdk/parser.js';
 import { SUMMARY_MODE_MARKER, MAX_CONSECUTIVE_SUMMARY_FAILURES } from '../../../sdk/prompts.js';
-import { updateCursorContextForProject } from '../../integrations/CursorHooksInstaller.js';
 import { updateFolderClaudeMdFiles } from '../../../utils/claude-md-utils.js';
-import { getWorkerPort } from '../../../shared/worker-utils.js';
 import { SettingsDefaultsManager } from '../../../shared/SettingsDefaultsManager.js';
 import { USER_SETTINGS_PATH } from '../../../shared/paths.js';
 import type { ActiveSession } from '../../worker-types.js';
@@ -30,7 +28,7 @@ import { cleanupProcessedMessages } from './SessionCleanupHelper.js';
  * Process agent response text (parse XML, save to database, sync to Chroma, broadcast SSE)
  *
  * This is the unified response processor that handles:
- * 1. Adding response to conversation history (for provider interop)
+ * 1. Adding response to conversation history
  * 2. Parsing observations and summaries from XML
  * 3. Atomic database transaction to store observations + summary
  * 4. Async Chroma sync (fire-and-forget, failures are non-critical)
@@ -44,7 +42,7 @@ import { cleanupProcessedMessages } from './SessionCleanupHelper.js';
  * @param worker - Worker reference for SSE broadcasting (optional)
  * @param discoveryTokens - Token cost delta for this response
  * @param originalTimestamp - Original epoch when message was queued (for accurate timestamps)
- * @param agentName - Name of the agent for logging (e.g., 'SDK', 'Gemini', 'OpenRouter')
+ * @param agentName - Name of the agent for logging (e.g., 'Claude SDK', 'Custom API')
  */
 export async function processAgentResponse(
   text: string,
@@ -61,7 +59,7 @@ export async function processAgentResponse(
   // Track generator activity for stale detection (Issue #1099)
   session.lastGeneratorActivity = Date.now();
 
-  // Add assistant response to shared conversation history for provider interop
+  // Add assistant response to shared conversation history
   if (text) {
     session.conversationHistory.push({ role: 'assistant', content: text });
   }
@@ -413,10 +411,5 @@ async function syncAndBroadcastSummary(
     project: session.project,
     prompt_number: session.lastPromptNumber,
     created_at_epoch: result.createdAtEpoch
-  });
-
-  // Update Cursor context file for registered projects (fire-and-forget)
-  updateCursorContextForProject(session.project, getWorkerPort()).catch(error => {
-    logger.warn('CURSOR', 'Context update failed (non-critical)', { project: session.project }, error as Error);
   });
 }

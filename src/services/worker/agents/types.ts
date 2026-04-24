@@ -1,8 +1,8 @@
 /**
- * Shared agent types for SDK, Gemini, and OpenRouter agents
+ * Shared agent types for the worker response-processing pipeline
  *
  * Responsibility:
- * - Define common interfaces used across all agent implementations
+ * - Define common interfaces used by the current worker agents
  * - Provide type safety for response processing and broadcasting
  */
 
@@ -98,14 +98,13 @@ export interface ParsedResponse {
   summary: ParsedSummary | null;
 }
 
-// ============================================================================
-// Fallback Agent Interface
+// Session runtime interface
 // ============================================================================
 
 /**
- * Interface for fallback agent (used by Gemini/OpenRouter to fall back to Claude)
+ * Interface for the worker session runtime implementation
  */
-export interface FallbackAgent {
+export interface SessionAgent {
   startSession(session: ActiveSession, worker?: WorkerRef): Promise<void>;
 }
 
@@ -122,7 +121,7 @@ export interface BaseAgentConfig {
 }
 
 /**
- * Error codes that should trigger fallback to Claude
+ * Error patterns treated as retryable session-runtime failures.
  */
 export const FALLBACK_ERROR_PATTERNS = [
   '429',           // Rate limit

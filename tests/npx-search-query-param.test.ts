@@ -18,7 +18,11 @@ describe('NPX search query param', () => {
   });
 
   it('uses query param instead of q param for worker search requests', () => {
-    expect(runtimeSource).toContain('/api/search?query=${encodeURIComponent(query)}');
+    expect(runtimeSource).toContain('buildWorkerUrl(`/api/search?query=${encodeURIComponent(query)}`)');
     expect(runtimeSource).not.toContain('/api/search?q=${encodeURIComponent(query)}');
+  });
+
+  it('does not hardcode the legacy 37777 worker port for search', () => {
+    expect(runtimeSource).not.toContain("'37777'");
   });
 });

@@ -130,7 +130,7 @@ describe('ResponseProcessor', () => {
       cumulativeOutputTokens: 50,
       earliestPendingTimestamp: Date.now() - 10000,
       conversationHistory: [],
-      currentProvider: 'claude',
+      currentRuntime: 'custom-api',
       processingMessageIds: [],  // CLAIM-CONFIRM pattern: track message IDs being processed
       consecutiveSummaryFailures: 0,
       ...overrides,

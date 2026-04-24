@@ -106,21 +106,42 @@ describe('Supervisor assertCanSpawn behavior', () => {
     const { getSupervisor } = require('../../src/supervisor/index.js');
     const supervisor = getSupervisor();
     const registry = supervisor.getRegistry();
+    const tempDir = makeTempDir();
+    tempDirs.push(tempDir);
+    const registryState = registry as unknown as {
+      registryPath: string;
+      initialized: boolean;
+      entries: Map<string, unknown>;
+      runtimeProcesses: Map<string, unknown>;
+    };
+    const originalRegistryPath = registryState.registryPath;
 
     const testId = `test-${Date.now()}`;
-    supervisor.registerProcess(testId, {
-      pid: process.pid,
-      type: 'test',
-      startedAt: new Date().toISOString()
-    });
+    registryState.registryPath = path.join(tempDir, 'supervisor.json');
+    registryState.initialized = false;
+    registryState.entries.clear();
+    registryState.runtimeProcesses.clear();
 
-    const found = registry.getAll().find((r: { id: string }) => r.id === testId);
-    expect(found).toBeDefined();
-    expect(found?.type).toBe('test');
+    try {
+      supervisor.registerProcess(testId, {
+        pid: process.pid,
+        type: 'test',
+        startedAt: new Date().toISOString()
+      });
 
-    supervisor.unregisterProcess(testId);
-    const afterUnregister = registry.getAll().find((r: { id: string }) => r.id === testId);
-    expect(afterUnregister).toBeUndefined();
+      const found = registry.getAll().find((r: { id: string }) => r.id === testId);
+      expect(found).toBeDefined();
+      expect(found?.type).toBe('test');
+
+      supervisor.unregisterProcess(testId);
+      const afterUnregister = registry.getAll().find((r: { id: string }) => r.id === testId);
+      expect(afterUnregister).toBeUndefined();
+    } finally {
+      registryState.entries.clear();
+      registryState.runtimeProcesses.clear();
+      registryState.initialized = false;
+      registryState.registryPath = originalRegistryPath;
+    }
   });
 });
 

@@ -97,7 +97,7 @@ export function getProcessBySession(sessionDbId: number): TrackedProcess | undef
  * Get count of active processes in the registry
  */
 export function getActiveCount(): number {
-  return getSupervisor().getRegistry().getAll().filter(record => record.type === 'sdk').length;
+  return getTrackedProcesses().length;
 }
 
 // Waiters for pool slots - resolved when a process exits and frees a slot
@@ -125,7 +125,7 @@ export async function waitForSlot(
   evictIdleSession?: () => boolean
 ): Promise<void> {
   // Hard cap: refuse to spawn if too many processes exist regardless of pool accounting
-  const activeCount = getActiveCount();
+  const activeCount = getTrackedProcesses().length;
   if (activeCount >= TOTAL_PROCESS_HARD_CAP) {
     throw new Error(`Hard cap exceeded: ${activeCount} processes in registry (cap=${TOTAL_PROCESS_HARD_CAP}). Refusing to spawn more.`);
   }
@@ -154,7 +154,7 @@ export async function waitForSlot(
 
     const onSlot = () => {
       clearTimeout(timeout);
-      if (getActiveCount() < maxConcurrent) {
+      if (getTrackedProcesses().length < maxConcurrent) {
         resolve();
       } else {
         // Still full, re-queue
@@ -387,7 +387,7 @@ export async function reapOrphanedProcesses(activeSessionIds: Set<number>): Prom
  * The SDK's spawnClaudeCodeProcess option allows us to intercept subprocess
  * creation and capture the PID before the SDK hides it.
  *
- * NOTE: Session isolation is handled via the `cwd` option in SDKAgent.ts,
+ * NOTE: Session isolation is handled via the `cwd` option in the session agent,
  * NOT via CLAUDE_CONFIG_DIR (which breaks authentication).
  */
 export function createPidCapturingSpawn(sessionDbId: number) {

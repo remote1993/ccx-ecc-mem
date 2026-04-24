@@ -1,19 +1,21 @@
 ---
 title: "Architecture Overview"
-description: "System components and data flow in Claude-Mem"
+description: "Current system components, hook entry flow, and worker-backed runtime in Claude-Mem"
 ---
 
 # Architecture Overview
 
+Claude-Mem now centers on a unified hook entry and a local worker-backed runtime. Lifecycle events enter through `plugin/hooks/hooks.json`, flow through the `src/cli/` handler pipeline, and hand off to the worker HTTP API for storage, retrieval, and asynchronous extraction.
+
 ## System Components
 
-Claude-Mem operates as a Claude Code plugin with five core components:
+Claude-Mem operates as a memory plugin with six core components:
 
-1. **Plugin Hooks** - Capture lifecycle events (6 hook files)
-2. **Smart Install** - Cached dependency checker (pre-hook script, runs before context-hook)
-3. **Worker Service** - Process observations via Claude Agent SDK + HTTP API (10 search endpoints)
-4. **Database Layer** - Store sessions and observations (SQLite + FTS5 + ChromaDB)
-5. **mem-search Skill** - Skill-based search with progressive disclosure (v5.4.0+)
+1. **Hook Entry Layer** - Capture lifecycle events through `plugin/hooks/hooks.json` → `worker-service.cjs hook claude-code <event>` → `src/cli/`
+2. **Smart Install** - Cached dependency checker that runs before the main hook flow when needed
+3. **Worker Service** - Orchestrates sessions, storage, search, settings, SSE, and custom API extraction over HTTP
+4. **Database Layer** - Stores sessions and observations in SQLite with FTS5; Chroma remains optional for semantic retrieval
+5. **Retrieval Surfaces** - Worker-backed HTTP retrieval is the primary path, with legacy MCP compatibility surfaces only where still enabled
 6. **Viewer UI** - Web-based real-time memory stream visualization
 
 ## Technology Stack
@@ -21,220 +23,171 @@ Claude-Mem operates as a Claude Code plugin with five core components:
 | Layer                  | Technology                                |
 |------------------------|-------------------------------------------|
 | **Language**           | TypeScript (ES2022, ESNext modules)       |
-| **Runtime**            | Node.js 18+                               |
+| **Runtime**            | Node.js 18+ + Bun-managed worker          |
 | **Database**           | SQLite 3 with bun:sqlite driver           |
 | **Vector Store**       | ChromaDB (optional, for semantic search)  |
 | **HTTP Server**        | Express.js 4.18                           |
 | **Real-time**          | Server-Sent Events (SSE)                  |
 | **UI Framework**       | React + TypeScript                        |
-| **AI SDK**             | @anthropic-ai/claude-agent-sdk            |
+| **AI Runtime**         | Custom API / OpenAI-compatible endpoint   |
 | **Build Tool**         | esbuild (bundles TypeScript)              |
 | **Process Manager**    | Bun                                       |
 | **Testing**            | Node.js built-in test runner              |
 
-## Data Flow
+## Primary Runtime Flow
 
-### Memory Pipeline
-```
-Hook (stdin) → Database → Worker Service → SDK Processor → Database → Next Session Hook
-```
+### Hook-to-worker pipeline
 
-1. **Input**: Claude Code sends tool execution data via stdin to hooks
-2. **Storage**: Hooks write observations to SQLite database
-3. **Processing**: Worker service reads observations, processes via SDK
-4. **Output**: Processed summaries written back to database
-5. **Retrieval**: Next session's context hook reads summaries from database
-
-### Search Pipeline
-```
-User Query → MCP Tools Invoked → HTTP API → SessionSearch Service → FTS5 Database → Search Results → Claude
+```text
+plugin/hooks/hooks.json
+  → bun-runner.js / worker-service.cjs
+  → worker-service.cjs hook claude-code <event>
+  → src/cli/hook-command.ts
+  → src/cli/handlers/*
+  → local worker HTTP API
+  → session runtime / search / settings routes
+  → SQLite / optional Chroma
 ```
 
-1. **User Query**: User asks naturally: "What bugs did we fix?"
-2. **MCP Tools Invoked**: Claude recognizes intent and invokes MCP search tools
-3. **HTTP API**: MCP tools call HTTP endpoint (e.g., `/api/search/observations`)
-4. **SessionSearch**: Worker service queries FTS5 virtual tables
-5. **Format**: Results formatted and returned via MCP
-6. **Return**: Claude presents formatted results to user
+This is the current runtime shape. Older per-hook script names are historical references, not the primary model.
 
-Uses 3-layer progressive disclosure: search → timeline → get_observations
+### Memory pipeline
 
-## Session Lifecycle
-
+```text
+Hook stdin → src/cli handler → Worker HTTP API → Session manager / pending queue → Custom API extraction → SQLite / Chroma → Next session context
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ 0. Smart Install Pre-Hook Fires                                 │
-│    Checks dependencies (cached), only runs on version changes   │
-│    Not a lifecycle hook - runs before context-hook starts       │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. Session Starts → Context Hook Fires                          │
-│    Starts Bun worker if needed, injects context from previous   │
-│    sessions (configurable observation count)                    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. User Types Prompt → UserPromptSubmit Hook Fires              │
-│    Creates session in database, saves raw user prompt for FTS5  │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. Claude Uses Tools → PostToolUse Hook Fires (100+ times)      │
-│    Captures tool executions, sends to worker for AI compression │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. Worker Processes → Claude Agent SDK Analyzes                 │
-│    Extracts structured learnings via iterative AI processing    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 5. Claude Stops → Summary Hook Fires                            │
-│    Generates final summary with request, completions, learnings │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 6. Session Ends → Cleanup Hook Fires                            │
-│    Marks session complete (graceful, not DELETE), ready for     │
-│    next session context. Skips on /clear to preserve ongoing    │
-└─────────────────────────────────────────────────────────────────┘
+
+1. **Input**: Claude Code, Cursor, Gemini CLI, and other adapters send normalized hook data through the `src/cli/` pipeline.
+2. **Ingest**: Hook handlers forward prompts and observations to the worker over localhost HTTP.
+3. **Processing**: The worker queues pending messages and runs the custom API extraction path asynchronously.
+4. **Output**: Structured observations and summaries are written back to SQLite and synced to Chroma when enabled.
+5. **Retrieval**: Later hooks, search APIs, and the viewer read stored context from the worker.
+
+### Retrieval pipeline
+
+```text
+User query → Worker-backed retrieval surface → Worker HTTP API → Search / data routes → SQLite FTS5 / optional Chroma → Formatted results
 ```
+
+1. **User query**: A user asks for prior work, bugs, or decisions.
+2. **Retrieval surface**: The current worker-backed path receives the request; legacy MCP surfaces can proxy to the same API if enabled.
+3. **HTTP API**: Retrieval uses worker routes such as search, context, timeline, and batch observation reads.
+4. **Storage/query layer**: SQLite FTS5 handles text search; optional Chroma supports semantic retrieval.
+5. **Formatting**: The worker formats results for context injection, viewer rendering, or compatibility surfaces.
+
+Uses progressive disclosure: search/index first, then timeline/context, then full observation details.
+
+## Active Lifecycle Coverage
+
+The current runtime covers these lifecycle events:
+
+| Stage | Hook event | Main purpose |
+|-------|------------|--------------|
+| **0. Setup** | `Setup` | Ensure runtime dependencies are available |
+| **1. SessionStart** | `SessionStart` | Start/health-check worker and inject prior context |
+| **2. UserPromptSubmit** | `UserPromptSubmit` | Create/get session and save prompt |
+| **3. PostToolUse** | `PostToolUse` | Queue observations for asynchronous processing |
+| **4. PreToolUse (Read)** | `PreToolUse` | Inject file-context hints before `Read` |
+| **5. Stop** | `Stop` | Summarize the session |
+| **6. SessionEnd** | `SessionEnd` | Mark session complete |
+
+This is broader than the older simplified 5-stage description.
 
 ## Directory Structure
 
-```
+```text
 claude-mem/
 ├── src/
-│   ├── hooks/                  # Hook implementations (6 hooks)
-│   │   ├── context-hook.ts     # SessionStart
-│   │   ├── user-message-hook.ts # UserMessage (for debugging)
-│   │   ├── new-hook.ts         # UserPromptSubmit
-│   │   ├── save-hook.ts        # PostToolUse
-│   │   ├── summary-hook.ts     # Stop
-│   │   ├── cleanup-hook.ts     # SessionEnd
-│   │   └── hook-response.ts    # Hook response utilities
+│   ├── cli/                    # Current hook entry, adapter, and handler pipeline
+│   │   ├── adapters/           # Claude Code / Cursor / Gemini CLI / Windsurf adapters
+│   │   ├── handlers/           # Lifecycle handlers and file-context logic
+│   │   └── hook-command.ts     # Hook execution entrypoint
 │   │
-│   ├── sdk/                    # Claude Agent SDK integration
-│   │   ├── prompts.ts          # XML prompt builders
-│   │   ├── parser.ts           # XML response parser
-│   │   └── worker.ts           # Main SDK agent loop
+│   ├── hooks/                  # Lightweight shared hook response helpers
+│   │   └── hook-response.ts
 │   │
 │   ├── services/
-│   │   ├── worker-service.ts   # Express HTTP + SSE service
+│   │   ├── worker-service.ts   # Worker orchestrator entrypoint
+│   │   ├── worker/             # Session, search, SSE, custom API, HTTP routes
+│   │   ├── server/             # Express server wrapper and middleware
 │   │   └── sqlite/             # Database layer
-│   │       ├── SessionStore.ts # CRUD operations
-│   │       ├── SessionSearch.ts # FTS5 search service
-│   │       ├── migrations.ts
-│   │       └── types.ts
 │   │
 │   ├── ui/                     # Viewer UI
 │   │   └── viewer/             # React + TypeScript web interface
-│   │       ├── components/     # UI components
-│   │       ├── hooks/          # React hooks
-│   │       ├── utils/          # Utilities
-│   │       └── assets/         # Fonts, logos
 │   │
-│   ├── shared/                 # Shared utilities
-│   │   ├── config.ts
-│   │   ├── paths.ts
-│   │   └── storage.ts
-│   │
-│   └── utils/
-│       ├── logger.ts
-│       ├── platform.ts
-│       └── port-allocator.ts
+│   ├── shared/                 # Shared configuration and utilities
+│   └── utils/                  # Logging and low-level helpers
 │
 ├── scripts/                    # Build and utility scripts
 │   └── smart-install.js        # Cached dependency checker (pre-hook)
 │
 ├── plugin/                     # Plugin distribution
-│   ├── .claude-plugin/
-│   │   └── plugin.json
 │   ├── hooks/
 │   │   └── hooks.json
-│   ├── scripts/                # Built executables
-│   │   ├── context-hook.js
-│   │   ├── user-message-hook.js
-│   │   ├── new-hook.js
-│   │   ├── save-hook.js
-│   │   ├── summary-hook.js
-│   │   ├── cleanup-hook.js
-│   │   └── worker-service.cjs  # Background worker + HTTP API
-│   │
-│   ├── skills/                 # Agent skills (v5.4.0+)
-│   │   ├── mem-search/         # Search skill with progressive disclosure (v5.5.0)
-│   │   │   ├── SKILL.md        # Skill frontmatter (~250 tokens)
-│   │   │   ├── operations/     # 12 detailed operation docs
-│   │   │   └── principles/     # 2 principle guides
-│   │   ├── troubleshoot/       # Troubleshooting skill
-│   │   │   ├── SKILL.md
-│   │   │   └── operations/     # 6 operation docs
-│   │   └── version-bump/       # Version management skill (deprecated)
-│   │
+│   ├── scripts/                # Built hook/worker executables
+│   ├── skills/                 # Skills and compatibility surfaces
 │   └── ui/                     # Built viewer UI
-│       └── viewer.html         # Self-contained bundle
 │
 ├── tests/                      # Test suite
 ├── docs/                       # Documentation
-└── ecosystem.config.cjs        # Process configuration (deprecated)
+└── ecosystem.config.cjs        # Deprecated PM2-era artifact
 ```
 
 ## Component Details
 
-### 1. Plugin Hooks (6 Hooks)
-- **context-hook.js** - SessionStart: Starts Bun worker, injects context
-- **user-message-hook.js** - UserMessage: Debugging hook
-- **new-hook.js** - UserPromptSubmit: Creates session, saves prompt
-- **save-hook.js** - PostToolUse: Captures tool executions
-- **summary-hook.js** - Stop: Generates session summary
-- **cleanup-hook.js** - SessionEnd: Marks session complete
+### 1. Hook Entry Layer
+- Built around `src/cli/hook-command.ts`, platform adapters, and lifecycle handlers
+- Receives lifecycle events through the unified hook entry in `plugin/hooks/hooks.json`
+- Normalizes inputs from Claude Code, Cursor, Gemini CLI, Windsurf, and raw integrations
+- Hands off quickly to the worker HTTP API instead of doing heavy processing inline
 
-**Note**: smart-install.js is a pre-hook dependency checker (not a lifecycle hook). It's called before context-hook via command chaining in hooks.json and only runs when dependencies need updating.
+**Note**: `src/hooks/` now contains only lightweight shared hook response helpers, not the main lifecycle implementations.
 
-See [Plugin Hooks](/architecture/hooks) for detailed hook documentation.
+See [Hook Lifecycle](/architecture/hooks) for current hook-entry details.
 
 ### 2. Worker Service
-Express.js HTTP server on port 37777 (configurable) with:
-- 10 search HTTP API endpoints (v5.4.0+)
-- 8 viewer UI HTTP/SSE endpoints
-- Async observation processing via Claude Agent SDK
-- Real-time updates via Server-Sent Events
-- Auto-managed by Bun
+The Bun-managed worker exposes the main localhost HTTP API and owns:
+- session creation, observation intake, and summarization
+- search, timeline, data, settings, and viewer routes
+- readiness/health state and background initialization
+- async custom API extraction and persistence
+- SSE broadcasting for the viewer
 
-See [Worker Service](/architecture/worker-service) for HTTP API and endpoints.
+See [Worker Service](/architecture/worker-service) for route structure and initialization flow.
 
 ### 3. Database Layer
-SQLite3 with bun:sqlite driver featuring:
+SQLite with bun:sqlite driver provides:
 - FTS5 virtual tables for full-text search
-- SessionStore for CRUD operations
-- SessionSearch for FTS5 queries
-- Location: `~/.claude-mem/claude-mem.db`
+- session, prompt, observation, and summary persistence
+- the primary durable store for context injection and retrieval
+- optional Chroma synchronization for semantic retrieval
 
-See [Database Architecture](/architecture/database) for schema and FTS5 search.
+See [Database Architecture](/architecture/database) for schema and search details.
 
-### 4. mem-search Skill (v5.4.0+)
-Skill-based search with progressive disclosure providing 10 search operations:
-- Search observations, sessions, prompts (full-text FTS5)
-- Filter by type, concept, file
-- Get recent context, timeline, timeline by query
-- API help documentation
+### 4. Search & Retrieval
+Worker-backed retrieval provides:
+- context injection for new sessions
+- full-text search over prompts, observations, and summaries
+- timeline-style inspection through HTTP endpoints
+- optional semantic retrieval through Chroma
+- compatibility MCP surfaces only as an add-on path where still enabled
 
-**Token Savings**: ~2,250 tokens per session vs MCP approach
-- Skill frontmatter: ~250 tokens (loaded at session start)
-- Full instructions: ~2,500 tokens (loaded on-demand when invoked)
-- HTTP API endpoints instead of MCP tools
-
-**Skill Enhancement (v5.5.0)**: Renamed from "search" to "mem-search" for better scope differentiation. Effectiveness increased from 67% to 100% with enhanced triggers and comprehensive documentation.
-
-See [Search Architecture](/architecture/search-architecture) for technical details and examples.
+See [Search Architecture](/architecture/search-architecture) for current retrieval flow and historical compatibility context.
 
 ### 5. Viewer UI
 React + TypeScript web interface at http://localhost:37777 featuring:
-- Real-time memory stream via Server-Sent Events
-- Infinite scroll pagination with automatic deduplication
-- Project filtering and settings persistence
-- GPU-accelerated animations
-- Self-contained HTML bundle (viewer.html)
+- real-time memory stream via Server-Sent Events
+- infinite scroll pagination with automatic deduplication
+- project filtering and settings persistence
+- self-contained HTML bundle (`viewer.html`)
 
-Built with esbuild into a single file deployment.
+Built with esbuild into a single-file deployment surface.
+
+## Historical Boundary
+
+If you encounter references to `context-hook.js`, `new-hook.js`, `save-hook.js`, or a simplified 5-stage model, treat them as historical documentation rather than the primary runtime contract.
+
+For the current implementation, continue with:
+- [Hook Lifecycle](/architecture/hooks)
+- [Worker Service](/architecture/worker-service)
+- [Configuration](/configuration)

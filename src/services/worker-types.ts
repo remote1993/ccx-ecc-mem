@@ -10,8 +10,7 @@ import type { RestartGuard } from './worker/RestartGuard.js';
 // ============================================================================
 
 /**
- * Provider-agnostic conversation message for shared history
- * Used to maintain context across Claude↔Gemini provider switches
+ * Shared conversation message for accumulated history
  */
 export interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -33,8 +32,8 @@ export interface ActiveSession {
   cumulativeInputTokens: number;   // Track input tokens for discovery cost
   cumulativeOutputTokens: number;  // Track output tokens for discovery cost
   earliestPendingTimestamp: number | null;  // Original timestamp of earliest pending message (for accurate observation timestamps)
-  conversationHistory: ConversationMessage[];  // Shared conversation history for provider switching
-  currentProvider: 'claude' | 'gemini' | 'openrouter' | null;  // Track which provider is currently running
+  conversationHistory: ConversationMessage[];  // Shared conversation history
+  currentRuntime: 'custom-api' | null;  // Track whether the custom API session runtime is currently running
   consecutiveRestarts: number;  // DEPRECATED: use restartGuard. Kept for logging compat.
   restartGuard?: RestartGuard;
   forceInit?: boolean;  // Force fresh SDK session (skip resume)

@@ -156,7 +156,7 @@ export const summarizeHandler: EventHandler = {
       await workerHttpRequest('/api/sessions/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentSessionId: sessionId }),
+        body: JSON.stringify({ contentSessionId: sessionId, platformSource }),
         timeoutMs: 10_000
       });
       logger.info('HOOK', 'Session completed in Stop hook', { contentSessionId: sessionId });

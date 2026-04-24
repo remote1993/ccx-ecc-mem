@@ -462,7 +462,16 @@ export async function updateFolderClaudeMdFiles(
       continue;
     }
 
-    const result = await response.json() as { content?: Array<{ text?: string }> };
+    let result: { content?: Array<{ text?: string }> };
+    try {
+      result = await response.json() as { content?: Array<{ text?: string }> };
+    } catch (error: unknown) {
+      logger.error('FOLDER_INDEX', 'Failed to parse timeline response', {
+        folderPath,
+        errorMessage: error instanceof Error ? error.message : String(error)
+      });
+      continue;
+    }
     if (!result.content?.[0]?.text) {
       logger.debug('FOLDER_INDEX', 'No content for folder', { folderPath });
       continue;

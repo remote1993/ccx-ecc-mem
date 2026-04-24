@@ -2,8 +2,8 @@
  * Uninstall command for `npx claude-mem uninstall`.
  *
  * Removes the plugin from the marketplace directory, cache, plugin
- * registrations, and Claude settings. Optionally cleans up IDE-specific
- * configurations.
+ * registrations, and Claude settings. Also cleans up Codex transcript
+ * integration when present.
  *
  * Pure Node.js — no Bun APIs used.
  */
@@ -173,28 +173,14 @@ export async function runUninstallCommand(): Promise<void> {
     },
   ]);
 
-  // Remove IDE-specific hooks and config (best-effort, each is independent)
   const ideCleanups: Array<{ label: string; fn: () => Promise<number> | number }> = [
-    { label: 'Gemini CLI hooks', fn: async () => {
-      const { uninstallGeminiCliHooks } = await import('../../services/integrations/GeminiCliHooksInstaller.js');
-      return uninstallGeminiCliHooks();
-    }},
-    { label: 'Windsurf hooks', fn: async () => {
-      const { uninstallWindsurfHooks } = await import('../../services/integrations/WindsurfHooksInstaller.js');
-      return uninstallWindsurfHooks();
-    }},
-    { label: 'OpenCode plugin', fn: async () => {
-      const { uninstallOpenCodePlugin } = await import('../../services/integrations/OpenCodeInstaller.js');
-      return uninstallOpenCodePlugin();
-    }},
-    { label: 'OpenClaw plugin', fn: async () => {
-      const { uninstallOpenClawPlugin } = await import('../../services/integrations/OpenClawInstaller.js');
-      return uninstallOpenClawPlugin();
-    }},
-    { label: 'Codex CLI', fn: async () => {
-      const { uninstallCodexCli } = await import('../../services/integrations/CodexCliInstaller.js');
-      return uninstallCodexCli();
-    }},
+    {
+      label: 'Codex CLI transcript watch',
+      fn: async () => {
+        const { uninstallCodexCli } = await import('../../services/integrations/CodexCliInstaller.js');
+        return uninstallCodexCli();
+      },
+    },
   ];
 
   for (const { label, fn } of ideCleanups) {
