@@ -2,8 +2,8 @@
   "mcpServers": {
     "mcp-search": {
       "type": "stdio",
-      "command": "bun",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.cjs"]
+      "command": "sh",
+      "args": ["-c", "ROOT=\"${CLAUDE_PLUGIN_ROOT:-}\"; case \"$ROOT\" in ''|*'$'*) ROOT=\"\";; esac; for CANDIDATE in \"$ROOT\" \"$(dirname \"$(dirname \"$0\")\")\" \"$HOME/.claude/plugins/marketplaces/thedotmack/plugin\"; do [ -n \"$CANDIDATE\" ] && [ -f \"$CANDIDATE/scripts/mcp-server.cjs\" ] && exec bun \"$CANDIDATE/scripts/mcp-server.cjs\"; done; echo 'claude-mem mcp-server.cjs not found' >&2; exit 1", "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.cjs"]
     }
   }
 }
