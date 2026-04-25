@@ -67,6 +67,10 @@ export interface ProjectCatalog {
   projectsBySource: Record<string, string[]>;
 }
 
+export interface ViewerIntegrationsResponse {
+  integrations: string[];
+}
+
 export interface Settings {
   CLAUDE_MEM_MODEL: string;
   CLAUDE_MEM_MODE?: string;

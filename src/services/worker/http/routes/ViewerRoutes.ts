@@ -8,12 +8,14 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { readFileSync, existsSync } from 'fs';
+import { homedir } from 'os';
 import { logger } from '../../../../utils/logger.js';
 import { getPackageRoot } from '../../../../shared/paths.js';
 import { SSEBroadcaster } from '../../SSEBroadcaster.js';
 import { DatabaseManager } from '../../DatabaseManager.js';
 import { SessionManager } from '../../SessionManager.js';
 import { BaseRouteHandler } from '../BaseRouteHandler.js';
+import { getDetectedIDEs } from '../../../../npx-cli/commands/ide-detection.js';
 
 export class ViewerRoutes extends BaseRouteHandler {
   constructor(
@@ -32,6 +34,7 @@ export class ViewerRoutes extends BaseRouteHandler {
     app.get('/health', this.handleHealth.bind(this));
     app.get('/', this.handleViewerUI.bind(this));
     app.get('/stream', this.handleSSEStream.bind(this));
+    app.get('/api/viewer/integrations', this.handleViewerIntegrations.bind(this));
   }
 
   /**
@@ -70,6 +73,37 @@ export class ViewerRoutes extends BaseRouteHandler {
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
   });
+
+  private handleViewerIntegrations = this.wrapHandler((req: Request, res: Response): void => {
+    const integrations = this.getViewerIntegrations();
+    res.json({ integrations });
+  });
+
+  private getViewerIntegrations(): string[] {
+    const detectedIds = new Set(getDetectedIDEs().map((ide) => ide.id));
+    const integrations = ['claude'];
+
+    if (this.isCodexInstalled()) integrations.push('codex');
+    if (detectedIds.has('opencode')) integrations.push('opencode');
+    if (detectedIds.has('gemini-cli')) integrations.push('gemini');
+    if (detectedIds.has('windsurf')) integrations.push('windsurf');
+    if (detectedIds.has('cursor')) integrations.push('cursor');
+
+    return integrations;
+  }
+
+  private isCodexInstalled(): boolean {
+    const transcriptConfigPath = path.join(homedir(), '.claude-mem', 'transcript-watch.json');
+    if (!existsSync(transcriptConfigPath)) return false;
+
+    try {
+      const raw = readFileSync(transcriptConfigPath, 'utf-8');
+      const parsed = JSON.parse(raw) as { watches?: Array<{ name?: string }> };
+      return Array.isArray(parsed.watches) && parsed.watches.some((watch) => watch.name === 'codex');
+    } catch {
+      return false;
+    }
+  }
 
   /**
    * SSE stream endpoint

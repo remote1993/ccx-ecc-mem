@@ -8,7 +8,7 @@ import type { ViewerLabels } from '../i18n';
 interface HeaderProps {
   isConnected: boolean;
   projects: string[];
-  sources: string[];
+  integrations: string[];
   currentFilter: string;
   currentSource: string;
   onFilterChange: (filter: string) => void;
@@ -28,15 +28,15 @@ function formatSourceLabel(source: string, labels: ViewerLabels): string {
   return source.charAt(0).toUpperCase() + source.slice(1);
 }
 
-function buildSourceTabs(sources: string[]): string[] {
-  const merged = ['all', 'claude', 'codex', ...sources];
+function buildSourceTabs(integrations: string[]): string[] {
+  const merged = ['all', ...integrations];
   return Array.from(new Set(merged.filter(Boolean)));
 }
 
 export function Header({
   isConnected,
   projects,
-  sources,
+  integrations,
   currentFilter,
   currentSource,
   onFilterChange,
@@ -49,7 +49,7 @@ export function Header({
   labels
 }: HeaderProps) {
   useSpinningFavicon(isProcessing);
-  const availableSources = buildSourceTabs(sources);
+  const availableSources = buildSourceTabs(integrations);
 
   return (
     <div className="header">

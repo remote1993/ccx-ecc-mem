@@ -8,6 +8,7 @@ import { useSettings } from './hooks/useSettings';
 import { useStats } from './hooks/useStats';
 import { usePagination } from './hooks/usePagination';
 import { useTheme } from './hooks/useTheme';
+import { useViewerIntegrations } from './hooks/useViewerIntegrations';
 import { Observation, Summary, UserPrompt } from './types';
 import { getViewerLabels } from './i18n';
 import { mergeAndDeduplicateByProject } from './utils/data';
@@ -22,6 +23,7 @@ export function App() {
   const [paginatedPrompts, setPaginatedPrompts] = useState<UserPrompt[]>([]);
 
   const { observations, summaries, prompts, projects, sources, projectsBySource, isProcessing, queueDepth, isConnected } = useSSE();
+  const { integrations } = useViewerIntegrations();
   const { settings, saveSettings, isSaving, saveStatus } = useSettings();
   const { stats, refreshStats } = useStats();
   const { preference, resolvedTheme, setThemePreference } = useTheme();
@@ -47,6 +49,12 @@ export function App() {
       setCurrentFilter('');
     }
   }, [availableProjects, currentFilter]);
+
+  useEffect(() => {
+    if (currentSource !== 'all' && !integrations.includes(currentSource)) {
+      setCurrentSource('all');
+    }
+  }, [currentSource, integrations]);
 
   // Merge SSE live data with paginated data, filtering by project when active
   const allObservations = useMemo(() => {
@@ -114,7 +122,7 @@ export function App() {
       <Header
         isConnected={isConnected}
         projects={availableProjects}
-        sources={sources}
+        integrations={integrations}
         currentFilter={currentFilter}
         currentSource={currentSource}
         onFilterChange={setCurrentFilter}
