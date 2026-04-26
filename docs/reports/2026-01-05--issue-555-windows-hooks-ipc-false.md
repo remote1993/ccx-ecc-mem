@@ -218,12 +218,12 @@ if (IS_WINDOWS) {
 
 2. **Check plugin installation:**
    ```powershell
-   dir $env:USERPROFILE\.claude\plugins\marketplaces\thedotmack\plugin\hooks
+   dir $env:USERPROFILE\.claude\plugins\marketplaces\remote1993\ccx-mem\plugin\hooks
    ```
 
 3. **Test environment variable:**
    ```powershell
-   $env:CLAUDE_PLUGIN_ROOT = "$env:USERPROFILE\.claude\plugins\marketplaces\thedotmack\plugin"
+   $env:CLAUDE_PLUGIN_ROOT = "$env:USERPROFILE\.claude\plugins\marketplaces\remote1993\ccx-mem\plugin"
    node "$env:CLAUDE_PLUGIN_ROOT\scripts\smart-install.js"
    ```
 

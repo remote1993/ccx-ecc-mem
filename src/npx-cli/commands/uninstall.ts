@@ -1,5 +1,5 @@
 /**
- * Uninstall command for `npx claude-mem uninstall`.
+ * Uninstall command for `npx ccx-mem uninstall`.
  *
  * Removes the plugin from the marketplace directory, cache, plugin
  * registrations, and Claude settings. Also cleans up Codex transcript
@@ -36,7 +36,7 @@ function removeMarketplaceDirectory(): boolean {
 }
 
 function removeCacheDirectory(): boolean {
-  const cacheDirectory = join(pluginsDirectory(), 'cache', 'thedotmack', 'claude-mem');
+  const cacheDirectory = join(pluginsDirectory(), 'cache', 'remote1993', 'ccx-mem');
   if (existsSync(cacheDirectory)) {
     rmSync(cacheDirectory, { recursive: true, force: true });
     return true;
@@ -46,24 +46,24 @@ function removeCacheDirectory(): boolean {
 
 function removeFromKnownMarketplaces(): void {
   const knownMarketplaces = readJsonSafe<Record<string, any>>(knownMarketplacesPath(), {});
-  if (knownMarketplaces['thedotmack']) {
-    delete knownMarketplaces['thedotmack'];
+  if (knownMarketplaces['remote1993']) {
+    delete knownMarketplaces['remote1993'];
     writeJsonFileAtomic(knownMarketplacesPath(), knownMarketplaces);
   }
 }
 
 function removeFromInstalledPlugins(): void {
   const installedPlugins = readJsonSafe<Record<string, any>>(installedPluginsPath(), {});
-  if (installedPlugins.plugins?.['claude-mem@thedotmack']) {
-    delete installedPlugins.plugins['claude-mem@thedotmack'];
+  if (installedPlugins.plugins?.['ccx-mem@remote1993']) {
+    delete installedPlugins.plugins['ccx-mem@remote1993'];
     writeJsonFileAtomic(installedPluginsPath(), installedPlugins);
   }
 }
 
 function removeFromClaudeSettings(): void {
   const settings = readJsonSafe<Record<string, any>>(claudeSettingsPath(), {});
-  if (settings.enabledPlugins?.['claude-mem@thedotmack'] !== undefined) {
-    delete settings.enabledPlugins['claude-mem@thedotmack'];
+  if (settings.enabledPlugins?.['ccx-mem@remote1993'] !== undefined) {
+    delete settings.enabledPlugins['ccx-mem@remote1993'];
     writeJsonFileAtomic(claudeSettingsPath(), settings);
   }
 }

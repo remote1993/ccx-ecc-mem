@@ -3,11 +3,11 @@
 ---
 <h1 align="center">
   <br>
-  <a href="https://github.com/thedotmack/claude-mem">
+  <a href="https://github.com/remote1993/ccx-mem">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/claude-mem-logo-for-dark-mode.webp">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/claude-mem-logo-for-light-mode.webp">
-      <img src="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/claude-mem-logo-for-light-mode.webp" alt="Claude-Mem" width="400">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-dark-mode.webp">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-light-mode.webp">
+      <img src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-light-mode.webp" alt="Claude-Mem" width="400">
     </picture>
   </a>
   <br>
@@ -58,7 +58,7 @@
   <a href="package.json">
     <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node">
   </a>
-  <a href="https://github.com/thedotmack/awesome-claude-code">
+  <a href="https://github.com/remote1993/awesome-claude-code">
     <img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Claude Code">
   </a>
 </p>
@@ -66,9 +66,9 @@
 <p align="center">
   <a href="https://trendshift.io/repositories/15496" target="_blank">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/trendshift-badge-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/trendshift-badge.svg">
-      <img src="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/trendshift-badge.svg" alt="thedotmack/claude-mem | Trendshift" width="250" height="55"/>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/trendshift-badge-dark.svg">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/trendshift-badge.svg">
+      <img src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/trendshift-badge.svg" alt="remote1993/ccx-mem | Trendshift" width="250" height="55"/>
     </picture>
   </a>
 </p>
@@ -76,9 +76,9 @@
 <br>
 
 <p align="center">
-  <a href="https://github.com/thedotmack/claude-mem">
+  <a href="https://github.com/remote1993/ccx-mem">
     <picture>
-      <img src="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/cm-preview.gif" alt="Claude-Mem Preview" width="800">
+      <img src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/cm-preview.gif" alt="Claude-Mem Preview" width="800">
     </picture>
   </a>
 </p>
@@ -104,7 +104,7 @@
 在终端中启动新的 Claude Code 会话并输入以下命令:
 
 ```
-> /plugin marketplace add thedotmack/claude-mem
+> /plugin marketplace add remote1993/ccx-mem
 
 > /plugin install claude-mem
 ```
@@ -255,7 +255,7 @@ Claude-Mem 提供**测试版渠道**,包含实验性功能,如**无尽模式**(�
 使用自动生成器创建全面的 bug 报告:
 
 ```bash
-cd ~/.claude/plugins/marketplaces/thedotmack
+cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem
 npm run bug-report
 ```
 
@@ -277,7 +277,7 @@ npm run bug-report
 
 本项目采用 **GNU Affero General Public License v3.0** (AGPL-3.0) 许可。
 
-Copyright (C) 2025 Alex Newman (@thedotmack)。保留所有权利。
+Copyright (C) 2025 remote1993。保留所有权利。
 
 详见 [LICENSE](LICENSE) 文件了解完整详情。
 
@@ -295,9 +295,9 @@ Copyright (C) 2025 Alex Newman (@thedotmack)。保留所有权利。
 ## 支持
 
 - **文档**: [docs/](docs/)
-- **问题反馈**: [GitHub Issues](https://github.com/thedotmack/claude-mem/issues)
-- **仓库**: [github.com/thedotmack/claude-mem](https://github.com/thedotmack/claude-mem)
-- **作者**: Alex Newman ([@thedotmack](https://github.com/thedotmack))
+- **问题反馈**: [GitHub Issues](https://github.com/remote1993/ccx-mem/issues)
+- **仓库**: [github.com/remote1993/ccx-mem](https://github.com/remote1993/ccx-mem)
+- **作者**: remote1993 ([@remote1993](https://github.com/remote1993))
 
 ---
 

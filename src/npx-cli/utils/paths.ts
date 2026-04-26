@@ -24,9 +24,9 @@ export function claudeConfigDirectory(): string {
   return process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
 }
 
-/** Marketplace install directory for thedotmack. */
+/** Marketplace install directory for remote1993/ccx-mem. */
 export function marketplaceDirectory(): string {
-  return join(claudeConfigDirectory(), 'plugins', 'marketplaces', 'thedotmack');
+  return join(claudeConfigDirectory(), 'plugins', 'marketplaces', 'remote1993', 'ccx-mem');
 }
 
 /** Top-level plugins directory. */
@@ -51,7 +51,7 @@ export function claudeSettingsPath(): string {
 
 /** Plugin cache directory for a specific version. */
 export function pluginCacheDirectory(version: string): string {
-  return join(pluginsDirectory(), 'cache', 'thedotmack', 'claude-mem', version);
+  return join(pluginsDirectory(), 'cache', 'remote1993', 'ccx-mem', version);
 }
 
 /** claude-mem data directory (default `~/.claude-mem`). */

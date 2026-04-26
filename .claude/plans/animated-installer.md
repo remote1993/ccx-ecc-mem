@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build a beautiful, animated CLI installer for claude-mem using `@clack/prompts` (v1.0.1). Distributable via `npx claude-mem-installer` and `curl -fsSL https://install.cmem.ai | bash`. Replaces the need for users to manually clone, build, configure settings, and start the worker.
+Build a beautiful, animated CLI installer for claude-mem using `@clack/prompts` (v1.0.1). Distributable via `npx ccx-mem-installer` and `curl -fsSL https://install.cmem.ai | bash`. Replaces the need for users to manually clone, build, configure settings, and start the worker.
 
 **Worktree**: `feat/animated-installer` at `.claude/worktrees/animated-installer`
 
@@ -134,14 +134,14 @@ Build a beautiful, animated CLI installer for claude-mem using `@clack/prompts` 
 ### Tasks
 
 1. **`src/index.ts`** — Entry point:
-   - TTY guard: if `!process.stdin.isTTY`, print error directing user to `npx claude-mem-installer`, exit 1
+   - TTY guard: if `!process.stdin.isTTY`, print error directing user to `npx ccx-mem-installer`, exit 1
    - Import and call `runInstaller()` from steps
    - Top-level catch → `p.cancel()` + exit 1
 
 2. **`src/steps/welcome.ts`** — Welcome step:
    - `p.intro()` with styled title using picocolors: `" claude-mem installer "`
    - Display version info via `p.log.info()`
-   - Check if already installed (detect `~/.claude-mem/settings.json` and `~/.claude/plugins/marketplaces/thedotmack/`)
+   - Check if already installed (detect `~/.claude-mem/settings.json` and `~/.claude/plugins/marketplaces/remote1993/ccx-mem/`)
    - If upgrade detected, `p.confirm()`: "claude-mem is already installed. Upgrade?"
    - `p.select()` for install mode: Fresh Install vs Upgrade vs Configure Only
 
@@ -268,10 +268,10 @@ Build a beautiful, animated CLI installer for claude-mem using `@clack/prompts` 
 
 1. **`src/steps/install.ts`** — Installation runner:
    - Use `p.tasks()` for visual progress:
-     - **"Cloning claude-mem repository"**: `git clone --depth 1 https://github.com/thedotmack/claude-mem.git` to temp dir
+     - **"Cloning claude-mem repository"**: `git clone --depth 1 https://github.com/remote1993/ccx-mem.git` to temp dir
      - **"Installing dependencies"**: `npm install` in cloned repo
      - **"Building plugin"**: `npm run build` in cloned repo
-     - **"Registering plugin"**: Copy plugin files to `~/.claude/plugins/marketplaces/thedotmack/`
+     - **"Registering plugin"**: Copy plugin files to `~/.claude/plugins/marketplaces/remote1993/ccx-mem/`
        - Create marketplace.json, plugin.json structure
        - Register in `~/.claude/plugins/known_marketplaces.json`
        - Add to `~/.claude/plugins/installed_plugins.json`
@@ -294,7 +294,7 @@ Build a beautiful, animated CLI installer for claude-mem using `@clack/prompts` 
      - On failure: `spinner.error("Worker failed to start")`, show log path
 
 ### Verification
-- [ ] Plugin files exist at `~/.claude/plugins/marketplaces/thedotmack/`
+- [ ] Plugin files exist at `~/.claude/plugins/marketplaces/remote1993/ccx-mem/`
 - [ ] known_marketplaces.json updated
 - [ ] installed_plugins.json updated
 - [ ] settings.json has enabledPlugins entry

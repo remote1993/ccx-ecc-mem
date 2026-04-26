@@ -442,9 +442,9 @@ case 'adopt': {
 
 ### Verification
 
-- `npx claude-mem adopt --dry-run` in a repo with merged worktrees prints what WOULD be adopted without writing.
-- `npx claude-mem adopt` writes + prints counts.
-- `npx claude-mem adopt --branch feature/foo` forces adoption of that branch even if `git branch --merged` doesn't include it (squash case).
+- `npx ccx-mem adopt --dry-run` in a repo with merged worktrees prints what WOULD be adopted without writing.
+- `npx ccx-mem adopt` writes + prints counts.
+- `npx ccx-mem adopt --branch feature/foo` forces adoption of that branch even if `git branch --merged` doesn't include it (squash case).
 - `bun scripts/adopt-worktrees.ts --apply` equivalent to the CLI.
 - Help text / unknown command still reports the existing error (CLI pattern preserved).
 

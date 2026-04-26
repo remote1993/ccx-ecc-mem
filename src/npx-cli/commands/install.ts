@@ -1,5 +1,5 @@
 /**
- * Install command for `npx claude-mem install`.
+ * Install command for `npx ccx-mem install`.
  *
  * Replaces the git-clone + build workflow. The npm package already ships
  * a pre-built `plugin/` directory; this command copies it into the right
@@ -66,10 +66,10 @@ import { resolveBunBinaryPath } from '../utils/bun-resolver.js';
 function registerMarketplace(): void {
   const knownMarketplaces = readJsonSafe<Record<string, any>>(knownMarketplacesPath(), {});
 
-  knownMarketplaces['thedotmack'] = {
+  knownMarketplaces['remote1993'] = {
     source: {
       source: 'github',
-      repo: 'thedotmack/claude-mem',
+      repo: 'remote1993/ccx-mem',
     },
     installLocation: marketplaceDirectory(),
     lastUpdated: new Date().toISOString(),
@@ -89,7 +89,7 @@ function registerPlugin(version: string): void {
   const cachePath = pluginCacheDirectory(version);
   const now = new Date().toISOString();
 
-  installedPlugins.plugins['claude-mem@thedotmack'] = [
+  installedPlugins.plugins['ccx-mem@remote1993'] = [
     {
       scope: 'user',
       installPath: cachePath,
@@ -106,7 +106,7 @@ function enablePluginInClaudeSettings(): void {
   const settings = readJsonSafe<Record<string, any>>(claudeSettingsPath(), {});
 
   if (!settings.enabledPlugins) settings.enabledPlugins = {};
-  settings.enabledPlugins['claude-mem@thedotmack'] = true;
+  settings.enabledPlugins['ccx-mem@remote1993'] = true;
 
   writeJsonFileAtomic(claudeSettingsPath(), settings);
 }
@@ -584,7 +584,7 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
   }
 
   const workerPort = process.env.CLAUDE_MEM_WORKER_PORT || '37777';
-  const nextSteps = [`Start worker: ${pc.bold('npx claude-mem start')}`];
+  const nextSteps = [`Start worker: ${pc.bold('npx ccx-mem start')}`];
 
   if (selectedIDEs.includes('claude-code')) {
     nextSteps.push('Restart Claude Code and start a conversation.');

@@ -12,7 +12,7 @@ description: "Install Claude-Mem for Claude Code or Codex CLI"
 Install and configure Claude-Mem with a single command:
 
 ```bash
-npx claude-mem install
+npx ccx-mem install
 ```
 
 The interactive installer will:
@@ -27,23 +27,23 @@ The interactive installer will:
 Install Claude-Mem directly from the plugin marketplace inside Claude Code:
 
 ```bash
-/plugin marketplace add thedotmack/claude-mem
+/plugin marketplace add remote1993/ccx-mem
 /plugin install claude-mem
 ```
 
-The marketplace path covers Claude Code only. If you also want Codex CLI, run `npx claude-mem install --ide codex-cli` afterward.
+The marketplace path covers Claude Code only. If you also want Codex CLI, run `npx ccx-mem install --ide codex-cli` afterward.
 
 After installation, start the worker manually:
 
 ```bash
-npx claude-mem start
+npx ccx-mem start
 ```
 
 Then restart Claude Code or open Codex CLI in your project workspace.
 
 > **Important:** Claude-Mem is published on npm, but running `npm install -g claude-mem` installs the
 > **SDK/library only**. It does **not** register plugin hooks or start the worker service.
-> Always install via `npx claude-mem install` or the `/plugin` commands above.
+> Always install via `npx ccx-mem install` or the `/plugin` commands above.
 
 ## System Requirements
 
@@ -62,7 +62,7 @@ For development or testing, you can clone and build from source:
 
 ```bash
 # Clone the repository
-git clone https://github.com/thedotmack/claude-mem.git
+git clone https://github.com/remote1993/ccx-mem.git
 cd claude-mem
 
 # Install dependencies
@@ -83,7 +83,7 @@ npm run worker:status
 #### 1. Verify Runtime Command Wiring
 
 ```bash
-npx claude-mem status
+npx ccx-mem status
 ```
 
 If the worker is not running yet, the command should print `Worker is not running`.
@@ -138,7 +138,7 @@ Upgrades are automatic when updating via the plugin marketplace. Key changes in 
 
 **v5.4.0+**: Skill-based search replaces MCP tools, saving ~2,250 tokens per session.
 
-See [CHANGELOG](https://github.com/thedotmack/claude-mem/blob/main/CHANGELOG.md) for complete version history.
+See [CHANGELOG](https://github.com/remote1993/ccx-mem/blob/main/CHANGELOG.md) for complete version history.
 
 ## Next Steps
 

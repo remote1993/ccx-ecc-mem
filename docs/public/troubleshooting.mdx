@@ -275,14 +275,14 @@ bun --version
 
 **Checks**
 ```bash
-cat ~/.claude/plugins/marketplaces/thedotmack/.install-version
-cat ~/.claude/plugins/marketplaces/thedotmack/package.json | grep version
+cat ~/.claude/plugins/marketplaces/remote1993/ccx-mem/.install-version
+cat ~/.claude/plugins/marketplaces/remote1993/ccx-mem/package.json | grep version
 ```
 
 **Fixes**
 ```bash
-rm ~/.claude/plugins/marketplaces/thedotmack/.install-version
-cd ~/.claude/plugins/marketplaces/thedotmack && npm install
+rm ~/.claude/plugins/marketplaces/remote1993/ccx-mem/.install-version
+cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem && npm install
 ```
 
 ## Manual Debugging Commands
@@ -337,4 +337,4 @@ If the issue still reproduces after worker health, readiness, hook wiring, and d
 3. include the output of `/health` and `/api/readiness`
 4. include the affected project / session context if known
 
-Then file an issue at [GitHub Issues](https://github.com/thedotmack/claude-mem/issues).
+Then file an issue at [GitHub Issues](https://github.com/remote1993/ccx-mem/issues).

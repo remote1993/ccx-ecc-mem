@@ -448,8 +448,8 @@ export class CustomApiAgent {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': siteUrl || 'https://github.com/thedotmack/claude-mem',
-        'X-Title': appName || 'claude-mem',
+        'HTTP-Referer': siteUrl || 'https://github.com/remote1993/ccx-mem',
+        'X-Title': appName || 'ccx-mem',
         'Content-Type': 'application/json',
       },
       signal: AbortSignal.timeout(requestTimeoutMs),
@@ -535,7 +535,7 @@ export class CustomApiAgent {
     const apiKey = settings.CLAUDE_MEM_CUSTOM_API_KEY || '';
     const model = settings.CLAUDE_MEM_CUSTOM_MODEL || 'xiaomi/mimo-v2-flash:free';
     const siteUrl = '';
-    const appName = settings.CLAUDE_MEM_CUSTOM_APP_NAME || 'claude-mem';
+    const appName = settings.CLAUDE_MEM_CUSTOM_APP_NAME || 'ccx-mem';
     const baseUrl = settings.CLAUDE_MEM_CUSTOM_BASE_URL || DEFAULT_CUSTOM_API_URL;
 
     return { apiKey, model, siteUrl, appName, baseUrl };

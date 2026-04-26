@@ -1,11 +1,11 @@
 {
-  "name": "claude-mem",
-  "version": "12.3.8",
+  "name": "ccx-mem",
+  "version": "0.1.0",
   "description": "Persistent memory system for Claude Code and Codex CLI",
   "author": {
-    "name": "Alex Newman"
+    "name": "remote1993"
   },
-  "repository": "https://github.com/thedotmack/claude-mem",
+  "repository": "https://github.com/remote1993/ccx-mem",
   "license": "AGPL-3.0",
   "keywords": [
     "claude",
@@ -20,5 +20,5 @@
     "typescript",
     "nodejs"
   ],
-  "homepage": "https://github.com/thedotmack/claude-mem#readme"
+  "homepage": "https://github.com/remote1993/ccx-mem#readme"
 }

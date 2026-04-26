@@ -87,7 +87,7 @@ export class SettingsDefaultsManager {
     CLAUDE_MEM_CUSTOM_API_KEY: '',  // Empty by default, can be set via UI or env
     CLAUDE_MEM_CUSTOM_MODEL: 'xiaomi/mimo-v2-flash:free',
     CLAUDE_MEM_CUSTOM_BASE_URL: 'https://openrouter.ai/api/v1/chat/completions',
-    CLAUDE_MEM_CUSTOM_APP_NAME: 'claude-mem',
+    CLAUDE_MEM_CUSTOM_APP_NAME: 'ccx-mem',
     CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES: '20',
     CLAUDE_MEM_CUSTOM_MAX_TOKENS: '100000',
     CLAUDE_MEM_CUSTOM_TIMEOUT_MS: '120000',

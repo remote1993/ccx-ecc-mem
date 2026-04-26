@@ -49,6 +49,11 @@ describe('Plugin Distribution - Required Files', () => {
     'plugin/hooks/hooks.json',
     'plugin/.claude-plugin/plugin.json',
     'plugin/skills/mem-search/SKILL.md',
+    'dist/index.js',
+    'dist/index.d.ts',
+    'dist/sdk/index.js',
+    'dist/sdk/index.d.ts',
+    'dist/npx-cli/index.js',
   ];
 
   for (const filePath of requiredFiles) {
@@ -85,7 +90,7 @@ describe('Plugin Distribution - hooks.json Integrity', () => {
   it('should include CLAUDE_PLUGIN_ROOT fallback in all hook commands (#1215)', () => {
     const hooksPath = path.join(projectRoot, 'plugin/hooks/hooks.json');
     const parsed = JSON.parse(readFileSync(hooksPath, 'utf-8'));
-    const expectedFallbackPath = '$HOME/.claude/plugins/marketplaces/thedotmack/plugin';
+    const expectedFallbackPath = '$HOME/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin';
 
     for (const [eventName, matchers] of Object.entries(parsed.hooks)) {
       for (const matcher of matchers as any[]) {
@@ -101,8 +106,8 @@ describe('Plugin Distribution - hooks.json Integrity', () => {
   it('should try cache path before marketplaces fallback in all hook commands (#1533)', () => {
     const hooksPath = path.join(projectRoot, 'plugin/hooks/hooks.json');
     const parsed = JSON.parse(readFileSync(hooksPath, 'utf-8'));
-    const cachePath = '$HOME/.claude/plugins/cache/thedotmack/claude-mem';
-    const marketplacesPath = '$HOME/.claude/plugins/marketplaces/thedotmack/plugin';
+    const cachePath = '$HOME/.claude/plugins/cache/remote1993/ccx-mem';
+    const marketplacesPath = '$HOME/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin';
 
     for (const [eventName, matchers] of Object.entries(parsed.hooks)) {
       for (const matcher of matchers as any[]) {
@@ -119,11 +124,45 @@ describe('Plugin Distribution - hooks.json Integrity', () => {
 });
 
 describe('Plugin Distribution - package.json Files Field', () => {
-  it('should include "plugin" in root package.json files field', () => {
+  it('should include only the plugin distribution subpaths required by the npm package', () => {
     const packageJsonPath = path.join(projectRoot, 'package.json');
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
     expect(packageJson.files).toBeDefined();
-    expect(packageJson.files).toContain('plugin');
+    expect(packageJson.files).toContain('plugin/.claude-plugin');
+    expect(packageJson.files).toContain('plugin/hooks');
+    expect(packageJson.files).toContain('plugin/modes');
+    expect(packageJson.files).toContain('plugin/scripts/*.js');
+    expect(packageJson.files).toContain('plugin/scripts/*.cjs');
+    expect(packageJson.files).toContain('plugin/skills');
+    expect(packageJson.files).toContain('plugin/ui');
+    expect(packageJson.files).not.toContain('plugin');
+  });
+});
+
+describe('Plugin Distribution - package.json Entry Points', () => {
+  it('should point bin and non-wildcard exports at files produced by the build', () => {
+    const packageJsonPath = path.join(projectRoot, 'package.json');
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+    const entryPaths: string[] = [];
+
+    for (const entryPath of Object.values(packageJson.bin ?? {})) {
+      entryPaths.push(String(entryPath));
+    }
+
+    for (const [exportKey, exportValue] of Object.entries(packageJson.exports ?? {})) {
+      if (exportKey.includes('*')) continue;
+      if (typeof exportValue === 'string') {
+        entryPaths.push(exportValue);
+      } else if (exportValue && typeof exportValue === 'object') {
+        for (const entryPath of Object.values(exportValue as Record<string, string>)) {
+          entryPaths.push(String(entryPath));
+        }
+      }
+    }
+
+    for (const entryPath of entryPaths) {
+      expect(existsSync(path.join(projectRoot, entryPath.replace(/^\.\//, '')))).toBe(true);
+    }
   });
 });
 

@@ -20,15 +20,15 @@
 
 ## Solution
 
-`npx claude-mem` becomes a unified CLI: install, configure any IDE, manage the worker, search memory.
+`npx ccx-mem` becomes a unified CLI: install, configure any IDE, manage the worker, search memory.
 
 ```
-npx claude-mem                          # Interactive install + IDE selection
-npx claude-mem install                  # Same as above
-npx claude-mem install --ide windsurf   # Direct IDE setup
-npx claude-mem start / stop / status    # Worker management
-npx claude-mem search <query>           # Search memory from terminal
-npx claude-mem transcript watch         # Start transcript watcher
+npx ccx-mem                          # Interactive install + IDE selection
+npx ccx-mem install                  # Same as above
+npx ccx-mem install --ide windsurf   # Direct IDE setup
+npx ccx-mem start / stop / status    # Worker management
+npx ccx-mem search <query>           # Search memory from terminal
+npx ccx-mem transcript watch         # Start transcript watcher
 ```
 
 ## Platform Support
@@ -119,26 +119,26 @@ npx claude-mem transcript watch         # Start transcript watcher
 2. **Create `src/npx-cli/index.ts`** — a Node.js CLI router (NOT Bun) with command categories:
 
    **Install commands** (pure Node.js, no Bun required):
-   - `npx claude-mem` or `npx claude-mem install` → interactive install (IDE multi-select)
-   - `npx claude-mem install --ide <name>` → direct IDE setup (only for implemented IDEs; unimplemented ones error with "Support for <name> coming soon")
-   - `npx claude-mem update` → update to latest version
-   - `npx claude-mem uninstall` → remove plugin and IDE configs
-   - `npx claude-mem version` → print version
+   - `npx ccx-mem` or `npx ccx-mem install` → interactive install (IDE multi-select)
+   - `npx ccx-mem install --ide <name>` → direct IDE setup (only for implemented IDEs; unimplemented ones error with "Support for <name> coming soon")
+   - `npx ccx-mem update` → update to latest version
+   - `npx ccx-mem uninstall` → remove plugin and IDE configs
+   - `npx ccx-mem version` → print version
 
    **Runtime commands** (delegate to Bun via installed plugin):
-   - `npx claude-mem start` → spawns `bun worker-service.cjs start`
-   - `npx claude-mem stop` → spawns `bun worker-service.cjs stop`
-   - `npx claude-mem restart` → spawns `bun worker-service.cjs restart`
-   - `npx claude-mem status` → spawns `bun worker-service.cjs status`
-   - `npx claude-mem search <query>` → hits `GET http://localhost:37777/api/search?q=<query>`
-   - `npx claude-mem transcript watch` → starts transcript watcher
+   - `npx ccx-mem start` → spawns `bun worker-service.cjs start`
+   - `npx ccx-mem stop` → spawns `bun worker-service.cjs stop`
+   - `npx ccx-mem restart` → spawns `bun worker-service.cjs restart`
+   - `npx ccx-mem status` → spawns `bun worker-service.cjs status`
+   - `npx ccx-mem search <query>` → hits `GET http://localhost:37777/api/search?q=<query>`
+   - `npx ccx-mem transcript watch` → starts transcript watcher
 
-   **Runtime commands must check for installation first**: If plugin directory doesn't exist at `~/.claude/plugins/marketplaces/thedotmack/`, print "claude-mem is not installed. Run: npx claude-mem install" and exit.
+   **Runtime commands must check for installation first**: If plugin directory doesn't exist at `~/.claude/plugins/marketplaces/remote1993/ccx-mem/`, print "claude-mem is not installed. Run: npx ccx-mem install" and exit.
 
 3. **The install flow** (fully replaces git clone + build):
    - Detect the npm package's own location (`import.meta.url` or `__dirname`)
-   - Copy `plugin/` from the npm package to `~/.claude/plugins/marketplaces/thedotmack/`
-   - Copy `plugin/` to `~/.claude/plugins/cache/thedotmack/claude-mem/<version>/`
+   - Copy `plugin/` from the npm package to `~/.claude/plugins/marketplaces/remote1993/ccx-mem/`
+   - Copy `plugin/` to `~/.claude/plugins/cache/remote1993/ccx-mem/<version>/`
    - Register marketplace in `~/.claude/plugins/known_marketplaces.json`
    - Register plugin in `~/.claude/plugins/installed_plugins.json`
    - Enable in `~/.claude/settings.json`
@@ -178,13 +178,13 @@ npx claude-mem transcript watch         # Start transcript watcher
 
 ### Verification
 
-- `npx claude-mem install` copies plugin to correct directories on macOS, Linux, and Windows
+- `npx ccx-mem install` copies plugin to correct directories on macOS, Linux, and Windows
 - Auto-detection finds installed IDEs
-- `npx claude-mem start/stop/status` work after install
-- `npx claude-mem search "test"` returns results
-- `npx claude-mem start` before install prints helpful error message
-- `npx claude-mem update` and `npx claude-mem uninstall` work correctly
-- `npx claude-mem version` prints version
+- `npx ccx-mem start/stop/status` work after install
+- `npx ccx-mem search "test"` returns results
+- `npx ccx-mem start` before install prints helpful error message
+- `npx ccx-mem update` and `npx ccx-mem uninstall` work correctly
+- `npx ccx-mem version` prints version
 
 ### Anti-patterns
 
@@ -314,7 +314,7 @@ npx claude-mem transcript watch         # Start transcript watcher
 
 ### Verification
 
-- `npx claude-mem install --ide gemini-cli` merges hooks into `~/.gemini/settings.json`
+- `npx ccx-mem install --ide gemini-cli` merges hooks into `~/.gemini/settings.json`
 - Gemini CLI sessions are captured by the worker
 - `AfterTool` events produce observations with correct `tool_name`, `tool_input`, `tool_response`
 - `GEMINI.md` gets claude-mem context section
@@ -425,7 +425,7 @@ return {
 
 ### OpenCode Verification
 
-- `npx claude-mem install --ide opencode` registers the plugin (file or npm)
+- `npx ccx-mem install --ide opencode` registers the plugin (file or npm)
 - OpenCode loads the plugin on next session
 - `tool.execute.after` interceptor produces observations with `tool`, `args`, `output`
 - Bus events (`session.created`, `session.deleted`) handle session lifecycle
@@ -531,7 +531,7 @@ return {
 
 ### Windsurf Verification
 
-- `npx claude-mem install --ide windsurf` creates hooks config at `~/.codeium/windsurf/hooks.json`
+- `npx ccx-mem install --ide windsurf` creates hooks config at `~/.codeium/windsurf/hooks.json`
 - Windsurf sessions are captured by the worker via post-action hooks
 - `trajectory_id` is used as session identifier
 - Context is injected via `.windsurf/rules/claude-mem-context.md` (under 6K char limit)
@@ -567,7 +567,7 @@ Codex has both a `notify` hook (real-time) and transcript files (complete histor
 
 ### Verification
 
-- `npx claude-mem install --ide codex` creates transcript watch config
+- `npx ccx-mem install --ide codex` creates transcript watch config
 - Codex sessions appear in claude-mem database
 - `AGENTS.md` updated with context after sessions
 - Existing `config.toml` is preserved
@@ -591,7 +591,7 @@ Codex has both a `notify` hook (real-time) and transcript files (complete histor
 
 ### Verification
 
-- `npx claude-mem install --ide openclaw` registers the plugin
+- `npx ccx-mem install --ide openclaw` registers the plugin
 - OpenClaw gateway loads the plugin on restart
 - Observations are recorded from OpenClaw sessions
 - MEMORY.md syncs to agent workspaces
@@ -668,8 +668,8 @@ This is a **full replacement**, not a deprecation.
 
 ### What to implement
 
-1. Remove `claude-mem-installer` npm package (unpublish or mark deprecated with message pointing to `npx claude-mem`)
-2. Update `install/public/install.sh` → redirect to `npx claude-mem`
+1. Remove `claude-mem-installer` npm package (unpublish or mark deprecated with message pointing to `npx ccx-mem`)
+2. Update `install/public/install.sh` → redirect to `npx ccx-mem`
 3. Remove `installer/` directory from the repository (it's replaced by `src/npx-cli/`)
 4. Update docs site to reflect the new install command
 5. Update README.md install instructions
@@ -683,11 +683,11 @@ This is a **full replacement**, not a deprecation.
 1. `npm run build` succeeds, produces `dist/cli/index.js` and `openclaw/dist/index.js`
 2. `node dist/cli/index.js install` works clean (no prior install)
 3. Auto-detects installed IDEs correctly per platform
-4. `npx claude-mem start/stop/status/search` all work
-5. `npx claude-mem update` updates correctly
-6. `npx claude-mem uninstall` cleans up all IDE configs
-7. `npx claude-mem version` prints version
-8. `npx claude-mem start` before install shows helpful error
+4. `npx ccx-mem start/stop/status/search` all work
+5. `npx ccx-mem update` updates correctly
+6. `npx ccx-mem uninstall` cleans up all IDE configs
+7. `npx ccx-mem version` prints version
+8. `npx ccx-mem start` before install shows helpful error
 9. No Bun dependency at install time
 
 ### Per-integration verification

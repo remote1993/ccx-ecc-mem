@@ -8,7 +8,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
 
-const PLUGIN_SETTINGS_KEY = 'claude-mem@thedotmack';
+const PLUGIN_SETTINGS_KEY = 'ccx-mem@remote1993';
 
 /**
  * Check if claude-mem is disabled in Claude Code's settings (#781).

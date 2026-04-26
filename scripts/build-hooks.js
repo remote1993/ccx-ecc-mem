@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Build script for claude-mem hooks
+ * Build script for ccx-mem hooks
  * Bundles TypeScript hooks into individual standalone executables using esbuild
  */
 
@@ -39,8 +39,74 @@ const CONTEXT_GENERATOR = {
  * This post-build step removes those hardcoded assignments so the runtime
  * globals are used instead.
  *
- * See: https://github.com/thedotmack/claude-mem/issues/1410
+ * See: https://github.com/remote1993/ccx-mem/issues/1410
  */
+function writeSdkDeclarations() {
+  const declaration = `export interface ParsedObservation {
+  type: string;
+  title: string | null;
+  subtitle: string | null;
+  facts: string[];
+  narrative: string | null;
+  concepts: string[];
+  files_read: string[];
+  files_modified: string[];
+}
+
+export interface ParsedSummary {
+  request: string | null;
+  investigated: string | null;
+  learned: string | null;
+  completed: string | null;
+  next_steps: string | null;
+  notes: string | null;
+}
+
+export interface Observation {
+  id: number;
+  tool_name: string;
+  tool_input: string;
+  tool_output: string;
+  created_at_epoch: number;
+  cwd?: string;
+}
+
+export interface SDKSession {
+  id: number;
+  memory_session_id: string | null;
+  project: string;
+  user_prompt: string;
+  last_assistant_message?: string;
+}
+
+export interface ModeConfig {
+  prompts: Record<string, string>;
+  observation_types: Array<{ id: string; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
+export declare const SUMMARY_MODE_MARKER: string;
+export declare const MAX_CONSECUTIVE_SUMMARY_FAILURES: number;
+export declare function parseObservations(text: string, correlationId?: string): ParsedObservation[];
+export declare function parseSummary(text: string, sessionId?: number, coerceFromObservation?: boolean): ParsedSummary | null;
+export declare function buildInitPrompt(project: string, sessionId: string, userPrompt: string, mode: ModeConfig): string;
+export declare function buildObservationPrompt(obs: Observation): string;
+export declare function buildSummaryPrompt(session: SDKSession, mode: ModeConfig): string;
+export declare function buildContinuationPrompt(userPrompt: string, promptNumber: number, contentSessionId: string, mode: ModeConfig): string;
+`;
+
+  fs.writeFileSync('dist/index.d.ts', declaration);
+  fs.writeFileSync('dist/sdk/index.d.ts', declaration);
+}
+
+function stripTrailingWhitespace(filePath) {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const cleaned = content.replace(/[ \t]+$/gm, '');
+  if (cleaned !== content) {
+    fs.writeFileSync(filePath, cleaned);
+  }
+}
+
 function stripHardcodedDirname(filePath) {
   let content = fs.readFileSync(filePath, 'utf-8');
   const before = content.length;
@@ -70,7 +136,7 @@ function stripHardcodedDirname(filePath) {
 }
 
 async function buildHooks() {
-  console.log('🔨 Building claude-mem hooks and worker service...\n');
+  console.log('🔨 Building ccx-mem hooks and worker service...\n');
 
   try {
     // Read version from package.json
@@ -95,10 +161,10 @@ async function buildHooks() {
     // Note: bun:sqlite is a Bun built-in, no external dependencies needed for SQLite
     console.log('\n📦 Generating plugin package.json...');
     const pluginPackageJson = {
-      name: 'claude-mem-plugin',
+      name: 'ccx-mem-plugin',
       version: version,
       private: true,
-      description: 'Runtime dependencies for claude-mem bundled hooks',
+      description: 'Runtime dependencies for ccx-mem bundled hooks',
       type: 'module',
       dependencies: {
         'tree-sitter-cli': '^0.26.5',
@@ -183,6 +249,7 @@ async function buildHooks() {
 
     // Fix hardcoded __dirname/__filename in bundled output (#1410)
     stripHardcodedDirname(`${hooksDir}/${WORKER_SERVICE.name}.cjs`);
+    stripTrailingWhitespace(`${hooksDir}/${WORKER_SERVICE.name}.cjs`);
 
     // Make worker service executable
     fs.chmodSync(`${hooksDir}/${WORKER_SERVICE.name}.cjs`, 0o755);
@@ -238,6 +305,7 @@ async function buildHooks() {
 
     // Fix hardcoded __dirname/__filename in bundled output (#1410)
     stripHardcodedDirname(`${hooksDir}/${MCP_SERVER.name}.cjs`);
+    stripTrailingWhitespace(`${hooksDir}/${MCP_SERVER.name}.cjs`);
 
     // Make MCP server executable
     fs.chmodSync(`${hooksDir}/${MCP_SERVER.name}.cjs`, 0o755);
@@ -300,9 +368,38 @@ async function buildHooks() {
 
     // Fix hardcoded __dirname/__filename in bundled output (#1410)
     stripHardcodedDirname(`${hooksDir}/${CONTEXT_GENERATOR.name}.cjs`);
+    stripTrailingWhitespace(`${hooksDir}/${CONTEXT_GENERATOR.name}.cjs`);
 
     const contextGenStats = fs.statSync(`${hooksDir}/${CONTEXT_GENERATOR.name}.cjs`);
     console.log(`✓ context-generator built (${(contextGenStats.size / 1024).toFixed(2)} KB)`);
+
+    // Build public SDK/library exports
+    console.log(`\n🔧 Building SDK exports...`);
+    const sdkOutDir = 'dist/sdk';
+    if (!fs.existsSync('dist')) {
+      fs.mkdirSync('dist', { recursive: true });
+    }
+    if (!fs.existsSync(sdkOutDir)) {
+      fs.mkdirSync(sdkOutDir, { recursive: true });
+    }
+    await build({
+      entryPoints: ['src/sdk/index.ts'],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'esm',
+      outfile: 'dist/index.js',
+      minify: true,
+      logLevel: 'error',
+      external: ['bun:sqlite'],
+      define: {
+        '__DEFAULT_PACKAGE_VERSION__': `"${version}"`
+      },
+    });
+    fs.copyFileSync('dist/index.js', `${sdkOutDir}/index.js`);
+    writeSdkDeclarations();
+    const sdkStats = fs.statSync('dist/index.js');
+    console.log(`✓ SDK exports built (${(sdkStats.size / 1024).toFixed(2)} KB)`);
 
     // Build NPX CLI (pure Node.js — no Bun dependency)
     console.log(`\n🔧 Building NPX CLI...`);
@@ -338,6 +435,11 @@ async function buildHooks() {
     // Verify critical distribution files exist (skills are source files, not build outputs)
     console.log('\n📋 Verifying distribution files...');
     const requiredDistributionFiles = [
+      'dist/index.js',
+      'dist/index.d.ts',
+      'dist/sdk/index.js',
+      'dist/sdk/index.d.ts',
+      'dist/npx-cli/index.js',
       'plugin/skills/mem-search/SKILL.md',
       'plugin/skills/smart-explore/SKILL.md',
       'plugin/hooks/hooks.json',
@@ -355,6 +457,8 @@ async function buildHooks() {
     console.log(`   - Worker: worker-service.cjs`);
     console.log(`   - MCP Server: mcp-server.cjs`);
     console.log(`   - Context Generator: context-generator.cjs`);
+    console.log(`   Output: dist/`);
+    console.log(`   - SDK: index.js, index.d.ts`);
     console.log(`   Output: ${npxCliOutDir}/`);
     console.log(`   - NPX CLI: index.js`);
 

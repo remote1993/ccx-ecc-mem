@@ -228,7 +228,7 @@ How it works:
   - Context from past sessions is injected via AGENTS.md in the active Codex workspace
 
 Next steps:
-  1. Start claude-mem worker: npx claude-mem start
+  1. Start claude-mem worker: npx ccx-mem start
   2. Use Codex CLI as usual -- memory capture is automatic!
 `);
 }
@@ -276,7 +276,7 @@ export function uninstallCodexCli(): number {
   cleanupLegacyCodexAgentsMdContext();
 
   console.log('\nUninstallation complete!');
-  console.log('Restart claude-mem worker to apply changes.\n');
+  console.log('Restart ccx-mem worker to apply changes.\n');
 
   return 0;
 }
@@ -297,7 +297,7 @@ export function checkCodexCliStatus(): number {
   if (!existsSync(DEFAULT_CONFIG_PATH)) {
     console.log('Status: Not installed');
     console.log(`  No transcript watch config at ${DEFAULT_CONFIG_PATH}`);
-    console.log('\nRun: npx claude-mem install --ide codex-cli\n');
+    console.log('\nRun: npx ccx-mem install --ide codex-cli\n');
     return 0;
   }
 
@@ -324,7 +324,7 @@ export function checkCodexCliStatus(): number {
   if (!codexWatch) {
     console.log('Status: Not installed');
     console.log('  transcript-watch.json exists but no codex watch configured.');
-    console.log('\nRun: npx claude-mem install --ide codex-cli\n');
+    console.log('\nRun: npx ccx-mem install --ide codex-cli\n');
     return 0;
   }
 

@@ -38,7 +38,8 @@ const VERSION_MARKER_PATH = path.join(
   '.claude',
   'plugins',
   'marketplaces',
-  'thedotmack',
+  'remote1993',
+  'ccx-mem',
   'plugin',
   '.install-version'
 );

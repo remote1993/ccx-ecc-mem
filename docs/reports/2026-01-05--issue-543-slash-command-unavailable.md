@@ -148,7 +148,7 @@ Then restart terminal.
 
 ### Step 2: Manually Start Worker
 ```powershell
-cd ~/.claude/plugins/marketplaces/thedotmack
+cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem
 bun plugin/scripts/worker-service.cjs start
 ```
 

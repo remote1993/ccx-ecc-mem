@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smart Install Script for claude-mem
+ * Smart Install Script for ccx-mem
  *
  * Ensures Bun runtime and uv (Python package manager) are installed
  * (auto-installs if missing) and handles dependency installation when needed.
@@ -22,7 +22,7 @@ function isPluginDisabledInClaudeSettings() {
     const settingsPath = join(configDir, 'settings.json');
     if (!existsSync(settingsPath)) return false;
     const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
-    return settings?.enabledPlugins?.['claude-mem@thedotmack'] === false;
+    return settings?.enabledPlugins?.['ccx-mem@remote1993'] === false;
   } catch {
     return false;
   }
@@ -40,8 +40,8 @@ const IS_WINDOWS = process.platform === 'win32';
  * 1. CLAUDE_PLUGIN_ROOT env var (set by Claude Code for hooks — works for
  *    both cache-based and marketplace installs)
  * 2. Script location (dirname of this file, up one level from scripts/)
- * 3. XDG path (~/.config/claude/plugins/marketplaces/thedotmack)
- * 4. Legacy path (~/.claude/plugins/marketplaces/thedotmack)
+ * 3. XDG path (~/.config/claude/plugins/marketplaces/remote1993/ccx-mem)
+ * 4. Legacy path (~/.claude/plugins/marketplaces/remote1993/ccx-mem)
  */
 function resolveRoot() {
   // CLAUDE_PLUGIN_ROOT is the authoritative location set by Claude Code
@@ -60,7 +60,7 @@ function resolveRoot() {
   }
 
   // Probe XDG path, then legacy
-  const marketplaceRel = join('plugins', 'marketplaces', 'thedotmack');
+  const marketplaceRel = join('plugins', 'marketplaces', 'remote1993', 'ccx-mem');
   const xdg = join(homedir(), '.config', 'claude', marketplaceRel);
   if (existsSync(join(xdg, 'package.json'))) return xdg;
 
@@ -340,12 +340,12 @@ function installUv() {
 }
 
 /**
- * Add shell alias for claude-mem command
+ * Add shell alias for ccx-mem command
  */
 function installCLI() {
   const WORKER_CLI = join(ROOT, 'scripts', 'worker-service.cjs');
   const bunPath = getBunPath() || 'bun';
-  const aliasLine = `alias claude-mem='${bunPath} "${WORKER_CLI}"'`;
+  const aliasLine = `alias ccx-mem='${bunPath} "${WORKER_CLI}"'`;
   const markerPath = join(ROOT, '.cli-installed');
 
   // Skip if already installed
@@ -356,17 +356,17 @@ function installCLI() {
       // Windows: Add to PATH via PowerShell profile
       const profilePath = join(process.env.USERPROFILE || homedir(), 'Documents', 'PowerShell', 'Microsoft.PowerShell_profile.ps1');
       const profileDir = join(process.env.USERPROFILE || homedir(), 'Documents', 'PowerShell');
-      const functionDef = `function claude-mem { & "${bunPath}" "${WORKER_CLI}" $args }\n`;
+      const functionDef = `function ccx-mem { & "${bunPath}" "${WORKER_CLI}" $args }\n`;
 
       if (!existsSync(profileDir)) {
         execSync(`mkdir "${profileDir}"`, { stdio: 'ignore', shell: true });
       }
 
       const existingContent = existsSync(profilePath) ? readFileSync(profilePath, 'utf-8') : '';
-      if (!existingContent.includes('function claude-mem')) {
+      if (!existingContent.includes('function ccx-mem')) {
         writeFileSync(profilePath, existingContent + '\n' + functionDef);
         console.error(`✅ PowerShell function added to profile`);
-        console.error('   Restart your terminal to use: claude-mem <command>');
+        console.error('   Restart your terminal to use: ccx-mem <command>');
       }
     } else {
       // Unix: Add alias to shell configs
@@ -378,13 +378,13 @@ function installCLI() {
       for (const config of shellConfigs) {
         if (existsSync(config)) {
           const content = readFileSync(config, 'utf-8');
-          if (!content.includes('alias claude-mem=')) {
+          if (!content.includes('alias ccx-mem=')) {
             writeFileSync(config, content + '\n' + aliasLine + '\n');
             console.error(`✅ Alias added to ${config}`);
           }
         }
       }
-      console.error('   Restart your terminal to use: claude-mem <command>');
+      console.error('   Restart your terminal to use: ccx-mem <command>');
     }
 
     writeFileSync(markerPath, new Date().toISOString());
@@ -497,9 +497,9 @@ const MACHO_MAGIC_NATIVE  = 0xFEEDFACF; // native 64-bit (arm64/x86_64) — file
 const MACHO_MAGIC_SWAPPED = 0xCFFAEDFE; // byte-swapped 64-bit             — file bytes FE ED FA CF
 
 /**
- * Warn when the bundled claude-mem binary cannot run on the current platform.
+ * Warn when the bundled ccx-mem binary cannot run on the current platform.
  *
- * The committed binary (plugin/scripts/claude-mem) is compiled for macOS arm64.
+ * The committed binary (plugin/scripts/ccx-mem) is compiled for macOS arm64.
  * On Linux or Windows it produces "Exec format error" and silently fails.
  * This check surfaces the incompatibility at install time so users know why
  * the binary path doesn't work, and confirms the JS fallback (bun-runner.js →
@@ -507,7 +507,7 @@ const MACHO_MAGIC_SWAPPED = 0xCFFAEDFE; // byte-swapped 64-bit             — f
  *
  * Fixes #1547 — Plugin silently fails on Linux ARM64.
  */
-export function checkBinaryPlatformCompatibility(binaryPath = join(ROOT, 'scripts', 'claude-mem')) {
+export function checkBinaryPlatformCompatibility(binaryPath = join(ROOT, 'scripts', 'ccx-mem')) {
 
   if (!existsSync(binaryPath)) {
     return; // Binary absent — nothing to check (e.g. after npm install which excludes it)
@@ -527,7 +527,7 @@ export function checkBinaryPlatformCompatibility(binaryPath = join(ROOT, 'script
 
     const magic = buf.readUInt32LE(0);
     if (magic === MACHO_MAGIC_NATIVE || magic === MACHO_MAGIC_SWAPPED) {
-      console.error('⚠️  Platform notice: The bundled claude-mem binary is macOS-only.');
+      console.error('⚠️  Platform notice: The bundled ccx-mem binary is macOS-only.');
       console.error(`   Current platform: ${process.platform} ${process.arch}`);
       console.error('   The binary will not execute on this platform.');
       console.error('   Plugin functionality is provided by the JS fallback');
@@ -610,7 +610,7 @@ try {
 
     // Auto-restart worker to pick up new code
     const port = process.env.CLAUDE_MEM_WORKER_PORT || 37777;
-    console.error(`[claude-mem] Plugin updated to v${newVersion} - restarting worker...`);
+    console.error(`[ccx-mem] Plugin updated to v${newVersion} - restarting worker...`);
     try {
       // Graceful shutdown via HTTP (curl is cross-platform enough)
       execSync(`curl -s -X POST http://127.0.0.1:${port}/api/admin/shutdown`, {
