@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as esbuild from 'esbuild';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -32,11 +33,17 @@ async function buildViewer() {
       }
     });
 
+    const bundlePath = path.join(rootDir, 'plugin/ui/viewer-bundle.js');
+    const bundleHash = createHash('sha256')
+      .update(fs.readFileSync(bundlePath))
+      .digest('hex')
+      .slice(0, 12);
+
     // Copy HTML template to build output
     const htmlTemplate = fs.readFileSync(
       path.join(rootDir, 'src/ui/viewer-template.html'),
       'utf-8'
-    );
+    ).replace('viewer-bundle.js', `viewer-bundle.js?v=${bundleHash}`);
     fs.writeFileSync(
       path.join(rootDir, 'plugin/ui/viewer.html'),
       htmlTemplate

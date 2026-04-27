@@ -149,6 +149,7 @@ export function App() {
         isOpen={contextPreviewOpen}
         onClose={toggleContextPreview}
         settings={settings}
+        integrations={integrations}
         onSave={saveSettings}
         isSaving={isSaving}
         saveStatus={saveStatus}

@@ -21,12 +21,7 @@ function getPreferredSource(sources: string[]): string | null {
   return sources[0] || null;
 }
 
-function withDefaultSources(sources: string[]): string[] {
-  const merged = ['claude', 'codex', ...sources];
-  return Array.from(new Set(merged));
-}
-
-export function useContextPreview(settings: Settings): UseContextPreviewResult {
+export function useContextPreview(settings: Settings, integrations: string[]): UseContextPreviewResult {
   const [preview, setPreview] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +44,7 @@ export function useContextPreview(settings: Settings): UseContextPreviewResult {
 
       const nextCatalog: ProjectCatalog = {
         projects: data.projects || [],
-        sources: withDefaultSources(data.sources || []),
+        sources: integrations,
         projectsBySource: data.projectsBySource || {}
       };
 
@@ -69,7 +64,7 @@ export function useContextPreview(settings: Settings): UseContextPreviewResult {
       setSelectedProject(nextCatalog.projects[0] || null);
     }
     fetchProjects();
-  }, []);
+  }, [integrations]);
 
   useEffect(() => {
     if (!selectedSource) {

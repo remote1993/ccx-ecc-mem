@@ -10,6 +10,7 @@ interface ContextSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   settings: Settings;
+  integrations: string[];
   onSave: (settings: Settings) => void;
   isSaving: boolean;
   saveStatus: string;
@@ -128,6 +129,7 @@ export function ContextSettingsModal({
   isOpen,
   onClose,
   settings,
+  integrations,
   onSave,
   isSaving,
   saveStatus,
@@ -217,7 +219,7 @@ export function ContextSettingsModal({
     setSelectedSource,
     selectedProject,
     setSelectedProject
-  } = useContextPreview(formState);
+  } = useContextPreview(formState, integrations);
 
   const updateSetting = useCallback((key: keyof Settings, value: string) => {
     const newState = { ...formState, [key]: value };
