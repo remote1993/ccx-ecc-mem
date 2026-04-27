@@ -30,6 +30,8 @@ export class SettingsRoutes extends BaseRouteHandler {
     // Settings endpoints
     app.get('/api/settings', this.handleGetSettings.bind(this));
     app.post('/api/settings', this.handleUpdateSettings.bind(this));
+    app.post('/api/settings/custom-models', this.handleGetCustomModels.bind(this));
+    app.post('/api/settings/custom-models/test', this.handleTestCustomModel.bind(this));
 
     // MCP toggle endpoints
     app.get('/api/mcp/status', this.handleGetMcpStatus.bind(this));
@@ -103,6 +105,118 @@ export class SettingsRoutes extends BaseRouteHandler {
     logger.info('WORKER', 'Settings updated');
     res.json({ success: true, message: 'Settings updated successfully' });
   });
+
+  /**
+   * Get available custom API models from supported providers.
+   */
+  private handleGetCustomModels = this.wrapHandler(async (req: Request, res: Response): Promise<void> => {
+    const baseUrl = String(req.body?.baseUrl || '').trim();
+    const apiKey = String(req.body?.apiKey || '').trim();
+
+    if (!baseUrl || !apiKey) {
+      res.json({ provider: 'custom', models: [] });
+      return;
+    }
+
+    const provider = this.detectModelProvider(baseUrl);
+    if (provider !== 'openrouter') {
+      res.json({ provider, models: [] });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        res.status(response.status).json({
+          provider,
+          models: [],
+          error: `OpenRouter models request failed (${response.status})`,
+        });
+        return;
+      }
+
+      const data = await response.json() as { data?: Array<{ id?: unknown; name?: unknown }> };
+      const models = (data.data || [])
+        .map((model) => ({
+          id: typeof model.id === 'string' ? model.id : '',
+          name: typeof model.name === 'string' ? model.name : undefined,
+        }))
+        .filter((model) => model.id)
+        .sort((a, b) => a.id.localeCompare(b.id));
+
+      res.json({ provider, models });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn('HTTP', 'Failed to load custom API model list', { provider, error: message });
+      res.status(502).json({ provider, models: [], error: message });
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
+
+  private handleTestCustomModel = this.wrapHandler(async (req: Request, res: Response): Promise<void> => {
+    const baseUrl = String(req.body?.baseUrl || '').trim();
+    const apiKey = String(req.body?.apiKey || '').trim();
+    const model = String(req.body?.model || '').trim();
+
+    if (!baseUrl || !apiKey || !model) {
+      res.status(400).json({ success: false, error: 'baseUrl, apiKey, and model are required' });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20_000);
+
+    try {
+      const response = await fetch(baseUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: 'Reply with OK.' }],
+          max_tokens: 8,
+          temperature: 0,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        res.status(response.status).json({
+          success: false,
+          error: text.slice(0, 500) || `Model test failed (${response.status})`,
+        });
+        return;
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn('HTTP', 'Custom API model health check failed', { error: message });
+      res.status(502).json({ success: false, error: message });
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
+
+  private detectModelProvider(baseUrl: string): 'openrouter' | 'custom' {
+    try {
+      const hostname = new URL(baseUrl).hostname.toLowerCase();
+      return hostname === 'openrouter.ai' || hostname.endsWith('.openrouter.ai') ? 'openrouter' : 'custom';
+    } catch {
+      return 'custom';
+    }
+  }
 
   /**
    * GET /api/mcp/status - Check if MCP search server is enabled

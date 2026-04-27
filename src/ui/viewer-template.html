@@ -2430,6 +2430,8 @@
     }
 
     .form-field input[type="number"],
+    .form-field input[type="text"],
+    .form-field input[type="password"],
     .form-field select {
       width: 100%;
       background: var(--color-bg-input);
@@ -2442,12 +2444,55 @@
       transition: all 0.15s ease;
     }
 
+    .model-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .model-test-actions {
+      margin-top: 8px;
+      margin-bottom: 0;
+    }
+
+    .secondary-btn {
+      background: var(--color-bg-input);
+      border: 1px solid var(--color-border-primary);
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--color-text-primary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .secondary-btn:hover:not(:disabled) {
+      border-color: var(--color-border-hover);
+      background: var(--color-type-badge-bg);
+    }
+
+    .secondary-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .field-hint {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
     .form-field input[type="number"]:hover,
+    .form-field input[type="text"]:hover,
+    .form-field input[type="password"]:hover,
     .form-field select:hover {
       border-color: var(--color-border-hover);
     }
 
     .form-field input[type="number"]:focus,
+    .form-field input[type="text"]:focus,
+    .form-field input[type="password"]:focus,
     .form-field select:focus {
       outline: none;
       border-color: var(--color-border-focus);

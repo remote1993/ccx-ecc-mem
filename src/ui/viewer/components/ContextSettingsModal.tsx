@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import type { Settings } from '../types';
+import type { CustomModelOption, CustomModelsResponse, Settings } from '../types';
 import { TerminalPreview } from './TerminalPreview';
 import { useContextPreview } from '../hooks/useContextPreview';
 import type { ViewerLabels } from '../i18n';
+import { API_ENDPOINTS } from '../constants/api';
+import { authFetch } from '../utils/api';
 
 interface ContextSettingsModalProps {
   isOpen: boolean;
@@ -132,11 +134,77 @@ export function ContextSettingsModal({
   labels
 }: ContextSettingsModalProps) {
   const [formState, setFormState] = useState<Settings>(settings);
+  const [customModels, setCustomModels] = useState<CustomModelOption[]>([]);
+  const [modelLoadStatus, setModelLoadStatus] = useState('');
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelTestStatus, setModelTestStatus] = useState('');
 
   // Update form state when settings prop changes
   useEffect(() => {
     setFormState(settings);
   }, [settings]);
+
+  const loadCustomModels = useCallback(async () => {
+    const baseUrl = formState.CLAUDE_MEM_CUSTOM_BASE_URL || '';
+    const apiKey = formState.CLAUDE_MEM_CUSTOM_API_KEY || '';
+
+    if (!baseUrl.trim() || !apiKey.trim()) {
+      setCustomModels([]);
+      setModelLoadStatus(labels.noModelsLoaded);
+      return;
+    }
+
+    setIsLoadingModels(true);
+    setModelLoadStatus(labels.loadingModels);
+    setModelTestStatus('');
+
+    try {
+      const res = await authFetch(API_ENDPOINTS.CUSTOM_MODELS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl, apiKey })
+      });
+      const data = await res.json() as CustomModelsResponse;
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to load models (${res.status})`);
+      }
+      setCustomModels(data.models || []);
+      setModelLoadStatus(data.models?.length ? '' : labels.noModelsLoaded);
+    } catch (error) {
+      setCustomModels([]);
+      setModelLoadStatus(error instanceof Error ? error.message : 'Failed to load models');
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }, [formState.CLAUDE_MEM_CUSTOM_API_KEY, formState.CLAUDE_MEM_CUSTOM_BASE_URL, labels]);
+
+  const testCustomModel = useCallback(async () => {
+    const baseUrl = formState.CLAUDE_MEM_CUSTOM_BASE_URL || '';
+    const apiKey = formState.CLAUDE_MEM_CUSTOM_API_KEY || '';
+    const model = formState.CLAUDE_MEM_CUSTOM_MODEL || '';
+
+    if (!baseUrl.trim() || !apiKey.trim() || !model.trim()) {
+      setModelTestStatus(labels.noModelsLoaded);
+      return;
+    }
+
+    setModelTestStatus(labels.testingModel);
+
+    try {
+      const res = await authFetch(API_ENDPOINTS.CUSTOM_MODEL_TEST, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl, apiKey, model })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Model test failed (${res.status})`);
+      }
+      setModelTestStatus(labels.modelTestSucceeded);
+    } catch (error) {
+      setModelTestStatus(`${labels.modelTestFailed}: ${error instanceof Error ? error.message : 'Network error'}`);
+    }
+  }, [formState.CLAUDE_MEM_CUSTOM_API_KEY, formState.CLAUDE_MEM_CUSTOM_BASE_URL, formState.CLAUDE_MEM_CUSTOM_MODEL, labels]);
 
   // Get context preview based on current form state
   const {
@@ -155,6 +223,11 @@ export function ContextSettingsModal({
     const newState = { ...formState, [key]: value };
     setFormState(newState);
   }, [formState]);
+
+  const modelQuery = (formState.CLAUDE_MEM_CUSTOM_MODEL || '').trim().toLowerCase();
+  const filteredCustomModels = modelQuery
+    ? customModels.filter((model) => model.id.toLowerCase().startsWith(modelQuery))
+    : customModels;
 
   const handleSave = useCallback(() => {
     onSave(formState);
@@ -355,7 +428,7 @@ export function ContextSettingsModal({
               >
                 <input
                   type="text"
-                  value={formState.CLAUDE_MEM_CUSTOM_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions'}
+                  value={formState.CLAUDE_MEM_CUSTOM_BASE_URL || ''}
                   onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_BASE_URL', e.target.value)}
                   placeholder="https://your-provider.example/v1/chat/completions"
                 />
@@ -364,12 +437,56 @@ export function ContextSettingsModal({
                 label={labels.customModel}
                 tooltip={labels.customModelTooltip}
               >
-                <input
-                  type="text"
-                  value={formState.CLAUDE_MEM_CUSTOM_MODEL || 'xiaomi/mimo-v2-flash:free'}
-                  onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_MODEL', e.target.value)}
-                  placeholder="e.g., xiaomi/mimo-v2-flash:free"
-                />
+                <div className="model-actions">
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={loadCustomModels}
+                    disabled={isLoadingModels || !formState.CLAUDE_MEM_CUSTOM_BASE_URL || !formState.CLAUDE_MEM_CUSTOM_API_KEY}
+                  >
+                    {isLoadingModels ? labels.loadingModels : labels.loadModels}
+                  </button>
+                </div>
+                {customModels.length > 0 ? (
+                  <>
+                    <input
+                      type="text"
+                      value={formState.CLAUDE_MEM_CUSTOM_MODEL || ''}
+                      onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_MODEL', e.target.value)}
+                      placeholder={labels.selectModel}
+                      list="custom-model-options"
+                    />
+                    <datalist id="custom-model-options">
+                      {filteredCustomModels.map((model) => (
+                        <option
+                          key={model.id}
+                          value={model.id}
+                          label={model.name ? `${model.id} — ${model.name}` : model.id}
+                        />
+                      ))}
+                    </datalist>
+                  </>
+                ) : (
+                  <input
+                    type="text"
+                    value={formState.CLAUDE_MEM_CUSTOM_MODEL || ''}
+                    onChange={(e) => updateSetting('CLAUDE_MEM_CUSTOM_MODEL', e.target.value)}
+                    placeholder={labels.selectModel}
+                  />
+                )}
+                <div className="model-actions model-test-actions">
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={testCustomModel}
+                    disabled={!formState.CLAUDE_MEM_CUSTOM_BASE_URL || !formState.CLAUDE_MEM_CUSTOM_API_KEY || !formState.CLAUDE_MEM_CUSTOM_MODEL}
+                  >
+                    {modelTestStatus === labels.testingModel ? labels.testingModel : labels.testModel}
+                  </button>
+                </div>
+                {(modelLoadStatus || modelTestStatus) && (
+                  <span className="field-hint">{modelTestStatus || modelLoadStatus}</span>
+                )}
               </FormField>
               <FormField
                 label={labels.appNameOptional}
