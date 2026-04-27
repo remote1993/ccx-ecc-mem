@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
   SUMMARIES: '/api/summaries',
   PROMPTS: '/api/prompts',
   SETTINGS: '/api/settings',
+  CUSTOM_MODELS: '/api/settings/custom-models',
+  CUSTOM_MODEL_TEST: '/api/settings/custom-models/test',
   VIEWER_INTEGRATIONS: '/api/viewer/integrations',
   STATS: '/api/stats',
   PROCESSING_STATUS: '/api/processing-status',

@@ -533,10 +533,10 @@ export class CustomApiAgent {
     const settings = SettingsDefaultsManager.loadFromFile(settingsPath);
 
     const apiKey = settings.CLAUDE_MEM_CUSTOM_API_KEY || '';
-    const model = settings.CLAUDE_MEM_CUSTOM_MODEL || 'xiaomi/mimo-v2-flash:free';
+    const model = settings.CLAUDE_MEM_CUSTOM_MODEL || '';
     const siteUrl = '';
     const appName = settings.CLAUDE_MEM_CUSTOM_APP_NAME || 'ccx-mem';
-    const baseUrl = settings.CLAUDE_MEM_CUSTOM_BASE_URL || DEFAULT_CUSTOM_API_URL;
+    const baseUrl = settings.CLAUDE_MEM_CUSTOM_BASE_URL || '';
 
     return { apiKey, model, siteUrl, appName, baseUrl };
   }
@@ -548,5 +548,9 @@ export class CustomApiAgent {
 export function isCustomApiAvailable(): boolean {
   const settingsPath = USER_SETTINGS_PATH;
   const settings = SettingsDefaultsManager.loadFromFile(settingsPath);
-  return !!settings.CLAUDE_MEM_CUSTOM_API_KEY;
+  return Boolean(
+    settings.CLAUDE_MEM_CUSTOM_API_KEY?.trim()
+    && settings.CLAUDE_MEM_CUSTOM_BASE_URL?.trim()
+    && settings.CLAUDE_MEM_CUSTOM_MODEL?.trim()
+  );
 }

@@ -12,7 +12,7 @@ import { stripMemoryTagsFromJson, stripMemoryTagsFromPrompt } from '../../../../
 import { SessionManager } from '../../SessionManager.js';
 import { DatabaseManager } from '../../DatabaseManager.js';
 import { CustomApiAgent, isCustomApiAvailable } from '../../CustomApiAgent.js';
-import type { WorkerService } from '../../../worker-service.js';
+import { isUnrecoverableGeneratorError, type WorkerService } from '../../../worker-service.js';
 import { BaseRouteHandler } from '../BaseRouteHandler.js';
 import { SessionEventBroadcaster } from '../../events/SessionEventBroadcaster.js';
 import { SessionCompletionHandler } from '../../session/SessionCompletionHandler.js';
@@ -183,6 +183,23 @@ export class SessionRoutes extends BaseRouteHandler {
             error: errorMsg
           });
           myController.abort();
+          return;
+        }
+
+        if (isUnrecoverableGeneratorError(errorMsg)) {
+          logger.error('SESSION', 'Unrecoverable generator error - aborting crash recovery', {
+            sessionId: session.sessionDbId,
+            runtime: 'custom-api',
+            error: errorMsg
+          }, error);
+          myController.abort();
+          const pendingStore = this.sessionManager.getPendingMessageStore();
+          const abandoned = pendingStore.markAllSessionMessagesAbandoned(session.sessionDbId);
+          logger.info('SESSION', 'Session terminated after unrecoverable generator error', {
+            sessionId: session.sessionDbId,
+            abandonedMessages: abandoned
+          });
+          this.sessionManager.removeSessionImmediate(session.sessionDbId);
           return;
         }
 
@@ -574,6 +591,12 @@ export class SessionRoutes extends BaseRouteHandler {
       ? stripMemoryTagsFromJson(JSON.stringify(tool_response))
       : '{}';
 
+    if (!isCustomApiAvailable()) {
+      logger.info('SESSION', 'Skipping observation because Custom API is not configured', { sessionId: sessionDbId, tool_name });
+      res.json({ status: 'skipped', reason: 'custom_api_unconfigured' });
+      return;
+    }
+
     // Queue observation
     this.sessionManager.queueObservation(sessionDbId, {
       tool_name,
@@ -642,6 +665,12 @@ export class SessionRoutes extends BaseRouteHandler {
       return;
     }
 
+    if (!isCustomApiAvailable()) {
+      logger.info('SESSION', 'Skipping summary because Custom API is not configured', { sessionId: sessionDbId });
+      res.json({ status: 'skipped', reason: 'custom_api_unconfigured' });
+      return;
+    }
+
     // Queue summarize
     this.sessionManager.queueSummarize(sessionDbId, last_assistant_message);
 
@@ -655,10 +684,8 @@ export class SessionRoutes extends BaseRouteHandler {
   });
 
   /**
-   * Get session status by contentSessionId (summarize handler polls this)
+   * Get active session status by contentSessionId.
    * GET /api/sessions/status?contentSessionId=...
-   *
-   * Returns queue depth so the Stop hook can wait for summary completion.
    */
   private handleStatusByClaudeId = this.wrapHandler((req: Request, res: Response): void => {
     const contentSessionId = req.query.contentSessionId as string;
@@ -691,14 +718,12 @@ export class SessionRoutes extends BaseRouteHandler {
   });
 
   /**
-   * Complete session by contentSessionId (session-complete hook uses this)
+   * Complete session by contentSessionId for explicit compatibility calls.
    * POST /api/sessions/complete
    * Body: { contentSessionId }
    *
    * Removes session from active sessions map, allowing orphan reaper to
    * clean up any remaining subprocesses.
-   *
-   * Fixes Issue #842: Sessions stay in map forever, reaper thinks all active.
    */
   private handleCompleteByClaudeId = this.wrapHandler(async (req: Request, res: Response): Promise<void> => {
     const { contentSessionId } = req.body;
@@ -721,15 +746,14 @@ export class SessionRoutes extends BaseRouteHandler {
     if (!activeSession) {
       // Session may not be in memory (already completed or never initialized)
       // Still proceed with DB-backed completion so the row gets marked completed
-      logger.debug('SESSION', 'session-complete: Session not in active map; continuing with DB-backed completion', {
+      logger.debug('SESSION', 'Session completion API: session not in active map; continuing with DB-backed completion', {
         contentSessionId,
         sessionDbId
       });
     }
 
-    // Complete the session (removes from active sessions map if present)
-    // Note: The Stop hook (summarize handler) waits for pending work before calling
-    // this endpoint. No polling here — that's the hook's responsibility.
+    // Complete the session for explicit callers only. Lifecycle hooks do not call
+    // this endpoint because it abandons pending queue messages by design.
     await this.completionHandler.completeByDbId(sessionDbId);
 
     logger.info('SESSION', 'Session completed via API', {

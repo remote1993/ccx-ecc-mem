@@ -80,13 +80,13 @@ export class SettingsDefaultsManager {
   private static readonly DEFAULTS: SettingsDefaults = {
     CLAUDE_MEM_MODEL: 'claude-sonnet-4-6',
     CLAUDE_MEM_CONTEXT_OBSERVATIONS: '50',
-    CLAUDE_MEM_WORKER_PORT: String(37700 + ((process.getuid?.() ?? 77) % 100)),
+    CLAUDE_MEM_WORKER_PORT: '37777',
     CLAUDE_MEM_WORKER_HOST: '127.0.0.1',
     CLAUDE_MEM_SKIP_TOOLS: 'ListMcpResourcesTool,SlashCommand,Skill,TodoWrite,AskUserQuestion',
     // Custom API Configuration
     CLAUDE_MEM_CUSTOM_API_KEY: '',  // Empty by default, can be set via UI or env
-    CLAUDE_MEM_CUSTOM_MODEL: 'xiaomi/mimo-v2-flash:free',
-    CLAUDE_MEM_CUSTOM_BASE_URL: 'https://openrouter.ai/api/v1/chat/completions',
+    CLAUDE_MEM_CUSTOM_MODEL: '',
+    CLAUDE_MEM_CUSTOM_BASE_URL: '',
     CLAUDE_MEM_CUSTOM_APP_NAME: 'ccx-mem',
     CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES: '20',
     CLAUDE_MEM_CUSTOM_MAX_TOKENS: '100000',

@@ -71,6 +71,17 @@ export interface ViewerIntegrationsResponse {
   integrations: string[];
 }
 
+export interface CustomModelOption {
+  id: string;
+  name?: string;
+}
+
+export interface CustomModelsResponse {
+  provider: 'openrouter' | 'custom';
+  models: CustomModelOption[];
+  error?: string;
+}
+
 export interface Settings {
   CLAUDE_MEM_MODEL: string;
   CLAUDE_MEM_MODE?: string;

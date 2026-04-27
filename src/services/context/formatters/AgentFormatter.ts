@@ -33,9 +33,29 @@ const defaultContextLabels: ContextLabels = {
   session_started: 'Session started',
   access_prefix: 'Access',
   access_suffix: 'tokens of past work via get_observations([IDs]) or mem-search skill.',
+  column_key: 'Column Key',
+  read: 'Read',
+  read_description: 'Tokens to read this observation (cost to learn it now)',
+  work: 'Work',
+  work_description: 'Tokens spent on work that produced this record (research, building, deciding)',
+  context_index: 'Context Index',
+  context_index_description: 'This semantic index (titles, types, files, tokens) is usually sufficient to understand past work.',
+  details_intro: 'When you need implementation details, rationale, or debugging context:',
+  fetch_by_id: 'Fetch by ID: get_observations([IDs]) for observations visible in this index',
+  search_history: 'Search history: Use the mem-search skill for past decisions, bugs, and deeper research',
+  trust_index: 'Trust this index over re-reading code for past decisions and learnings',
+  context_economics: 'Context Economics',
+  loading: 'Loading',
+  tokens_to_read: 'tokens to read',
+  work_investment: 'Work investment',
+  work_investment_description: 'tokens spent on research, building, and decisions',
+  your_savings: 'Your savings',
+  tokens: 'tokens',
+  reduction_from_reuse: 'reduction from reuse',
+  access_human_suffix: 'tokens of past research & decisions. Use the ccx-mem skill to access memories by ID.',
 };
 
-function getContextLabels(): ContextLabels {
+export function getContextLabels(): ContextLabels {
   const mode = ModeManager.getInstance().getActiveMode();
   return { ...defaultContextLabels, ...mode.context_labels };
 }
@@ -72,7 +92,7 @@ export function renderAgentHeader(project: string): string[] {
 export function renderAgentLegend(): string[] {
   const mode = ModeManager.getInstance().getActiveMode();
   const labels = getContextLabels();
-  const typeLegendItems = mode.observation_types.map(t => `${t.emoji}${t.id}`).join(' ');
+  const typeLegendItems = mode.observation_types.map(t => `${t.emoji}${t.label}`).join(' ');
 
   return [
     `${labels.legend}: 🎯${labels.session} ${typeLegendItems}`,

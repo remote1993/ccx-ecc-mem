@@ -60,6 +60,14 @@ export interface ViewerLabels {
   customBaseUrlTooltip: string;
   customModel: string;
   customModelTooltip: string;
+  loadModels: string;
+  loadingModels: string;
+  selectModel: string;
+  noModelsLoaded: string;
+  testModel: string;
+  testingModel: string;
+  modelTestSucceeded: string;
+  modelTestFailed: string;
   appNameOptional: string;
   appNameOptionalTooltip: string;
   contextMessages: string;
@@ -145,7 +153,15 @@ const en: ViewerLabels = {
   customBaseUrl: 'Custom Base URL',
   customBaseUrlTooltip: 'OpenAI-compatible chat completions endpoint',
   customModel: 'Custom Model',
-  customModelTooltip: 'Model identifier sent to the custom API',
+  customModelTooltip: 'Load models after entering a provider URL and API key, then choose one to test',
+  loadModels: 'Load models',
+  loadingModels: 'Loading models...',
+  selectModel: 'Select a model',
+  noModelsLoaded: 'Enter Base URL and API key, then load models',
+  testModel: 'Test model',
+  testingModel: 'Testing model...',
+  modelTestSucceeded: 'Model test succeeded',
+  modelTestFailed: 'Model test failed',
   appNameOptional: 'App Name (Optional)',
   appNameOptionalTooltip: 'Optional application name sent to the provider',
   contextMessages: 'Context Messages',
@@ -232,7 +248,15 @@ const zh: ViewerLabels = {
   customBaseUrl: '自定义 Base URL',
   customBaseUrlTooltip: '兼容 OpenAI 的 chat completions 端点',
   customModel: '自定义模型',
-  customModelTooltip: '发送给自定义 API 的模型标识符',
+  customModelTooltip: '填写供应商 URL 和 API key 后加载模型，再选择并测试',
+  loadModels: '加载模型',
+  loadingModels: '正在加载模型...',
+  selectModel: '选择模型',
+  noModelsLoaded: '请输入 Base URL 和 API key，然后加载模型',
+  testModel: '测试模型',
+  testingModel: '正在测试模型...',
+  modelTestSucceeded: '模型测试成功',
+  modelTestFailed: '模型测试失败',
   appNameOptional: '应用名称（可选）',
   appNameOptionalTooltip: '发送给提供商的可选应用名称',
   contextMessages: '上下文消息数',

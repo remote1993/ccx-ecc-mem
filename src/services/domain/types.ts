@@ -79,6 +79,26 @@ export interface ContextLabels {
   session_started: string;
   access_prefix: string;
   access_suffix: string;
+  column_key: string;
+  read: string;
+  read_description: string;
+  work: string;
+  work_description: string;
+  context_index: string;
+  context_index_description: string;
+  details_intro: string;
+  fetch_by_id: string;
+  search_history: string;
+  trust_index: string;
+  context_economics: string;
+  loading: string;
+  tokens_to_read: string;
+  work_investment: string;
+  work_investment_description: string;
+  your_savings: string;
+  tokens: string;
+  reduction_from_reuse: string;
+  access_human_suffix: string;
 }
 
 export interface ModeConfig {

@@ -13,6 +13,7 @@ import type {
 import { colors } from '../types.js';
 import { ModeManager } from '../../domain/ModeManager.js';
 import { formatObservationTokenDisplay } from '../TokenCalculator.js';
+import { getContextLabels } from './AgentFormatter.js';
 
 /**
  * Format current date/time for header display
@@ -33,9 +34,10 @@ function formatHeaderDateTime(): string {
  * Render human-readable header
  */
 export function renderHumanHeader(project: string): string[] {
+  const labels = getContextLabels();
   return [
     '',
-    `${colors.bright}${colors.cyan}[${project}] recent context, ${formatHeaderDateTime()}${colors.reset}`,
+    `${colors.bright}${colors.cyan}[${project}] ${labels.recent_context}, ${formatHeaderDateTime()}${colors.reset}`,
     `${colors.gray}${'─'.repeat(60)}${colors.reset}`,
     ''
   ];
@@ -46,10 +48,11 @@ export function renderHumanHeader(project: string): string[] {
  */
 export function renderHumanLegend(): string[] {
   const mode = ModeManager.getInstance().getActiveMode();
-  const typeLegendItems = mode.observation_types.map(t => `${t.emoji} ${t.id}`).join(' | ');
+  const labels = getContextLabels();
+  const typeLegendItems = mode.observation_types.map(t => `${t.emoji} ${t.label}`).join(' | ');
 
   return [
-    `${colors.dim}Legend: session-request | ${typeLegendItems}${colors.reset}`,
+    `${colors.dim}${labels.legend}: ${labels.session} | ${typeLegendItems}${colors.reset}`,
     ''
   ];
 }
@@ -58,10 +61,11 @@ export function renderHumanLegend(): string[] {
  * Render human-readable column key
  */
 export function renderHumanColumnKey(): string[] {
+  const labels = getContextLabels();
   return [
-    `${colors.bright}Column Key${colors.reset}`,
-    `${colors.dim}  Read: Tokens to read this observation (cost to learn it now)${colors.reset}`,
-    `${colors.dim}  Work: Tokens spent on work that produced this record ( research, building, deciding)${colors.reset}`,
+    `${colors.bright}${labels.column_key}${colors.reset}`,
+    `${colors.dim}  ${labels.read}: ${labels.read_description}${colors.reset}`,
+    `${colors.dim}  ${labels.work}: ${labels.work_description}${colors.reset}`,
     ''
   ];
 }
@@ -70,13 +74,14 @@ export function renderHumanColumnKey(): string[] {
  * Render human-readable context index instructions
  */
 export function renderHumanContextIndex(): string[] {
+  const labels = getContextLabels();
   return [
-    `${colors.dim}Context Index: This semantic index (titles, types, files, tokens) is usually sufficient to understand past work.${colors.reset}`,
+    `${colors.dim}${labels.context_index}: ${labels.context_index_description}${colors.reset}`,
     '',
-    `${colors.dim}When you need implementation details, rationale, or debugging context:${colors.reset}`,
-    `${colors.dim}  - Fetch by ID: get_observations([IDs]) for observations visible in this index${colors.reset}`,
-    `${colors.dim}  - Search history: Use the mem-search skill for past decisions, bugs, and deeper research${colors.reset}`,
-    `${colors.dim}  - Trust this index over re-reading code for past decisions and learnings${colors.reset}`,
+    `${colors.dim}${labels.details_intro}${colors.reset}`,
+    `${colors.dim}  - ${labels.fetch_by_id}${colors.reset}`,
+    `${colors.dim}  - ${labels.search_history}${colors.reset}`,
+    `${colors.dim}  - ${labels.trust_index}${colors.reset}`,
     ''
   ];
 }
@@ -89,19 +94,20 @@ export function renderHumanContextEconomics(
   config: ContextConfig
 ): string[] {
   const output: string[] = [];
+  const labels = getContextLabels();
 
-  output.push(`${colors.bright}${colors.cyan}Context Economics${colors.reset}`);
-  output.push(`${colors.dim}  Loading: ${economics.totalObservations} observations (${economics.totalReadTokens.toLocaleString()} tokens to read)${colors.reset}`);
-  output.push(`${colors.dim}  Work investment: ${economics.totalDiscoveryTokens.toLocaleString()} tokens spent on research, building, and decisions${colors.reset}`);
+  output.push(`${colors.bright}${colors.cyan}${labels.context_economics}${colors.reset}`);
+  output.push(`${colors.dim}  ${labels.loading}: ${economics.totalObservations} ${labels.observations_short} (${economics.totalReadTokens.toLocaleString()} ${labels.tokens_to_read})${colors.reset}`);
+  output.push(`${colors.dim}  ${labels.work_investment}: ${economics.totalDiscoveryTokens.toLocaleString()} ${labels.work_investment_description}${colors.reset}`);
 
   if (economics.totalDiscoveryTokens > 0 && (config.showSavingsAmount || config.showSavingsPercent)) {
-    let savingsLine = '  Your savings: ';
+    let savingsLine = `  ${labels.your_savings}: `;
     if (config.showSavingsAmount && config.showSavingsPercent) {
-      savingsLine += `${economics.savings.toLocaleString()} tokens (${economics.savingsPercent}% reduction from reuse)`;
+      savingsLine += `${economics.savings.toLocaleString()} ${labels.tokens} (${economics.savingsPercent}% ${labels.reduction_from_reuse})`;
     } else if (config.showSavingsAmount) {
-      savingsLine += `${economics.savings.toLocaleString()} tokens`;
+      savingsLine += `${economics.savings.toLocaleString()} ${labels.tokens}`;
     } else {
-      savingsLine += `${economics.savingsPercent}% reduction from reuse`;
+      savingsLine += `${economics.savingsPercent}% ${labels.reduction_from_reuse}`;
     }
     output.push(`${colors.green}${savingsLine}${colors.reset}`);
   }
@@ -187,7 +193,8 @@ export function renderHumanSummaryItem(
   summary: { id: number; request: string | null },
   formattedTime: string
 ): string[] {
-  const summaryTitle = `${summary.request || 'Session started'} (${formattedTime})`;
+  const labels = getContextLabels();
+  const summaryTitle = `${summary.request || labels.session_started} (${formattedTime})`;
   return [
     `${colors.yellow}#S${summary.id}${colors.reset} ${summaryTitle}`,
     ''
@@ -208,11 +215,12 @@ export function renderHumanSummaryField(label: string, value: string | null, col
 export function renderHumanPreviouslySection(priorMessages: PriorMessages): string[] {
   if (!priorMessages.assistantMessage) return [];
 
+  const labels = getContextLabels();
   return [
     '',
     '---',
     '',
-    `${colors.bright}${colors.magenta}Previously${colors.reset}`,
+    `${colors.bright}${colors.magenta}${labels.previously}${colors.reset}`,
     '',
     `${colors.dim}A: ${priorMessages.assistantMessage}${colors.reset}`,
     ''
@@ -223,10 +231,11 @@ export function renderHumanPreviouslySection(priorMessages: PriorMessages): stri
  * Render human-readable footer
  */
 export function renderHumanFooter(totalDiscoveryTokens: number, totalReadTokens: number): string[] {
+  const labels = getContextLabels();
   const workTokensK = Math.round(totalDiscoveryTokens / 1000);
   return [
     '',
-    `${colors.dim}Access ${workTokensK}k tokens of past research & decisions for just ${totalReadTokens.toLocaleString()}t. Use the claude-mem skill to access memories by ID.${colors.reset}`
+    `${colors.dim}${labels.access_prefix} ${workTokensK}k ${labels.access_human_suffix} (${totalReadTokens.toLocaleString()}t)${colors.reset}`
   ];
 }
 
@@ -234,5 +243,6 @@ export function renderHumanFooter(totalDiscoveryTokens: number, totalReadTokens:
  * Render human-readable empty state
  */
 export function renderHumanEmptyState(project: string): string {
-  return `\n${colors.bright}${colors.cyan}[${project}] recent context, ${formatHeaderDateTime()}${colors.reset}\n${colors.gray}${'─'.repeat(60)}${colors.reset}\n\n${colors.dim}No previous sessions found for this project yet.${colors.reset}\n`;
+  const labels = getContextLabels();
+  return `\n${colors.bright}${colors.cyan}[${project}] ${labels.recent_context}, ${formatHeaderDateTime()}${colors.reset}\n${colors.gray}${'─'.repeat(60)}${colors.reset}\n\n${colors.dim}${labels.no_previous_sessions}${colors.reset}\n`;
 }

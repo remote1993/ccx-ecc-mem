@@ -122,6 +122,27 @@ export function buildStatusOutput(status: 'ready' | 'error', message?: string): 
   };
 }
 
+export function isUnrecoverableGeneratorError(errorMessage: string): boolean {
+  const unrecoverablePatterns = [
+    'Claude executable not found',
+    'CLAUDE_CODE_PATH',
+    'ENOENT',
+    'spawn',
+    'Invalid API key',
+    'API_KEY_INVALID',
+    'API key expired',
+    'API key not valid',
+    'PERMISSION_DENIED',
+    'Custom API error: 400',
+    'Custom API error: 401',
+    'Custom API error: 403',
+    'Custom API error: 404',
+    'Custom API error: 429',
+    'FOREIGN KEY constraint failed',
+  ];
+  return unrecoverablePatterns.some(pattern => errorMessage.includes(pattern));
+}
+
 export class WorkerService {
   private server: Server;
   private startTime: number = Date.now();
@@ -689,24 +710,7 @@ export class WorkerService {
       .catch(async (error: unknown) => {
         const errorMessage = (error as Error)?.message || '';
 
-        // Detect unrecoverable errors that should NOT trigger restart
-        // These errors will fail immediately on retry, causing infinite loops
-        const unrecoverablePatterns = [
-          'Claude executable not found',
-          'CLAUDE_CODE_PATH',
-          'ENOENT',
-          'spawn',
-          'Invalid API key',
-          'API_KEY_INVALID',
-          'API key expired',
-          'API key not valid',
-          'PERMISSION_DENIED',
-          'Custom API error: 400',
-          'Custom API error: 401',
-          'Custom API error: 403',
-          'FOREIGN KEY constraint failed',
-        ];
-        if (unrecoverablePatterns.some(pattern => errorMessage.includes(pattern))) {
+        if (isUnrecoverableGeneratorError(errorMessage)) {
           hadUnrecoverableError = true;
           this.lastAiInteraction = {
             timestamp: Date.now(),
@@ -1012,6 +1016,16 @@ export class WorkerService {
 
     if (orphanedSessionIds.length === 0) return result;
 
+    if (!isCustomApiAvailable()) {
+      logger.info('SYSTEM', 'Custom API is not configured; skipping pending queue startup recovery', {
+        pendingSessions: orphanedSessionIds.length
+      });
+      return {
+        ...result,
+        sessionsSkipped: orphanedSessionIds.length,
+      };
+    }
+
     logger.info('SYSTEM', `Processing up to ${sessionLimit} of ${orphanedSessionIds.length} pending session queues`);
 
     for (const sessionDbId of orphanedSessionIds) {
@@ -1232,7 +1246,7 @@ async function main() {
       if (!platform || !event) {
         console.error('Usage: ccx-mem hook <platform> <event>');
         console.error('Platforms: claude-code, codex-cli, raw');
-        console.error('Events: context, session-init, observation, summarize, session-complete, user-message');
+        console.error('Events: context, session-init, observation, summarize, user-message');
         process.exit(1);
       }
 
