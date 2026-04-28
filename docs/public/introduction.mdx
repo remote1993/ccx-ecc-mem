@@ -3,11 +3,11 @@ title: "Introduction"
 description: "Persistent memory system for Claude Code and Codex CLI"
 ---
 
-# Claude-Mem
+# ccx-mem
 
-**Persistent memory system for Claude Code and Codex CLI**
+**Worker-backed persistent memory for Claude Code and Codex CLI**
 
-Claude-Mem seamlessly preserves context across sessions by automatically capturing tool usage observations, generating semantic summaries, and making them available to future sessions. This enables Claude to maintain continuity of knowledge about projects even after sessions end or reconnect.
+ccx-mem preserves coding-session context across Claude Code and Codex CLI by capturing lifecycle events, storing structured observations in a local worker-backed runtime, and injecting relevant project history into future sessions.
 
 ## Quick Start
 
@@ -34,50 +34,46 @@ For Claude Code, restart the client after installation. For Codex CLI, start the
 
 ## Key Features
 
-- 🧠 **Persistent Memory** - Context survives across sessions
-- 📁 **Folder Context Files** - Auto-generated `CLAUDE.md` in project folders with activity timelines
-- 🌐 **Multilingual Modes** - Supports 28 languages (Spanish, Chinese, French, Japanese, etc.)
-- 🎭 **Mode System** - Switch between workflows (Code, Email Investigation, Chill)
-- 🔍 **MCP Search Tools** - Query your project history with natural language
-- 🧠 **Knowledge Agents** - Build queryable "brains" from your observation history
-- 🌐 **Web Viewer UI** - Real-time memory stream visualization at http://localhost:37777
+- 🧠 **Persistent Memory** - Project context survives across Claude Code and Codex CLI sessions
+- 🔁 **Unified Hook Entry** - Lifecycle events flow through one worker-backed runtime
+- 📊 **Progressive Disclosure** - Search starts with compact indexes, then fetches full observations only when needed
+- 🔍 **Worker-Backed Retrieval** - Query project history through HTTP APIs, skills, MCP compatibility surfaces, and the web viewer
+- 🌐 **Web Viewer UI** - Real-time memory stream, settings, logs, source filters, and context preview at http://localhost:37777
 - 🔒 **Privacy Control** - Use `<private>` tags to exclude sensitive content from storage
-- ⚙️ **Context Configuration** - Fine-grained control over what context gets injected
-- 🤖 **Automatic Operation** - No manual intervention required
-- 📊 **FTS5 Search** - Fast full-text search across observations
-- 🔗 **Citations** - Reference past observations with IDs
+- ⚙️ **Custom API Extraction** - Configure a third-party compatible API for structured observation processing
+- 🧩 **Focused Host Integrations** - Claude Code plugin support plus optional Codex CLI transcript ingestion
 
 ## How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Session Start → Inject context from recent sessions         │
+│ Claude Code / Codex activity enters through integrations    │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ User Prompts → Create session, save user prompts           │
+│ Unified hook/transcript adapters normalize lifecycle events │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Tool Executions → Capture observations (Read, Write, etc.) │
+│ Local worker stores prompts, sessions, and observations     │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Worker Processes → Run structured extraction asynchronously │
+│ Custom API extraction creates structured reusable memory    │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Session Ends → Generate summary, ready for next session     │
+│ Future sessions retrieve compact, relevant project context  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Core Components:**
-1. **Hook Entry Layer** - `src/cli/` adapters and handlers translate lifecycle events into worker requests
-2. **Smart Install** - Cached dependency checker (pre-hook script)
-3. **Worker Service** - HTTP API on port 37777 managed by Bun
-4. **SQLite Database** - Stores sessions, observations, summaries with FTS5 search
-5. **Retrieval Surfaces** - Worker-backed retrieval with legacy MCP compatibility where enabled
-6. **Web Viewer UI** - Real-time visualization with SSE and infinite scroll
+1. **Hook Entry Layer** - `src/cli/` adapters and handlers translate Claude Code lifecycle events into worker requests
+2. **Transcript Integration** - Optional Codex CLI transcript watching imports sessions from project workspaces
+3. **Worker Service** - HTTP API on port 37777 manages sessions, storage, search, settings, logs, SSE, and custom API extraction
+4. **SQLite Database** - Stores sessions, prompts, observations, summaries, and project/source metadata
+5. **Retrieval Surfaces** - Web viewer, HTTP APIs, skills, and MCP compatibility tools expose worker-backed history
+6. **Web Viewer UI** - Real-time visualization with source filters, settings, logs, context preview, and infinite scroll
 
 See [Architecture Overview](architecture/overview) for details.
 
@@ -90,24 +86,15 @@ See [Architecture Overview](architecture/overview) for details.
 - **uv**: Python package manager for vector search (auto-installed if missing)
 - **SQLite 3**: For persistent storage (bundled)
 
-## What's New
+## Current Release
 
-**v9.0.0 - Live Context:**
-- **Folder Context Files**: Auto-generated `CLAUDE.md` in project folders with activity timelines
-- **Worktree Support**: Unified context from parent repos and git worktrees
-- **Configurable Observation Limits**: Control how many observations appear in context
-- **Windows Fixes**: Resolved IPC detection and hook execution issues
-- **Settings Auto-Creation**: `settings.json` now auto-creates on first run
-- **MCP Tools Naming**: Updated from "mem-search skill" to "MCP tools" terminology
-
-**v7.1.0 - Bun Migration:**
-- Replaced PM2 with native Bun process management
-- Switched from better-sqlite3 to bun:sqlite for faster database access
-- Simplified cross-platform support
-
-**v7.0.0 - Context Configuration:**
-- 11 settings for fine-grained control over context injection
-- Dual-tag privacy system (`<private>` tags)
+**v0.1.1 - ccx-mem canonical release:**
+- Published as `ccx-mem` on npm and `remote1993/ccx-mem` on GitHub
+- Supports `npx ccx-mem install` for local plugin setup
+- Supports Claude Code marketplace installation with `/plugin marketplace add remote1993/ccx-mem`
+- Fixes viewer source filtering so only detected integrations are shown
+- Adds viewer bundle cache busting so updated UI code is not hidden by browser cache
+- Removes the obsolete OpenClaw install-script copy step from the deploy workflow
 
 ## Next Steps
 
@@ -116,15 +103,12 @@ See [Architecture Overview](architecture/overview) for details.
     Quick start & advanced installation
   </Card>
   <Card title="Getting Started" icon="rocket" href="/usage/getting-started">
-    Learn how Claude-Mem works automatically
-  </Card>
-  <Card title="Folder Context" icon="folder-open" href="/usage/folder-context">
-    Auto-generated folder CLAUDE.md files
+    Learn how ccx-mem works automatically
   </Card>
   <Card title="Search Tools" icon="magnifying-glass" href="/usage/search-tools">
-    Query your project history
+    Query worker-backed project history
   </Card>
-  <Card title="Knowledge Agents" icon="brain" href="/usage/knowledge-agents">
-    Build queryable corpora from your history
+  <Card title="Private Tags" icon="shield" href="/usage/private-tags">
+    Exclude sensitive content from storage
   </Card>
 </CardGroup>

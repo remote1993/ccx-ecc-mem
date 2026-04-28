@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "Install Claude-Mem for Claude Code or Codex CLI"
+description: "Install ccx-mem for Claude Code or Codex CLI"
 ---
 
 # Installation Guide
@@ -9,7 +9,7 @@ description: "Install Claude-Mem for Claude Code or Codex CLI"
 
 ### Option 1: npx (Recommended)
 
-Install and configure Claude-Mem with a single command:
+Install and configure ccx-mem with a single command:
 
 ```bash
 npx ccx-mem install
@@ -24,7 +24,7 @@ The interactive installer will:
 
 ### Option 2: Plugin Marketplace
 
-Install Claude-Mem directly from the plugin marketplace inside Claude Code:
+Install ccx-mem directly from the plugin marketplace inside Claude Code:
 
 ```bash
 /plugin marketplace add remote1993/ccx-mem
@@ -130,18 +130,16 @@ npm run test:context
 
 ## Upgrading
 
-Upgrades are automatic when updating via the plugin marketplace. Key changes in recent versions:
+For npm-based installs, update with the latest published package:
 
-**v7.1.0**: PM2 replaced with native Bun process management. Migration is automatic on first hook trigger.
+```bash
+npx ccx-mem install
+```
 
-**v7.0.0+**: 11 configuration settings, dual-tag privacy system.
-
-**v5.4.0+**: Skill-based search replaces MCP tools, saving ~2,250 tokens per session.
-
-See [CHANGELOG](https://github.com/remote1993/ccx-mem/blob/main/CHANGELOG.md) for complete version history.
+For Claude Code marketplace installs, re-run the marketplace install flow or update the plugin from Claude Code's plugin UI. Current release notes are published on GitHub releases and summarized in [CHANGELOG](https://github.com/remote1993/ccx-mem/blob/main/CHANGELOG.md).
 
 ## Next Steps
 
-- [Getting Started Guide](usage/getting-started) - Learn how Claude-Mem works automatically
-- [MCP Search Tools](usage/search-tools) - Query your project history
-- [Configuration](configuration) - Customize Claude-Mem behavior
+- [Getting Started Guide](usage/getting-started) - Learn how ccx-mem works automatically
+- [Search Tools](usage/search-tools) - Query your project history
+- [Configuration](configuration) - Customize ccx-mem behavior
