@@ -1,4 +1,4 @@
-# claude-mem Production Guide
+# ccx-mem Production Guide
 
 Practical guide based on 23 days of production usage with 3,400+ observations across two physical servers and 8 projects.
 
@@ -41,7 +41,7 @@ sqlite3 ~/.claude-mem/claude-mem.db "
 
 ## Multi-Machine Setup
 
-If running claude-mem on multiple machines, use `claude-mem-sync` to keep observations in sync:
+If running ccx-mem on multiple machines, use `claude-mem-sync` to keep observations in sync:
 
 ```bash
 claude-mem-sync push <remote-host>    # local -> remote

@@ -1,4 +1,4 @@
-# claude-mem Architecture Overview
+# ccx-mem Architecture Overview
 
 ## Current Runtime Baseline
 
@@ -138,7 +138,7 @@ Hook commands ensure the worker is running, but the hook process does not become
 
 ## Integration Boundary
 
-If you are extending claude-mem today, prefer this order of abstraction:
+If you are extending ccx-mem today, prefer this order of abstraction:
 
 1. integrate a host into the unified hook entry
 2. normalize host payloads with a platform adapter or transcript schema

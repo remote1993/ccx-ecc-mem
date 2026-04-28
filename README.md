@@ -11,10 +11,10 @@
 </h1>
 
 <p align="center">
-  <a href="docs/i18n/README.zh.md">中文</a>
+  <a href="docs/README.en.md">English</a>
 </p>
 
-<h4 align="center">Persistent memory system built around a local worker runtime, custom third-party API extraction, and focused host integrations for Claude Code and Codex CLI.</h4>
+<h4 align="center">围绕本地 worker 运行时、自定义第三方 API 提取路径，以及 Claude Code / Codex CLI 集成构建的持久记忆系统。</h4>
 
 <p align="center">
   <a href="LICENSE">
@@ -26,244 +26,122 @@
   <a href="package.json">
     <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node">
   </a>
-  <a href="https://github.com/remote1993/awesome-claude-code">
-    <img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Claude Code">
-  </a>
 </p>
 
 <p align="center">
-  <a href="https://trendshift.io/repositories/15496" target="_blank">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/trendshift-badge-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/trendshift-badge.svg">
-      <img src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/trendshift-badge.svg" alt="remote1993/ccx-mem | Trendshift" width="250" height="55"/>
-    </picture>
-  </a>
-</p>
-
-<br>
-
-<table align="center">
-  <tr>
-    <td align="center">
-      <a href="https://github.com/remote1993/ccx-mem">
-        <picture>
-          <img
-            src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/cm-preview.gif"
-            alt="ccx-mem Preview"
-            width="500"
-          >
-        </picture>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://www.star-history.com/#remote1993/ccx-mem&Date">
-        <picture>
-          <source
-            media="(prefers-color-scheme: dark)"
-            srcset="https://api.star-history.com/image?repos=remote1993/ccx-mem&type=date&theme=dark&legend=top-left"
-          />
-          <source
-            media="(prefers-color-scheme: light)"
-            srcset="https://api.star-history.com/image?repos=remote1993/ccx-mem&type=date&legend=top-left"
-          />
-          <img
-            alt="Star History Chart"
-            src="https://api.star-history.com/image?repos=remote1993/ccx-mem&type=date&legend=top-left"
-            width="500"
-          />
-        </picture>
-      </a>
-    </td>
-  </tr>
-</table>
-
-<p align="center">
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#how-it-works">How It Works</a> •
-  <a href="#mcp-search-tools">Search Tools</a> •
-  <a href="#documentation">Documentation</a> •
-  <a href="#configuration">Configuration</a> •
-  <a href="#troubleshooting">Troubleshooting</a> •
-  <a href="#license">License</a>
+  <a href="#快速开始">快速开始</a> •
+  <a href="#工作原理">工作原理</a> •
+  <a href="#搜索工具">搜索工具</a> •
+  <a href="#配置">配置</a> •
+  <a href="#故障排除">故障排除</a> •
+  <a href="#许可证与原项目致谢">许可证</a>
 </p>
 
 <p align="center">
-  ccx-mem preserves coding-session context across Claude Code and Codex CLI by capturing lifecycle events, storing structured observations in a local worker-backed runtime, and injecting relevant project history into future sessions.
+  ccx-mem 通过捕获 Claude Code 和 Codex CLI 的会话活动，将结构化观察存储到本地 worker 运行时，并在未来会话中注入相关项目历史，从而保留跨会话上下文。
 </p>
 
 ---
 
-## Quick Start
+## 快速开始
 
-Install with a single command:
+使用一条命令安装：
 
 ```bash
 npx ccx-mem install
 ```
 
-Install for Codex CLI transcript ingestion:
+安装 Codex CLI transcript 采集支持：
 
 ```bash
 npx ccx-mem install --ide codex-cli
 ```
 
-Or install from the plugin marketplace inside Claude Code:
+也可以在 Claude Code 内通过插件 marketplace 安装：
 
 ```bash
 /plugin marketplace add remote1993/ccx-mem
-
 /plugin install ccx-mem
 ```
 
-Current supported host integrations:
+当前支持的宿主集成：
 
-- Claude Code: local plugin registration and worker-backed context/search
-- Codex CLI: transcript watching plus workspace `AGENTS.md` context sync
+- Claude Code：本地插件注册、worker-backed 上下文注入与检索
+- Codex CLI：transcript 监听和工作区 `AGENTS.md` 上下文同步
 
-Restart your host client after installation. Claude Code picks up the local plugin state, and Codex CLI starts feeding memory once the worker is running and transcript watching is enabled.
+安装后请重启宿主客户端。Claude Code 会读取本地插件状态；Codex CLI 在 worker 运行且 transcript watch 启用后开始写入记忆。
 
-> **Note:** ccx-mem is published on npm, but `npm install -g ccx-mem` installs the **SDK/library only** — it does not register the Claude Code plugin state or configure Codex transcript watching. Always install via `npx ccx-mem install`, `npx ccx-mem install --ide codex-cli`, or the `/plugin` commands above.
+> **注意：** ccx-mem 已发布到 npm，但 `npm install -g ccx-mem` 只会安装 **SDK/library**，不会注册 Claude Code 插件状态，也不会配置 Codex transcript 监听。请使用 `npx ccx-mem install`、`npx ccx-mem install --ide codex-cli` 或上面的 `/plugin` 命令安装。
 
-**Key Features:**
+## 核心特性
 
-- 🧠 **Persistent Memory** - Project context survives across Claude Code and Codex CLI sessions
-- 🔁 **Unified Hook Entry** - Lifecycle events flow through one worker-backed runtime instead of scattered hook scripts
-- 📊 **Progressive Disclosure** - Search starts with compact indexes, then fetches detailed observations only when needed
-- 🔍 **Worker-Backed Retrieval** - Query project history through HTTP APIs, skills, MCP compatibility surfaces, and the web viewer
-- 🖥️ **Web Viewer UI** - Real-time memory stream, settings, logs, source filters, and context preview at http://localhost:37777
-- 🔒 **Privacy Control** - Use `<private>` tags to exclude sensitive content from storage
-- ⚙️ **Custom API Extraction** - Configure a third-party compatible API for structured observation processing
-- 🧩 **Focused Host Integrations** - Claude Code plugin support plus optional Codex CLI transcript ingestion
-
----
-
-## Documentation
-
-📚 **[View Full Documentation](https://docs.claude-mem.ai/)** - Browse on official website
-
-### Getting Started
-
-- **[Installation Guide](https://docs.claude-mem.ai/installation)** - Quick start & advanced installation
-- **[Platform Integration Guide](https://docs.claude-mem.ai/platform-integration)** - Claude Code hooks and Codex transcript integration model
-- **[Usage Guide](https://docs.claude-mem.ai/usage/getting-started)** - How ccx-mem works automatically
-- **[Search Tools](https://docs.claude-mem.ai/usage/search-tools)** - Query your project history with natural language
-
-### Best Practices
-
-- **[Context Engineering](https://docs.claude-mem.ai/context-engineering)** - AI agent context optimization principles
-- **[Progressive Disclosure](https://docs.claude-mem.ai/progressive-disclosure)** - Philosophy behind ccx-mem's context priming strategy
-
-### Architecture
-
-- **[Overview](https://docs.claude-mem.ai/architecture/overview)** - System components & data flow
-- **[Architecture Evolution](https://docs.claude-mem.ai/architecture-evolution)** - The journey from v3 to v5
-- **[Hooks Architecture](https://docs.claude-mem.ai/hooks-architecture)** - Historical hook architecture reference
-- **[Hooks Reference](https://docs.claude-mem.ai/architecture/hooks)** - Current unified hook entry and lifecycle coverage
-- **[Worker Service](https://docs.claude-mem.ai/architecture/worker-service)** - HTTP API & Bun management
-- **[Database](https://docs.claude-mem.ai/architecture/database)** - SQLite schema & FTS5 search
-- **[Search Architecture](https://docs.claude-mem.ai/architecture/search-architecture)** - Hybrid search with Chroma vector database
-
-### Configuration & Development
-
-- **[Configuration](https://docs.claude-mem.ai/configuration)** - Environment variables & settings
-- **[Development](https://docs.claude-mem.ai/development)** - Building, testing, contributing
-- **[Troubleshooting](https://docs.claude-mem.ai/troubleshooting)** - Common issues & solutions
+- **持久记忆**：项目上下文可跨 Claude Code 和 Codex CLI 会话延续
+- **统一 hook 入口**：生命周期事件进入同一个 worker-backed 运行时
+- **渐进式检索**：先读取紧凑索引，再按需展开时间线和完整观察
+- **worker-backed retrieval**：通过 Web UI、HTTP API、skills 和 MCP compatibility surfaces 查询项目历史
+- **Web Viewer UI**：在 http://localhost:37777 查看实时记忆流、设置、日志、来源筛选和上下文预览
+- **隐私控制**：使用 `<private>` 标签排除敏感内容存储
+- **自定义 API 提取**：可配置第三方兼容 API 处理结构化观察
+- **聚焦宿主集成**：Claude Code 插件支持，以及可选的 Codex CLI transcript ingestion
 
 ---
 
-## How It Works
+## 文档
 
-**Core Components:**
-
-1. **Unified Hook Entry** - Claude Code lifecycle events enter through `plugin/scripts/worker-service.cjs hook claude-code <event>` and `src/cli/` handlers
-2. **Smart Install** - Cached dependency checker keeps hook startup lightweight
-3. **Worker Service** - Express HTTP API on port 37777 with sessions, storage, search, settings, logs, SSE, and custom API processing
-4. **SQLite Database** - Stores sessions, prompts, observations, summaries, and project/source metadata
-5. **Retrieval Surfaces** - Web viewer, HTTP APIs, skills, and MCP compatibility tools expose the same worker-backed history
-6. **Optional Chroma Sync** - Vector embeddings can augment retrieval when enabled
-
-See [Architecture Overview](https://docs.claude-mem.ai/architecture/overview) for details.
+- [安装指南](docs/public/installation.mdx) - 快速开始与高级安装
+- [Platform Integration Guide](docs/public/platform-integration.mdx) - Claude Code hooks 和 Codex transcript 集成模型
+- [使用指南](docs/public/usage/getting-started.mdx) - ccx-mem 如何自动工作
+- [搜索工具](docs/public/usage/search-tools.mdx) - 使用自然语言查询项目历史
+- [配置](docs/public/configuration.mdx) - 环境变量与设置
+- [故障排除](docs/public/troubleshooting.mdx) - 常见问题与解决方案
 
 ---
 
-## Search Tools
+## 工作原理
 
-ccx-mem exposes worker-backed memory search through the web viewer, HTTP endpoints, skills, and MCP compatibility tools. The retrieval pattern is intentionally token-efficient: start with a compact index, inspect nearby timeline context, then fetch full observation details only for the IDs that matter.
+核心组件：
 
-**The 3-Layer Workflow:**
+1. **统一 hook 入口**：Claude Code 生命周期事件通过 `plugin/scripts/worker-service.cjs hook claude-code <event>` 和 `src/cli/` handlers 进入系统
+2. **智能安装**：缓存依赖检查，降低 hook 启动成本
+3. **Worker Service**：端口 37777 上的 Express HTTP API，负责 sessions、storage、search、settings、logs、SSE 和 custom API processing
+4. **SQLite 数据库**：存储 sessions、prompts、observations、summaries 和 project/source 元数据
+5. **检索入口**：Web viewer、HTTP APIs、skills 和 MCP compatibility tools 共享同一套 worker-backed history
+6. **可选 Chroma Sync**：启用后可用向量 embedding 增强检索
 
-1. **`search`** - Get compact index with IDs (~50-100 tokens/result)
-2. **`timeline`** - Get chronological context around interesting results
-3. **`get_observations`** - Fetch full details ONLY for filtered IDs (~500-1,000 tokens/result)
-
-**How It Works:**
-- Start with `search` to get an index of results
-- Use `timeline` to see what was happening around specific observations
-- Use `get_observations` to fetch full details for relevant IDs
-- **~10x token savings** by filtering before fetching details
-
-**Core retrieval tools:**
-
-1. **`search`** - Search memory index with full-text queries, filters by type/date/project
-2. **`timeline`** - Get chronological context around a specific observation or query
-3. **`get_observations`** - Fetch full observation details by IDs (always batch multiple IDs)
-
-**Example Usage:**
-
-```typescript
-// Step 1: Search for index
-search(query="authentication bug", type="bugfix", limit=10)
-
-// Step 2: Review index, identify relevant IDs (e.g., #123, #456)
-
-// Step 3: Fetch full details
-get_observations(ids=[123, 456])
-```
-
-See [Search Tools Guide](https://docs.claude-mem.ai/usage/search-tools) for detailed examples.
+详见 [Architecture Overview](docs/public/architecture/overview.mdx)。
 
 ---
 
-## System Requirements
+## 搜索工具
 
-- **Node.js**: 18.0.0 or higher
-- **Claude Code**: Latest version with plugin support
-- **Codex CLI**: Optional, for transcript-based memory capture
-- **Bun**: JavaScript runtime and process manager (auto-installed if missing)
-- **uv**: Python package manager for vector search (auto-installed if missing)
-- **SQLite 3**: For persistent storage (bundled)
+ccx-mem 通过 Web viewer、HTTP endpoints、skills 和 MCP compatibility tools 暴露 worker-backed memory search。检索遵循节省 token 的渐进式模式：先看紧凑索引，再查看时间线上下文，最后只为必要 ID 获取完整观察。
 
----
-### Windows Setup Notes
+三层检索流程：
 
-If you see an error like:
+1. `search`：获取紧凑索引
+2. `timeline`：查看相关结果前后的上下文
+3. `get_observations`：只为筛选出的 ID 获取完整详情
 
-```powershell
-npm : The term 'npm' is not recognized as the name of a cmdlet
-```
-
-Make sure Node.js and npm are installed and added to your PATH. Download the latest Node.js installer from https://nodejs.org and restart your terminal after installation.
+详见 [Search Tools Guide](docs/public/usage/search-tools.mdx)。
 
 ---
 
-## Configuration
+## 系统要求
 
-Settings are managed in `~/.claude-mem/settings.json` (auto-created with defaults on first run). Configure AI model, worker port, data directory, log level, and context injection settings.
+- Node.js 18.0.0 或更高版本
+- 支持插件的最新版 Claude Code
+- Codex CLI（可选，用于 transcript-based memory capture）
+- Bun（缺失时自动安装）
+- uv（缺失时自动安装，用于向量搜索）
+- SQLite 3（已内置）
 
-See the **[Configuration Guide](https://docs.claude-mem.ai/configuration)** for all available settings and examples.
+---
 
-### Mode & Language Configuration
+## 配置
 
-ccx-mem supports multiple workflow modes and languages via the `CLAUDE_MEM_MODE` setting.
+设置文件位于 `~/.claude-mem/settings.json`，首次运行会自动创建。可配置模型、worker 端口、数据目录、日志级别和上下文注入行为。
 
-This option controls both:
-- The workflow behavior (e.g. code, chill, investigation)
-- The language used in generated observations
-
-#### How to Configure
-
-Edit your settings file at `~/.claude-mem/settings.json`:
+示例：
 
 ```json
 {
@@ -271,110 +149,53 @@ Edit your settings file at `~/.claude-mem/settings.json`:
 }
 ```
 
-Modes are defined in `plugin/modes/`. To see all available modes locally:
+模式文件位于 `plugin/modes/`。修改模式后请重启 Claude Code。
+
+---
+
+## 开发
 
 ```bash
-ls ~/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin/modes/
+git clone https://github.com/remote1993/ccx-mem.git
+cd ccx-mem
+npm install
+npm run build
 ```
 
-#### Available Modes
-
-| Mode | Description |
-|------------|-------------------------|
-| `code` | Default English mode |
-| `code--zh` | Simplified Chinese mode |
-| `code--ja` | Japanese mode |
-
-Language-specific modes follow the pattern `code--[lang]` where `[lang]` is the ISO 639-1 language code (e.g., `zh` for Chinese, `ja` for Japanese, `es` for Spanish).
-
-> Note: `code--zh` (Simplified Chinese) is already built-in — no additional installation or plugin update is required.
-
-#### After Changing Mode
-
-Restart Claude Code to apply the new mode configuration.
----
-
-## Development
-
-See the **[Development Guide](https://docs.claude-mem.ai/development)** for build instructions, testing, and contribution workflow.
+详见 [Development Guide](docs/public/development.mdx)。
 
 ---
 
-## Troubleshooting
+## 故障排除
 
-If experiencing issues, describe the problem to Claude and the troubleshoot skill will automatically diagnose and provide fixes.
+如果遇到问题，请先检查 worker 状态：
 
-See the **[Troubleshooting Guide](https://docs.claude-mem.ai/troubleshooting)** for common issues and solutions.
+```bash
+npx ccx-mem status
+```
 
----
-
-## Bug Reports
-
-Create comprehensive bug reports with the automated generator:
+安装后的插件目录中也提供日志命令：
 
 ```bash
 cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem
-npm run bug-report
+npm run worker:logs
 ```
 
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Update documentation
-5. Submit a Pull Request
-
-See [Development Guide](https://docs.claude-mem.ai/development) for contribution workflow.
+详见 [Troubleshooting Guide](docs/public/troubleshooting.mdx)。
 
 ---
 
-## License
+## 支持
 
-This project is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0).
-
-Copyright (C) 2025 remote1993. All rights reserved.
-
-See the [LICENSE](LICENSE) file for full details.
-
-**What This Means:**
-
-- You can use, modify, and distribute this software freely
-- If you modify and deploy on a network server, you must make your source code available
-- Derivative works must also be licensed under AGPL-3.0
-- There is NO WARRANTY for this software
-
-**Note on Ragtime**: The `ragtime/` directory is licensed separately under the **PolyForm Noncommercial License 1.0.0**. See [ragtime/LICENSE](ragtime/LICENSE) for details.
+- **文档**：[docs/](docs/)
+- **Issues**：[GitHub Issues](https://github.com/remote1993/ccx-mem/issues)
+- **仓库**：[github.com/remote1993/ccx-mem](https://github.com/remote1993/ccx-mem)
+- **作者**：Alex Newman ([@remote1993](https://github.com/remote1993))
 
 ---
 
-## Support
+## 许可证与原项目致谢
 
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/remote1993/ccx-mem/issues)
-- **Repository**: [github.com/remote1993/ccx-mem](https://github.com/remote1993/ccx-mem)
-- **Official X Account**: [@Claude_Memory](https://x.com/Claude_Memory)
-- **Official Discord**: [Join Discord](https://discord.com/invite/J4wttp9vDu)
-- **Author**: Alex Newman ([@remote1993](https://github.com/remote1993))
+ccx-mem 源自原始 **Claude-Mem** 项目，并保留原项目的 AGPL-3.0 许可与版权声明。许可证文件中的 `Copyright (C) 2025 Alex Newman (@thedotmack)` 是原项目版权信息，应当保留。
 
----
-
-**Powered by the local worker runtime** | **Custom API extraction path** | **Made with TypeScript**
-
----
-
-### What About $CMEM?
-
-$CMEM is a solana token created by a 3rd party without Claude-Mem's prior consent, but officially embraced by the creator of Claude-Mem (remote1993). The token acts as a community catalyst for growth and a vehicle for bringing real-time agent data to the developers and knowledge workers that need it most. $CMEM: 2TsmuYUrsctE57VLckZBYEEzdokUF8j8e1GavekWBAGS
-
-## Integration Model
-
-The original Claude-Mem project follows this rule:
-
-- each host integrates through its native mechanism
-- internal processing converges on the local worker runtime
-- observation extraction and summaries converge on the custom API path
-
-See `docs/integration-capability-matrix.md` for the current host capability matrix.
+本仓库当前由 [@remote1993](https://github.com/remote1993) 维护为 `remote1993/ccx-mem` 发布线。详见 [LICENSE](LICENSE)。
