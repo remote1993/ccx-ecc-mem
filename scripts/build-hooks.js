@@ -260,7 +260,6 @@ function writeFusionActiveView(registry) {
     defaultProfile,
     defaultLocale: registry.defaultLocale ?? 'zh-CN',
     locales: registry.locales ?? ['zh-CN', 'en'],
-    generatedAt: new Date().toISOString(),
     activeCapabilityIds: activeIds,
     activeCapabilities,
     capabilitiesByStatus: grouped,
