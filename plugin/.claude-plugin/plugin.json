@@ -1,0 +1,57 @@
+{
+  "name": "ccx-ecc-mem",
+  "version": "0.1.2",
+  "description": "少依赖、中文优先的 Claude Code 本地能力编排、记忆与治理插件",
+  "author": {
+    "name": "remote1993"
+  },
+  "repository": "https://github.com/remote1993/ccx-ecc-mem",
+  "license": "AGPL-3.0",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "claude-agent-sdk",
+    "mcp",
+    "plugin",
+    "memory",
+    "compression",
+    "knowledge-graph",
+    "transcript",
+    "typescript",
+    "nodejs",
+    "everything-claude-code",
+    "ecc",
+    "chinese",
+    "localization",
+    "agents",
+    "skills",
+    "hooks"
+  ],
+  "homepage": "https://github.com/remote1993/ccx-ecc-mem#readme",
+  "skills": [
+    "./skills/",
+    "./ecc/skills/",
+    "./fusion/"
+  ],
+  "commands": [
+    "./fusion/"
+  ],
+  "features": {
+    "agents": 0,
+    "optionalAgents": 8,
+    "commands": 7,
+    "skills": 183,
+    "configAssets": true,
+    "hookEvents": [
+      "Setup",
+      "SessionStart",
+      "UserPromptSubmit",
+      "PreToolUse",
+      "PostToolUse",
+      "Stop"
+    ],
+    "customTools": [
+      "mcp-search"
+    ]
+  }
+}

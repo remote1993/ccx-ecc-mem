@@ -1,0 +1,288 @@
+---
+title: "Worker Service"
+description: "Current HTTP API, initialization flow, and Bun-managed worker runtime"
+---
+
+# Worker Service
+
+The worker service is the long-running local HTTP runtime for ccx-ecc-mem. It is built with Express.js, started through the Bun-managed worker path, and keeps hook execution lightweight by moving session orchestration, storage, search, settings, SSE updates, and custom API extraction into a separate process.
+
+## Overview
+
+- **Technology**: Express.js HTTP server
+- **Runtime**: Bun-managed worker process
+- **Primary entrypoint**: `src/services/worker-service.ts`
+- **HTTP server wrapper**: `src/services/server/Server.ts`
+- **Built output**: `plugin/scripts/worker-service.cjs`
+- **Default bind**: `127.0.0.1:37777` unless overridden by settings / env
+- **AI runtime**: custom API only (`CustomApiAgent`)
+
+## Runtime Shape
+
+The current runtime is organized as:
+
+```text
+worker-service.ts
+  → Server
+  → DatabaseManager / SessionManager / SearchManager
+  → route modules
+  → CustomApiAgent
+  → SQLite / optional Chroma
+```
+
+The worker starts the HTTP server first, then finishes slower background initialization such as database setup, search route registration, optional Codex transcript watcher startup, and optional Chroma backfill.
+
+## Initialization Model
+
+The worker does **not** become fully ready all at once.
+
+### Startup sequence
+
+```text
+start HTTP server
+  → write PID / register supervisor state
+  → run background initialization
+  → initialize DB
+  → register search + corpus routes
+  → mark readiness complete
+  → continue optional best-effort startup work
+```
+
+### Why this matters
+
+- `/api/health` is available even while initialization is still in progress
+- `/api/readiness` is the endpoint that tells callers whether the worker is fully ready
+- `/api/context/inject` explicitly fails open with empty context until search is ready
+- most other `/api/*` routes wait for initialization and otherwise return `503`
+
+## Route Organization
+
+The current HTTP API is split by responsibility instead of being best understood as one flat endpoint list.
+
+### Core system routes
+
+Implemented in `src/services/server/Server.ts`:
+
+```text
+GET  /api/health
+GET  /api/readiness
+GET  /api/version
+GET  /api/instructions
+POST /api/admin/restart
+POST /api/admin/shutdown
+GET  /api/admin/doctor
+```
+
+### Viewer and stream routes
+
+Primarily registered through `ViewerRoutes`:
+
+```text
+GET /
+GET /stream
+```
+
+These power the built-in viewer UI and live updates.
+
+### Session lifecycle routes
+
+Implemented in `src/services/worker/http/routes/SessionRoutes.ts`:
+
+```text
+POST /api/sessions/init
+POST /api/sessions/observations
+POST /api/sessions/summarize
+POST /api/sessions/complete
+GET  /api/sessions/status
+```
+
+Legacy `POST /sessions/:sessionDbId/...` routes still exist as compatibility surfaces, but the worker-centered lifecycle used by current hook handlers targets the `/api/sessions/*` routes.
+
+### Search and context routes
+
+Implemented in `src/services/worker/http/routes/SearchRoutes.ts`:
+
+```text
+GET  /api/search
+GET  /api/timeline
+GET  /api/decisions
+GET  /api/changes
+GET  /api/how-it-works
+GET  /api/context/recent
+GET  /api/context/timeline
+GET  /api/context/preview
+GET  /api/context/inject
+POST /api/context/semantic
+```
+
+Additional backward-compatibility search routes remain available under `/api/search/*`.
+
+### Data and queue routes
+
+Implemented in `src/services/worker/http/routes/DataRoutes.ts`:
+
+```text
+GET    /api/observations
+GET    /api/summaries
+GET    /api/prompts
+GET    /api/observation/:id
+GET    /api/observations/by-file
+POST   /api/observations/batch
+GET    /api/session/:id
+POST   /api/sdk-sessions/batch
+GET    /api/prompt/:id
+GET    /api/stats
+GET    /api/projects
+GET    /api/processing-status
+POST   /api/processing
+GET    /api/pending-queue
+POST   /api/pending-queue/process
+DELETE /api/pending-queue/failed
+DELETE /api/pending-queue/all
+POST   /api/import
+```
+
+### Settings and compatibility-control routes
+
+Implemented in `src/services/worker/http/routes/SettingsRoutes.ts`:
+
+```text
+GET  /api/settings
+POST /api/settings
+GET  /api/mcp/status
+POST /api/mcp/toggle
+GET  /api/branch/status
+POST /api/branch/switch
+POST /api/branch/update
+```
+
+The MCP and branch endpoints are compatibility / operational surfaces. They should not be treated as the primary architecture of the worker runtime.
+
+## Health, Readiness, and Locality
+
+### Health endpoint
+
+`GET /api/health` returns basic liveness plus worker metadata such as:
+- built version
+- uptime
+- PID
+- initialization state
+- MCP loopback readiness state
+- current AI provider status
+
+### Readiness endpoint
+
+`GET /api/readiness` returns `200` only after core initialization completes.
+
+### Local-only expectation
+
+Admin endpoints are localhost-protected, and the worker is intended to run as a local companion service rather than a shared remote API.
+
+## Session Processing Model
+
+The worker owns asynchronous session processing.
+
+### Flow
+
+```text
+hook / client request
+  → /api/sessions/init or /api/sessions/observations or /api/sessions/summarize
+  → SessionManager queue
+  → generator/session runtime
+  → CustomApiAgent
+  → ResponseProcessor
+  → SQLite / optional Chroma sync
+```
+
+### Important runtime behavior
+
+- session lifecycle requests are idempotent around `contentSessionId`
+- observations are queued, not fully processed inline in the hook request
+- the worker ensures a generator is running when queued work exists
+- summarize / complete are separate operations
+- privacy-tag stripping happens before or during worker intake so private content is not stored
+
+## Search and Context Role
+
+The worker is also the source of truth for retrieval.
+
+Relevant routes include:
+- `/api/search`
+- `/api/timeline`
+- `/api/context/inject`
+- `/api/observations/batch`
+
+This means the worker service is not just an extraction daemon; it is also the central local API for context injection, search, viewer data, and queue inspection.
+
+## Custom API Integration
+
+The current processing path is custom-only.
+
+### Main components
+
+- `src/services/worker/CustomApiAgent.ts`
+- `src/services/worker/agents/ResponseProcessor.ts`
+- `src/services/worker/http/routes/SessionRoutes.ts`
+
+### Relevant settings
+
+- `CLAUDE_MEM_CUSTOM_BASE_URL`
+- `CLAUDE_MEM_CUSTOM_API_KEY`
+- `CLAUDE_MEM_CUSTOM_MODEL`
+
+If custom API configuration is missing, session-processing routes can reject processing requests instead of silently falling back to older provider paths.
+
+## Bun and Process Management
+
+The worker is started and managed through the Bun-based runtime path used by the plugin scripts.
+
+### Process-management responsibilities
+
+- start the worker daemon
+- write and verify PID ownership
+- wait for health / readiness
+- handle graceful shutdown
+- clean stale PID or startup state when possible
+
+Implementation lives primarily in:
+- `src/services/infrastructure/ProcessManager.ts`
+- `src/services/infrastructure/HealthMonitor.ts`
+- `src/services/infrastructure/GracefulShutdown.ts`
+
+## Data Storage
+
+The worker persists local state under `~/.claude-mem/`, including:
+
+```text
+~/.claude-mem/
+├── claude-mem.db
+├── worker.pid
+├── settings.json
+└── logs/
+```
+
+SQLite is the durable system of record. Chroma remains optional and is used as a semantic retrieval layer rather than as the primary store.
+
+## Compatibility Notes
+
+Some older routes and operational surfaces still exist for backward compatibility:
+- legacy `/sessions/:sessionDbId/*` session routes
+- MCP toggle/status endpoints
+- branch-switching endpoints
+- backward-compatibility search endpoints under `/api/search/*`
+
+These compatibility surfaces should be described as compatibility surfaces, not as the main runtime shape.
+
+## Practical Guidance
+
+When updating the worker architecture docs or implementation, check these in order:
+1. `src/services/worker-service.ts`
+2. `src/services/server/Server.ts`
+3. `src/services/worker/http/routes/SessionRoutes.ts`
+4. `src/services/worker/http/routes/SearchRoutes.ts`
+5. `src/services/worker/http/routes/DataRoutes.ts`
+6. `src/services/worker/http/routes/SettingsRoutes.ts`
+
+## Troubleshooting
+
+See [Troubleshooting - Worker Issues](../troubleshooting.md#worker-service-issues) for operational debugging guidance.

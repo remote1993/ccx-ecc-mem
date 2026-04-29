@@ -1,0 +1,119 @@
+---
+title: "Architecture Overview"
+description: "Current Claude Code, Codex CLI, worker, memory, and optional capability architecture in ccx-ecc-mem"
+---
+
+# Architecture Overview
+
+ccx-ecc-mem is a worker-backed local memory system for Claude Code and Codex CLI. It keeps memory capture, SQLite storage, search, context injection, and the Viewer available by default, while Chroma, ECC agents, and heavier compatibility surfaces remain opt-in.
+
+## System Components
+
+1. **Claude Code Hook Entry** - `plugin/hooks/hooks.json` invokes `worker-service.cjs hook claude-code <event>` and then `src/cli/`.
+2. **Codex Transcript Ingestion** - enabled only by `npx ccx-mem install --ide codex-cli`; the worker starts the watcher automatically.
+3. **Worker Service** - owns sessions, storage, search, settings, logs, SSE, and custom API extraction over HTTP.
+4. **Database Layer** - stores sessions and observations in SQLite with FTS5; Chroma is optional and disabled by default.
+5. **Retrieval Surfaces** - worker HTTP APIs, native skills, and the web Viewer read from the same worker-backed store.
+6. **Fusion Capability Registry** - `plugin/fusion/registry.json` defines default and optional capabilities for the Viewer and install state.
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Language | TypeScript |
+| Runtime | Node.js 18+ plus Bun-managed worker |
+| Primary Store | SQLite 3 with `bun:sqlite` |
+| Optional Vector Store | ChromaDB |
+| HTTP Server | Express |
+| Real-time UI | Server-Sent Events |
+| UI Framework | React |
+| AI Runtime | Custom API / OpenAI-compatible endpoint |
+| Build Tool | esbuild |
+
+## Primary Runtime Flow
+
+### Claude Code
+
+```text
+plugin/hooks/hooks.json
+  -> bun-runner.js / worker-service.cjs
+  -> worker-service.cjs hook claude-code <event>
+  -> src/cli/hook-command.ts
+  -> src/cli/adapters/claude-code.ts
+  -> src/cli/handlers/*
+  -> local worker HTTP API
+  -> SQLite / optional Chroma
+```
+
+### Codex CLI
+
+```text
+Codex session JSONL
+  -> worker-managed transcript watcher
+  -> src/services/transcripts/processor.ts
+  -> local worker HTTP API
+  -> workspace AGENTS.md context update
+  -> SQLite / optional Chroma
+```
+
+Codex transcript ingestion is not a standalone public CLI command. It is enabled by the Codex installer and started by the worker.
+
+## Memory Pipeline
+
+```text
+Host event
+  -> normalized worker request
+  -> SessionManager queue
+  -> CustomApiAgent extraction
+  -> ResponseProcessor
+  -> SQLite store
+  -> future context/search/viewer reads
+```
+
+Memory-related functionality remains part of the default runtime: worker, Claude hooks, SQLite, search, and context injection stay active. The low-load default disables optional Chroma and Codex transcript ingestion unless Codex CLI is installed.
+
+## Active Lifecycle Coverage
+
+| Stage | Claude Code hook event | Purpose |
+|---|---|---|
+| Setup | `Setup` | Ensure runtime dependencies are available |
+| Session start | `SessionStart` | Start or health-check worker and inject prior context |
+| Prompt submit | `UserPromptSubmit` | Create/get session and save prompt |
+| Tool observation | `PostToolUse` | Queue observations for asynchronous processing |
+| Read context | `PreToolUse` for `Read` | Inject file-context hints |
+| Stop | `Stop` | Summarize the session |
+| Session end | `SessionEnd` | Mark session complete |
+
+Codex CLI has partial lifecycle coverage based on transcript events exposed by the host.
+
+## Optional Capability Boundary
+
+- Chroma is disabled by default through `CLAUDE_MEM_CHROMA_ENABLED=false`.
+- Codex transcript ingestion is disabled by default through `CLAUDE_MEM_TRANSCRIPTS_ENABLED=false` and enabled by the Codex installer.
+- ECC agents are optional capabilities. They are not in the default `core` profile and are not exposed through the plugin manifest as default agents.
+- Raw ECC hooks, external MCP catalogs, orchestration flows, and media-generation flows are archived reference assets unless explicitly wired through controlled configuration.
+
+## Directory Structure
+
+```text
+ccx-ecc-mem/
+├── src/
+│   ├── cli/                    # Claude hook entry, adapter, and handler pipeline
+│   ├── services/
+│   │   ├── transcripts/        # Codex transcript ingestion
+│   │   ├── worker-service.ts   # Worker orchestrator entrypoint
+│   │   ├── worker/             # Sessions, search, SSE, custom API, HTTP routes
+│   │   └── sqlite/             # Database layer
+│   ├── ui/viewer/              # React Viewer
+│   ├── shared/                 # Settings and utilities
+│   └── utils/
+├── plugin/
+│   ├── hooks/                  # Claude Code hook configuration
+│   ├── scripts/                # Built worker executables
+│   ├── skills/                 # Native memory skills
+│   ├── ecc/                    # Preinstalled ECC reference library
+│   ├── fusion/                 # Curated capability registry and commands
+│   └── ui/                     # Built Viewer UI
+├── tests/
+└── docs/
+```

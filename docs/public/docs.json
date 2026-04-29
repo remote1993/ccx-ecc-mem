@@ -1,0 +1,133 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "ccx-mem",
+  "description": "Worker-backed persistent memory for Claude Code and Codex CLI",
+  "theme": "mint",
+  "favicon": "/ccx-ecc-mem-logomark.webp",
+  "logo": {
+    "light": "/ccx-ecc-mem-logo-for-light-mode.webp",
+    "dark": "/ccx-ecc-mem-logo-for-dark-mode.webp",
+    "href": "https://github.com/remote1993/ccx-mem"
+  },
+  "colors": {
+    "primary": "#3B82F6",
+    "light": "#EFF6FF",
+    "dark": "#1E40AF"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/remote1993/ccx-mem"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Install",
+      "href": "https://github.com/remote1993/ccx-mem#快速开始"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "icon": "rocket",
+        "pages": [
+          "introduction",
+          "installation",
+          "usage/getting-started",
+          "usage/search-tools",
+          "usage/knowledge-agents",
+          "usage/private-tags",
+          "usage/export-import",
+          "usage/manual-recovery"
+        ]
+      },
+      {
+        "group": "Best Practices",
+        "icon": "lightbulb",
+        "pages": [
+          "context-engineering",
+          "progressive-disclosure",
+          "file-read-gate",
+          "smart-explore-benchmark"
+        ]
+      },
+      {
+        "group": "Configuration & Development",
+        "icon": "gear",
+        "pages": [
+          "configuration",
+          "modes",
+          "development",
+          "troubleshooting",
+          "platform-integration"
+        ]
+      },
+      {
+        "group": "Architecture",
+        "icon": "diagram-project",
+        "pages": [
+          "architecture/overview",
+          "architecture/hooks",
+          "architecture/worker-service",
+          "architecture/database",
+          "architecture/search-architecture",
+          "architecture-evolution",
+          "hooks-architecture",
+          "architecture/pm2-to-bun-migration"
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/remote1993/ccx-mem"
+    },
+    "links": [
+      {
+        "header": "Resources",
+        "items": [
+          {
+            "label": "Documentation",
+            "href": "https://github.com/remote1993/ccx-mem"
+          },
+          {
+            "label": "Issues",
+            "href": "https://github.com/remote1993/ccx-mem/issues"
+          }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          {
+            "label": "License (AGPL-3.0)",
+            "href": "https://github.com/remote1993/ccx-mem/blob/main/LICENSE"
+          }
+        ]
+      }
+    ]
+  },
+  "seo": {
+    "indexing": "all",
+    "metatags": {
+      "og:type": "website",
+      "og:site_name": "ccx-mem Documentation",
+      "og:description": "Worker-backed persistent memory for Claude Code and Codex CLI"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
+  },
+  "integrations": {
+    "telemetry": {
+      "enabled": false
+    }
+  }
+}

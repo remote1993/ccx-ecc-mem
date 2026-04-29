@@ -1,0 +1,50 @@
+{
+  "name": "ccx-ecc-mem",
+  "version": "0.1.2",
+  "description": "少依赖、中文优先的 Claude Code 本地能力编排、记忆与治理插件",
+  "author": {
+    "name": "remote1993",
+    "url": "https://github.com/remote1993"
+  },
+  "homepage": "https://github.com/remote1993/ccx-ecc-mem#readme",
+  "repository": "https://github.com/remote1993/ccx-ecc-mem",
+  "license": "AGPL-3.0",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "claude-agent-sdk",
+    "mcp",
+    "plugin",
+    "memory",
+    "compression",
+    "knowledge-graph",
+    "transcript",
+    "typescript",
+    "nodejs",
+    "everything-claude-code",
+    "ecc",
+    "chinese",
+    "localization",
+    "agents",
+    "skills",
+    "hooks"
+  ],
+  "interface": {
+    "displayName": "ccx-ecc-mem",
+    "shortDescription": "中文本地化 Claude Code 持久记忆与精选 ECC 能力融合插件。",
+    "longDescription": "ccx-ecc-mem 以 ccx-mem 为持久记忆与 worker 运行内核，并精选内化 Everything Claude Code 的高价值 skills、commands 与可选 agent 能力，默认保持中文、轻量、低依赖。",
+    "developerName": "remote1993",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/remote1993/ccx-ecc-mem",
+    "defaultPrompt": [
+      "查找我之前已经了解过的代码库上下文，再开始新任务。",
+      "显示与我当前编辑文件相关的最近观察。",
+      "总结上一次会话，并把最相关的上下文注入到本次会话。"
+    ],
+    "brandColor": "#1F6FEB"
+  }
+}

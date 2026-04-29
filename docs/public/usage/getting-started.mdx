@@ -1,0 +1,154 @@
+---
+title: "Getting Started"
+description: "Learn how ccx-ecc-mem works automatically through the current unified hook entry and worker-backed runtime"
+---
+
+# Getting Started with ccx-ecc-mem
+
+ccx-ecc-mem works automatically after installation. The current runtime uses a unified hook entry and a local worker-backed service to capture activity, store history, and inject relevant context into later sessions.
+
+## The Current Runtime Shape
+
+```text
+plugin/hooks/hooks.json
+  → worker-service.cjs hook claude-code <event>
+  → src/cli/hook-command.ts
+  → src/cli/handlers/*
+  → local worker HTTP API
+  → SQLite / optional Chroma
+```
+
+This is the current primary model.
+
+If you encounter references to older per-hook scripts, treat them as historical material rather than the default runtime path.
+
+## What Happens Automatically
+
+### 1. Session start
+
+On `SessionStart`, ccx-ecc-mem:
+- ensures the worker is running
+- waits for worker health/readiness
+- retrieves recent project context
+- injects that context into the new session
+
+### 2. Prompt submission
+
+On `UserPromptSubmit`, ccx-ecc-mem:
+- creates or reuses the logical session
+- stores the user prompt
+- initializes worker-side session state
+
+### 3. Tool observations
+
+On `PostToolUse`, ccx-ecc-mem:
+- forwards tool-use observations to the worker
+- queues them for asynchronous extraction
+- stores structured observations after processing succeeds
+
+### 4. File-context hints
+
+Before `Read`, ccx-ecc-mem can inject file-context hints through the active `PreToolUse (Read)` lifecycle step.
+
+### 5. Session summary and completion
+
+Near the end of the interaction, ccx-ecc-mem:
+- summarizes the session on `Stop`
+- marks the session complete on `SessionEnd`
+
+## Lifecycle Coverage
+
+The current lifecycle coverage is:
+
+`Setup` → `SessionStart` → `UserPromptSubmit` → `PostToolUse` → `PreToolUse (Read)` → `Stop` → `SessionEnd`
+
+That is broader than older simplified descriptions that only mention a subset of hooks.
+
+## What Gets Stored
+
+The worker-backed runtime stores:
+- user prompts
+- tool observations
+- session summaries
+- project/session metadata used for later retrieval
+
+Structured extraction commonly produces:
+- titles or summaries
+- narrative context
+- key facts
+- concepts or categories
+- observation types
+- related files
+
+## Context Injection
+
+When a later session starts, ccx-ecc-mem can retrieve:
+- recent observations for the current project
+- recent session summaries
+- timeline-style context around recent work
+
+This lets the next session start with project history already in view.
+
+## Retrieval Model
+
+ccx-ecc-mem now follows a progressive disclosure retrieval pattern:
+
+1. inspect a compact index first
+2. fetch narrower context for the relevant items
+3. read full details only for the records that still matter
+4. verify current truth in the codebase if needed
+
+Read [Progressive Disclosure](/progressive-disclosure) for the current retrieval mental model.
+
+## Optional Runtime Commands
+
+Most users do not need these commands day to day, but they are useful for debugging the local runtime:
+
+```bash
+npm run worker:start
+npm run worker:stop
+npm run worker:restart
+npm run worker:status
+npm run worker:logs
+```
+
+Useful health checks:
+
+```bash
+curl http://localhost:37777/health
+curl http://localhost:37777/api/readiness
+```
+
+## Direct Inspection
+
+Stored context lives in SQLite at `~/.claude-mem/claude-mem.db`.
+
+Examples:
+
+```bash
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM sdk_sessions;"
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM observations;"
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM session_summaries;"
+```
+
+## `/clear` Behavior
+
+`/clear` does not mean ccx-ecc-mem forgets the session history.
+
+In the current runtime, it can trigger a fresh context injection path while session-level storage and worker history remain available for later retrieval and summarization.
+
+## Historical Boundary
+
+If you find older docs that describe ccx-ecc-mem mainly through per-hook scripts or MCP-first search flows, treat them as historical or compatibility-oriented material.
+
+For the current system, continue with:
+- [Introduction](/introduction)
+- [Configuration](/configuration)
+- [Architecture Overview](/architecture/overview)
+- [Troubleshooting](/troubleshooting)
+
+## Next Steps
+
+- [Memory Search](/usage/search-tools)
+- [Architecture Overview](/architecture/overview)
+- [Troubleshooting](/troubleshooting)

@@ -1,0 +1,635 @@
+#!/usr/bin/env node
+
+/**
+ * Build script for ccx-mem hooks
+ * Bundles TypeScript hooks into individual standalone executables using esbuild
+ */
+
+import { build } from 'esbuild';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const WORKER_SERVICE = {
+  name: 'worker-service',
+  source: 'src/services/worker-service.ts'
+};
+
+const MCP_SERVER = {
+  name: 'mcp-server',
+  source: 'src/servers/mcp-server.ts'
+};
+
+const CONTEXT_GENERATOR = {
+  name: 'context-generator',
+  source: 'src/services/context-generator.ts'
+};
+
+/**
+ * Strip hardcoded __dirname/__filename from bundled CJS output.
+ *
+ * When esbuild converts ESM TypeScript source to CJS format, it inlines
+ * __dirname and __filename as static strings based on the SOURCE file paths
+ * at build time. These `var __dirname = "/build/machine/path/..."` declarations
+ * shadow the runtime's native __dirname (provided by Bun/Node's CJS module
+ * wrapper), causing path resolution to fail on end-user machines.
+ *
+ * This post-build step removes those hardcoded assignments so the runtime
+ * globals are used instead.
+ *
+ * See: https://github.com/remote1993/ccx-mem/issues/1410
+ */
+function writeSdkDeclarations() {
+  const declaration = `export interface ParsedObservation {
+  type: string;
+  title: string | null;
+  subtitle: string | null;
+  facts: string[];
+  narrative: string | null;
+  concepts: string[];
+  files_read: string[];
+  files_modified: string[];
+}
+
+export interface ParsedSummary {
+  request: string | null;
+  investigated: string | null;
+  learned: string | null;
+  completed: string | null;
+  next_steps: string | null;
+  notes: string | null;
+}
+
+export interface Observation {
+  id: number;
+  tool_name: string;
+  tool_input: string;
+  tool_output: string;
+  created_at_epoch: number;
+  cwd?: string;
+}
+
+export interface SDKSession {
+  id: number;
+  memory_session_id: string | null;
+  project: string;
+  user_prompt: string;
+  last_assistant_message?: string;
+}
+
+export interface ModeConfig {
+  prompts: Record<string, string>;
+  observation_types: Array<{ id: string; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
+export declare const SUMMARY_MODE_MARKER: string;
+export declare const MAX_CONSECUTIVE_SUMMARY_FAILURES: number;
+export declare function parseObservations(text: string, correlationId?: string): ParsedObservation[];
+export declare function parseSummary(text: string, sessionId?: number, coerceFromObservation?: boolean): ParsedSummary | null;
+export declare function buildInitPrompt(project: string, sessionId: string, userPrompt: string, mode: ModeConfig): string;
+export declare function buildObservationPrompt(obs: Observation): string;
+export declare function buildSummaryPrompt(session: SDKSession, mode: ModeConfig): string;
+export declare function buildContinuationPrompt(userPrompt: string, promptNumber: number, contentSessionId: string, mode: ModeConfig): string;
+`;
+
+  fs.writeFileSync('dist/index.d.ts', declaration);
+  fs.writeFileSync('dist/sdk/index.d.ts', declaration);
+}
+
+function stripTrailingWhitespace(filePath) {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const cleaned = content.replace(/[ \t]+$/gm, '');
+  if (cleaned !== content) {
+    fs.writeFileSync(filePath, cleaned);
+  }
+}
+
+function stripHardcodedDirname(filePath) {
+  let content = fs.readFileSync(filePath, 'utf-8');
+  const before = content.length;
+
+  // Match both double-quoted and single-quoted string literals.
+  // esbuild currently emits double quotes, but single quotes are handled
+  // defensively in case future versions change quoting style.
+  const str = `(?:"[^"]*"|'[^']*')`;
+
+  for (const id of ['__dirname', '__filename']) {
+    // Remove `var <id> = "...", rest` → `var rest`
+    content = content.replace(new RegExp(`\\bvar ${id}\\s*=\\s*${str},\\s*`, 'g'), 'var ');
+    // Remove standalone `var <id> = "...";`
+    content = content.replace(new RegExp(`\\bvar ${id}\\s*=\\s*${str};\\s*`, 'g'), '');
+    // Remove `, <id> = "..."` from mid/end of var declarations
+    content = content.replace(new RegExp(`,\\s*${id}\\s*=\\s*${str}`, 'g'), '');
+  }
+
+  // Clean up dangling `var ;` left when __dirname was the sole declarator
+  content = content.replace(/\bvar\s*;/g, '');
+
+  const removed = before - content.length;
+  if (removed > 0) {
+    fs.writeFileSync(filePath, content);
+    console.log(`  ✓ Stripped hardcoded __dirname/__filename paths (${removed} bytes)`);
+  }
+}
+
+function readJsonFile(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+}
+
+function registryCapabilities(registry) {
+  const capabilities = Array.isArray(registry.capabilities) ? registry.capabilities : [];
+  return new Map(capabilities.map((capability) => [capability.id, capability]));
+}
+
+function resolveProfileCapabilityIds(registry, profileName, seen = new Set()) {
+  const profile = registry.profiles?.[profileName];
+  if (!profile) {
+    throw new Error(`Fusion registry references missing profile: ${profileName}`);
+  }
+  if (seen.has(profileName)) return [];
+  seen.add(profileName);
+
+  const inherited = (profile.extends ?? []).flatMap((parent) =>
+    resolveProfileCapabilityIds(registry, parent, seen),
+  );
+  return [...new Set([...inherited, ...(profile.capabilities ?? [])])];
+}
+
+function capabilityImplementationPath(capability) {
+  return capability?.implementation?.path;
+}
+
+function capabilityFilePath(capability) {
+  const implementationPath = capabilityImplementationPath(capability);
+  if (!implementationPath || !fs.existsSync(implementationPath)) return implementationPath;
+  return fs.statSync(implementationPath).isDirectory()
+    ? path.join(implementationPath, 'SKILL.md')
+    : implementationPath;
+}
+
+function assertExistingRegistryPaths(registry) {
+  const capabilitiesById = registryCapabilities(registry);
+  const coreIds = resolveProfileCapabilityIds(registry, registry.defaultProfile ?? 'core');
+  if (coreIds.length === 0) {
+    throw new Error('Fusion default profile must include at least one capability.');
+  }
+
+  for (const capabilityId of coreIds) {
+    const capability = capabilitiesById.get(capabilityId);
+    if (!capability) {
+      throw new Error(`Fusion profile references missing capability: ${capabilityId}`);
+    }
+
+    const implementationPath = capabilityImplementationPath(capability);
+    if (!implementationPath) {
+      throw new Error(`Fusion capability ${capabilityId} is missing implementation.path`);
+    }
+    if (!fs.existsSync(implementationPath)) {
+      throw new Error(`Fusion capability ${capabilityId} references missing path: ${implementationPath}`);
+    }
+  }
+}
+
+function assertEccPreinstallComplete() {
+  const requiredPaths = [
+    'plugin/ecc/LICENSE.everything-claude-code',
+    'plugin/ecc/skills',
+    'plugin/ecc/commands',
+    'plugin/ecc/agents',
+    'plugin/ecc/docs',
+    'plugin/ecc/rules',
+    'plugin/ecc/schemas',
+    'plugin/ecc/manifests/install-profiles.json',
+    'plugin/ecc/manifests/install-modules.json',
+    'plugin/ecc/mcp-configs/mcp-servers.json',
+  ];
+
+  for (const filePath of requiredPaths) {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`ECC preinstall is incomplete; missing: ${filePath}`);
+    }
+  }
+}
+
+function assertCoreAvoidsHeavyRuntime(registry) {
+  const forbiddenTerms = registry.dependencyPolicy?.coreMustAvoid ?? [];
+  const capabilitiesById = registryCapabilities(registry);
+  const coreIds = resolveProfileCapabilityIds(registry, registry.defaultProfile ?? 'core');
+
+  for (const capabilityId of coreIds) {
+    const capability = capabilitiesById.get(capabilityId);
+    if (!capability || capability.dependencyTier !== 'core') continue;
+
+    const filePath = capabilityFilePath(capability);
+    if (!filePath || !fs.existsSync(filePath)) continue;
+
+    const content = fs.readFileSync(filePath, 'utf-8').toLowerCase();
+    for (const term of forbiddenTerms) {
+      if (content.includes(String(term).toLowerCase())) {
+        throw new Error(`Fusion core capability ${capabilityId} references forbidden default dependency: ${term}`);
+      }
+    }
+  }
+}
+
+function groupCapabilities(capabilities) {
+  return capabilities.reduce((groups, capability) => {
+    const status = capability.status ?? 'reference';
+    groups[status] ??= [];
+    groups[status].push(capability);
+    return groups;
+  }, { active: [], optional: [], reference: [], archived: [] });
+}
+
+function writeFusionActiveView(registry) {
+  const capabilitiesById = registryCapabilities(registry);
+  const defaultProfile = registry.defaultProfile ?? 'core';
+  const activeIds = resolveProfileCapabilityIds(registry, defaultProfile);
+  const activeCapabilities = activeIds.map((id) => capabilitiesById.get(id)).filter(Boolean);
+  const optionalProfiles = Object.fromEntries(
+    Object.entries(registry.profiles ?? {}).filter(([name]) => name !== defaultProfile),
+  );
+  const grouped = groupCapabilities(registry.capabilities ?? []);
+
+  const activeView = {
+    version: registry.version,
+    schema: registry.schema ?? 'capability-registry',
+    defaultProfile,
+    defaultLocale: registry.defaultLocale ?? 'zh-CN',
+    locales: registry.locales ?? ['zh-CN', 'en'],
+    generatedAt: new Date().toISOString(),
+    activeCapabilityIds: activeIds,
+    activeCapabilities,
+    capabilitiesByStatus: grouped,
+    optionalProfiles,
+    catalogPaths: registry.catalogPaths,
+    archived: registry.archived,
+    dependencySummary: {
+      core: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'core').length,
+      optional: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'optional').length,
+      heavy: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'heavy').length,
+      external: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'external').length,
+    },
+  };
+
+  fs.writeFileSync('plugin/fusion/active-view.json', JSON.stringify(activeView, null, 2) + '\n');
+}
+
+async function buildHooks() {
+  console.log('🔨 Building ccx-mem hooks and worker service...\n');
+
+  try {
+    // Read version from package.json
+    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+    const version = packageJson.version;
+    console.log(`📌 Version: ${version}`);
+
+    // Create output directories
+    console.log('\n📦 Preparing output directories...');
+    const hooksDir = 'plugin/scripts';
+    const uiDir = 'plugin/ui';
+
+    if (!fs.existsSync(hooksDir)) {
+      fs.mkdirSync(hooksDir, { recursive: true });
+    }
+    if (!fs.existsSync(uiDir)) {
+      fs.mkdirSync(uiDir, { recursive: true });
+    }
+    console.log('✓ Output directories ready');
+
+    // Generate plugin/package.json for cache directory dependency installation
+    // Note: bun:sqlite is a Bun built-in, no external dependencies needed for SQLite
+    console.log('\n📦 Generating plugin package.json...');
+    const pluginPackageJson = {
+      name: 'ccx-ecc-mem-plugin',
+      version: version,
+      private: true,
+      description: 'Runtime dependencies for the ccx-ecc-mem bundled plugin',
+      type: 'module',
+      dependencies: {
+        'tree-sitter-cli': '^0.26.5',
+        'tree-sitter-c': '^0.24.1',
+        'tree-sitter-cpp': '^0.23.4',
+        'tree-sitter-go': '^0.25.0',
+        'tree-sitter-java': '^0.23.5',
+        'tree-sitter-javascript': '^0.25.0',
+        'tree-sitter-python': '^0.25.0',
+        'tree-sitter-ruby': '^0.23.1',
+        'tree-sitter-rust': '^0.24.0',
+        'tree-sitter-typescript': '^0.23.2',
+        'tree-sitter-kotlin': '^0.3.8',
+        'tree-sitter-swift': '^0.7.1',
+        'tree-sitter-php': '^0.24.2',
+        'tree-sitter-elixir': '^0.3.5',
+        '@tree-sitter-grammars/tree-sitter-lua': '^0.4.1',
+        'tree-sitter-scala': '^0.24.0',
+        'tree-sitter-bash': '^0.25.1',
+        'tree-sitter-haskell': '^0.23.1',
+        '@tree-sitter-grammars/tree-sitter-zig': '^1.1.2',
+        'tree-sitter-css': '^0.25.0',
+        'tree-sitter-scss': '^1.0.0',
+        '@tree-sitter-grammars/tree-sitter-toml': '^0.7.0',
+        '@tree-sitter-grammars/tree-sitter-yaml': '^0.7.1',
+        '@derekstride/tree-sitter-sql': '^0.3.11',
+        '@tree-sitter-grammars/tree-sitter-markdown': '^0.3.2',
+      },
+      engines: {
+        node: '>=18.0.0',
+        bun: '>=1.0.0'
+      }
+    };
+    fs.writeFileSync('plugin/package.json', JSON.stringify(pluginPackageJson, null, 2) + '\n');
+    console.log('✓ plugin/package.json generated');
+
+    // Build React viewer
+    console.log('\n📋 Building React viewer...');
+    const { spawn } = await import('child_process');
+    const viewerBuild = spawn('node', ['scripts/build-viewer.js'], { stdio: 'inherit' });
+    await new Promise((resolve, reject) => {
+      viewerBuild.on('exit', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Viewer build failed with exit code ${code}`));
+        }
+      });
+    });
+
+    // Build worker service
+    console.log(`\n🔧 Building worker service...`);
+    await build({
+      entryPoints: [WORKER_SERVICE.source],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'cjs',
+      outfile: `${hooksDir}/${WORKER_SERVICE.name}.cjs`,
+      minify: true,
+      logLevel: 'error', // Suppress warnings (import.meta warning is benign)
+      external: [
+        'bun:sqlite',
+        // Optional chromadb embedding providers
+        'cohere-ai',
+        'ollama',
+        // Default embedding function with native binaries
+        '@chroma-core/default-embed',
+        'onnxruntime-node'
+      ],
+      define: {
+        '__DEFAULT_PACKAGE_VERSION__': `"${version}"`
+      },
+      banner: {
+        js: [
+          '#!/usr/bin/env bun',
+          'var __filename = require("node:url").fileURLToPath(import.meta.url);',
+          'var __dirname = require("node:path").dirname(__filename);'
+        ].join('\n')
+      }
+    });
+
+    // Fix hardcoded __dirname/__filename in bundled output (#1410)
+    stripHardcodedDirname(`${hooksDir}/${WORKER_SERVICE.name}.cjs`);
+    stripTrailingWhitespace(`${hooksDir}/${WORKER_SERVICE.name}.cjs`);
+
+    // Make worker service executable
+    fs.chmodSync(`${hooksDir}/${WORKER_SERVICE.name}.cjs`, 0o755);
+    const workerStats = fs.statSync(`${hooksDir}/${WORKER_SERVICE.name}.cjs`);
+    console.log(`✓ worker-service built (${(workerStats.size / 1024).toFixed(2)} KB)`);
+
+    // Build MCP server
+    console.log(`\n🔧 Building MCP server...`);
+    await build({
+      entryPoints: [MCP_SERVER.source],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'cjs',
+      outfile: `${hooksDir}/${MCP_SERVER.name}.cjs`,
+      minify: true,
+      logLevel: 'error',
+      external: [
+        'bun:sqlite',
+        'tree-sitter-cli',
+        'tree-sitter-javascript',
+        'tree-sitter-typescript',
+        'tree-sitter-python',
+        'tree-sitter-go',
+        'tree-sitter-rust',
+        'tree-sitter-ruby',
+        'tree-sitter-java',
+        'tree-sitter-c',
+        'tree-sitter-cpp',
+        'tree-sitter-kotlin',
+        'tree-sitter-swift',
+        'tree-sitter-php',
+        'tree-sitter-elixir',
+        '@tree-sitter-grammars/tree-sitter-lua',
+        'tree-sitter-scala',
+        'tree-sitter-bash',
+        'tree-sitter-haskell',
+        '@tree-sitter-grammars/tree-sitter-zig',
+        'tree-sitter-css',
+        'tree-sitter-scss',
+        '@tree-sitter-grammars/tree-sitter-toml',
+        '@tree-sitter-grammars/tree-sitter-yaml',
+        '@derekstride/tree-sitter-sql',
+        '@tree-sitter-grammars/tree-sitter-markdown',
+      ],
+      define: {
+        '__DEFAULT_PACKAGE_VERSION__': `"${version}"`
+      },
+      banner: {
+        js: '#!/usr/bin/env node'
+      }
+    });
+
+    // Fix hardcoded __dirname/__filename in bundled output (#1410)
+    stripHardcodedDirname(`${hooksDir}/${MCP_SERVER.name}.cjs`);
+    stripTrailingWhitespace(`${hooksDir}/${MCP_SERVER.name}.cjs`);
+
+    // Make MCP server executable
+    fs.chmodSync(`${hooksDir}/${MCP_SERVER.name}.cjs`, 0o755);
+    const mcpServerStats = fs.statSync(`${hooksDir}/${MCP_SERVER.name}.cjs`);
+    console.log(`✓ mcp-server built (${(mcpServerStats.size / 1024).toFixed(2)} KB)`);
+
+    // GUARDRAIL (#1645): The MCP server runs under Node, but the entire `bun:`
+    // module namespace (bun:sqlite, bun:ffi, bun:test, etc.) is Bun-only. If
+    // any transitive import in mcp-server.ts ever pulls one in, the bundle
+    // will crash on first require under Node — which is exactly the regression
+    // PR #1645 fixed for `bun:sqlite`. Fail the build instead of shipping a
+    // broken bundle so future contributors get an immediate signal.
+    //
+    // Only flag actual `require("bun:...")` / `require('bun:...')` calls, not
+    // the bare string — error messages and inline comments may legitimately
+    // mention `bun:sqlite` by name without re-introducing the import.
+    const mcpBundleContent = fs.readFileSync(`${hooksDir}/${MCP_SERVER.name}.cjs`, 'utf-8');
+    const bunRequireRegex = /require\(\s*["']bun:[a-z][a-z0-9_-]*["']\s*\)/;
+    const bunRequireMatch = mcpBundleContent.match(bunRequireRegex);
+    if (bunRequireMatch) {
+      throw new Error(
+        `mcp-server.cjs contains a Bun-only ${bunRequireMatch[0]} call. This means a transitive import in src/servers/mcp-server.ts pulled in code from worker-service.ts (or another module that touches DatabaseManager/ChromaSync). The MCP server runs under Node and cannot load bun:* modules. Audit recent imports in src/servers/mcp-server.ts and src/services/worker-spawner.ts — the spawner module is intentionally lightweight and MUST NOT import anything that touches SQLite or other Bun-only modules. See PR #1645 for context.`
+      );
+    }
+
+    // SECONDARY GUARDRAIL (#1645 round 11): bundle size budget. The bun:sqlite
+    // regex above catches the specific regression class we already know about,
+    // but esbuild could in theory change how it emits external module specifiers
+    // and silently slip past the regex. A bundle-size budget catches the
+    // structural symptom (worker-service.ts dragged into the bundle blew the
+    // size from ~358KB to ~1.96MB) regardless of how the imports look.
+    //
+    // 600KB is a generous ceiling — current size is ~384KB, the broken v12.0.0
+    // bundle was ~1920KB, and there's plenty of headroom for legitimate growth
+    // before we'd want to revisit this number.
+    const MCP_SERVER_MAX_BYTES = 600 * 1024;
+    if (mcpServerStats.size > MCP_SERVER_MAX_BYTES) {
+      throw new Error(
+        `mcp-server.cjs is ${(mcpServerStats.size / 1024).toFixed(2)} KB, exceeding the ${(MCP_SERVER_MAX_BYTES / 1024).toFixed(0)} KB budget. This usually means a transitive import pulled worker-service.ts (or another heavy module) into the MCP bundle. The MCP server is supposed to be a thin HTTP wrapper — audit recent imports in src/servers/mcp-server.ts and src/services/worker-spawner.ts. See PR #1645 for context on why this guardrail exists.`
+      );
+    }
+
+    // Build context generator
+    console.log(`\n🔧 Building context generator...`);
+    await build({
+      entryPoints: [CONTEXT_GENERATOR.source],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'cjs',
+      outfile: `${hooksDir}/${CONTEXT_GENERATOR.name}.cjs`,
+      minify: true,
+      logLevel: 'error',
+      external: ['bun:sqlite'],
+      define: {
+        '__DEFAULT_PACKAGE_VERSION__': `"${version}"`
+      },
+      // No banner needed: CJS files under Node.js have __dirname/__filename natively
+    });
+
+    // Fix hardcoded __dirname/__filename in bundled output (#1410)
+    stripHardcodedDirname(`${hooksDir}/${CONTEXT_GENERATOR.name}.cjs`);
+    stripTrailingWhitespace(`${hooksDir}/${CONTEXT_GENERATOR.name}.cjs`);
+
+    const contextGenStats = fs.statSync(`${hooksDir}/${CONTEXT_GENERATOR.name}.cjs`);
+    console.log(`✓ context-generator built (${(contextGenStats.size / 1024).toFixed(2)} KB)`);
+
+    // Build public SDK/library exports
+    console.log(`\n🔧 Building SDK exports...`);
+    const sdkOutDir = 'dist/sdk';
+    if (!fs.existsSync('dist')) {
+      fs.mkdirSync('dist', { recursive: true });
+    }
+    if (!fs.existsSync(sdkOutDir)) {
+      fs.mkdirSync(sdkOutDir, { recursive: true });
+    }
+    await build({
+      entryPoints: ['src/sdk/index.ts'],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'esm',
+      outfile: 'dist/index.js',
+      minify: true,
+      logLevel: 'error',
+      external: ['bun:sqlite'],
+      define: {
+        '__DEFAULT_PACKAGE_VERSION__': `"${version}"`
+      },
+    });
+    fs.copyFileSync('dist/index.js', `${sdkOutDir}/index.js`);
+    writeSdkDeclarations();
+    const sdkStats = fs.statSync('dist/index.js');
+    console.log(`✓ SDK exports built (${(sdkStats.size / 1024).toFixed(2)} KB)`);
+
+    // Build NPX CLI (pure Node.js — no Bun dependency)
+    console.log(`\n🔧 Building NPX CLI...`);
+    const npxCliOutDir = 'dist/npx-cli';
+    if (!fs.existsSync(npxCliOutDir)) {
+      fs.mkdirSync(npxCliOutDir, { recursive: true });
+    }
+    await build({
+      entryPoints: ['src/npx-cli/index.ts'],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'esm',
+      outfile: `${npxCliOutDir}/index.js`,
+      banner: { js: '#!/usr/bin/env node' },
+      minify: true,
+      logLevel: 'error',
+      external: [
+        'fs', 'fs/promises', 'path', 'os', 'child_process', 'url',
+        'crypto', 'http', 'https', 'net', 'stream', 'util', 'events',
+        'buffer', 'querystring', 'readline', 'tty', 'assert',
+      ],
+      define: {
+        '__DEFAULT_PACKAGE_VERSION__': `"${version}"`
+      },
+    });
+
+    // Make NPX CLI executable
+    fs.chmodSync(`${npxCliOutDir}/index.js`, 0o755);
+    const npxCliStats = fs.statSync(`${npxCliOutDir}/index.js`);
+    console.log(`✓ npx-cli built (${(npxCliStats.size / 1024).toFixed(2)} KB)`);
+
+    // Verify critical distribution files exist (skills are source files, not build outputs)
+    console.log('\n📋 Verifying distribution files...');
+    const requiredDistributionFiles = [
+      'dist/index.js',
+      'dist/index.d.ts',
+      'dist/sdk/index.js',
+      'dist/sdk/index.d.ts',
+      'dist/npx-cli/index.js',
+      'plugin/skills/mem-search/SKILL.md',
+      'plugin/skills/smart-explore/SKILL.md',
+      'plugin/hooks/hooks.json',
+      'plugin/.claude-plugin/plugin.json',
+      'plugin/fusion/registry.json',
+      'plugin/ecc/manifests/install-profiles.json',
+      'plugin/ecc/manifests/install-modules.json',
+      'plugin/ecc/mcp-configs/mcp-servers.json',
+    ];
+    for (const filePath of requiredDistributionFiles) {
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`Missing required distribution file: ${filePath}`);
+      }
+    }
+
+    const fusionRegistry = readJsonFile('plugin/fusion/registry.json');
+    assertExistingRegistryPaths(fusionRegistry);
+    assertEccPreinstallComplete();
+    assertCoreAvoidsHeavyRuntime(fusionRegistry);
+    writeFusionActiveView(fusionRegistry);
+
+    const capabilityCount = resolveProfileCapabilityIds(
+      fusionRegistry,
+      fusionRegistry.defaultProfile ?? 'core',
+    ).length;
+
+    console.log(`✓ All required distribution files present`);
+    console.log(`✓ Fusion capability profile validated (${capabilityCount} active capabilities)`);
+
+    console.log('\n✅ All build targets compiled successfully!');
+    console.log(`   Output: ${hooksDir}/`);
+    console.log(`   - Worker: worker-service.cjs`);
+    console.log(`   - MCP Server: mcp-server.cjs`);
+    console.log(`   - Context Generator: context-generator.cjs`);
+    console.log(`   Output: dist/`);
+    console.log(`   - SDK: index.js, index.d.ts`);
+    console.log(`   Output: ${npxCliOutDir}/`);
+    console.log(`   - NPX CLI: index.js`);
+
+  } catch (error) {
+    console.error('\n❌ Build failed:', error.message);
+    if (error.errors) {
+      console.error('\nBuild errors:');
+      error.errors.forEach(err => console.error(`  - ${err.text}`));
+    }
+    process.exit(1);
+  }
+}
+
+buildHooks();

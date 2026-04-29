@@ -1,0 +1,108 @@
+---
+title: Platform Integration Guide
+description: Supported Claude Code and Codex CLI integration model for ccx-ecc-mem
+icon: plug
+---
+
+# Platform Integration Guide
+
+ccx-ecc-mem currently supports two host integrations:
+
+- Claude Code through the local plugin hook lifecycle
+- Codex CLI through worker-managed transcript ingestion and workspace-local `AGENTS.md` context
+
+VS Code is not a supported host integration. Other upstream ECC assets, old provider notes, and non-target host experiments are reference material only. They are not supported host integrations in the current product surface.
+
+## Worker Service Basics
+
+```typescript
+const WORKER_BASE_URL = 'http://localhost:37777';
+const DEFAULT_PORT = 37777; // Override with CLAUDE_MEM_WORKER_PORT
+```
+
+Common checks:
+
+```http
+GET /health
+GET /api/readiness
+GET /api/settings
+GET /api/search?query=authentication
+```
+
+## Claude Code
+
+Claude Code uses plugin hooks:
+
+```text
+plugin/hooks/hooks.json
+  -> worker-service.cjs hook claude-code <event>
+  -> src/cli/hook-command.ts
+  -> src/cli/adapters/claude-code.ts
+  -> src/cli/handlers/*
+  -> local worker HTTP API
+```
+
+This path covers setup, session start, prompt intake, tool observations, selected read-context hints, stop summaries, and session completion.
+
+## Codex CLI
+
+Codex CLI is enabled explicitly:
+
+```bash
+npx ccx-mem install --ide codex-cli
+```
+
+That installer:
+
+- merges the Codex watch entry into `~/.claude-mem/transcript-watch.json`
+- sets `CLAUDE_MEM_TRANSCRIPTS_ENABLED=true` in `~/.claude-mem/settings.json`
+- keeps context injection workspace-local through `<workspace>/AGENTS.md`
+
+The user-facing runtime command is still the worker:
+
+```bash
+npx ccx-mem start
+```
+
+There is no supported public `transcript watch` command. The worker starts the transcript watcher automatically only when transcript ingestion is enabled.
+
+## Unified Internal Contract
+
+Both supported hosts converge on:
+
+- `sessionId`
+- `cwd`
+- `platform`
+- `prompt`
+- `toolName`
+- `toolInput`
+- `toolResponse`
+- `transcriptPath`
+- `metadata`
+
+See:
+
+- `src/cli/types.ts`
+- `src/cli/adapters/index.ts`
+- `src/services/transcripts/processor.ts`
+
+## Runtime Architecture
+
+```text
+Claude hooks / Codex transcript ingestion
+  -> normalized worker request
+  -> local worker runtime
+  -> session / search / settings / data routes
+  -> CustomApiAgent extraction and summarization
+  -> SQLite primary storage
+  -> optional Chroma / optional MCP compatibility surfaces
+```
+
+SQLite is the default retrieval store. Chroma and other heavier surfaces are opt-in.
+
+## Integration Guidance
+
+- Do not add new public host support without code, install flow, docs, and tests.
+- Do not expose optional ECC agents or heavyweight resources through the default profile.
+- Keep Codex ingestion tied to `install --ide codex-cli` plus the worker-managed watcher.
+- Keep memory capture, search, context injection, and the worker active by default for Claude Code.

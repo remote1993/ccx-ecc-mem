@@ -1,0 +1,132 @@
+---
+title: "Memory Search"
+description: "Use ccx-ecc-mem memory retrieval through the current worker-backed search flow"
+---
+
+# Memory Search
+
+ccx-ecc-mem keeps project history in a local worker-backed runtime. The current retrieval model is:
+
+1. inspect a lightweight index first
+2. fetch narrower context for the relevant items
+3. read full details only when justified
+
+This is the same progressive disclosure pattern described in [Progressive Disclosure](/progressive-disclosure), but framed around the current worker HTTP API rather than treating MCP as the primary runtime architecture.
+
+## Current Retrieval Model
+
+```text
+User query
+  → worker-backed retrieval surface
+  → local worker HTTP API
+  → search / timeline / data routes
+  → SQLite FTS5 / optional Chroma
+  → formatted results
+```
+
+Worker-backed retrieval is the primary path.
+
+Compatibility MCP surfaces may still exist in some environments, but they are an add-on access surface rather than the main runtime model.
+
+## The Three Layers
+
+### Layer 1: Index
+
+Start with a compact list of what exists.
+
+Typical index fields include:
+- IDs
+- timestamps
+- short titles or summaries
+- categories or observation types
+- enough metadata to decide relevance
+
+The purpose is selection, not full understanding.
+
+### Layer 2: Context
+
+Once a result looks relevant, fetch a narrower context slice.
+
+That may be:
+- a timeline around a record
+- nearby related observations
+- grouped results for the same file or topic
+- session-level context around a decision or fix
+
+The goal is to understand narrative shape before paying for every detail.
+
+### Layer 3: Details
+
+Fetch full observation or summary payloads only for the items that still matter after the index/context pass.
+
+Only after that should you read source files directly if stored context still leaves ambiguity.
+
+## Practical Workflow
+
+Use this order when looking up prior work:
+
+1. **Start with search or index-style output**
+2. **Pick only the results that look relevant**
+3. **Fetch timeline or nearby context for those results**
+4. **Read full details only for validated items**
+5. **Verify current truth in the codebase if needed**
+
+This keeps retrieval focused and avoids dumping large amounts of stale or irrelevant history into the session.
+
+## Common Use Cases
+
+### Debugging a recurring issue
+
+1. search for the error, bug type, or affected file
+2. inspect the compact result list
+3. open timeline/context around the most relevant hit
+4. fetch full details for the one or two records that still matter
+5. verify whether the current code still matches the stored history
+
+### Reviewing architectural decisions
+
+1. search by feature area or concept
+2. narrow to decision-like observations or summaries
+3. inspect nearby context to understand the surrounding trade-offs
+4. fetch full details for the final decision points
+
+### Recovering project context
+
+1. inspect recent project history through index-style output
+2. read a small timeline around the latest meaningful work
+3. fetch detail only for the milestones that still matter to the current task
+
+## Retrieval Surfaces
+
+In the current architecture, retrieval commonly flows through:
+
+- session-start context injection
+- worker search routes
+- timeline-style retrieval
+- data routes for observations, prompts, and summaries
+- viewer inspection flows
+
+Relevant implementation areas:
+- [SearchRoutes.ts](../src/services/worker/http/routes/SearchRoutes.ts)
+- [SessionRoutes.ts](../src/services/worker/http/routes/SessionRoutes.ts)
+- [SessionSearch.ts](../src/services/sqlite/SessionSearch.ts)
+- [search-architecture.mdx](../architecture/search-architecture)
+
+## Historical Boundary
+
+If you encounter older references to MCP tools such as `search`, `timeline`, or `get_observations` as if they were the system's default runtime architecture, treat them as compatibility-oriented guidance.
+
+For current implementation details, prefer:
+- [Progressive Disclosure](/progressive-disclosure)
+- [Architecture Overview](/architecture/overview)
+- [Search Architecture](/architecture/search-architecture)
+- [Troubleshooting](/troubleshooting)
+
+## Key Takeaway
+
+ccx-ecc-mem search is now best understood as a worker-backed retrieval flow:
+
+- compact first
+- contextual next
+- detailed only when justified
+- current code verified separately

@@ -1,0 +1,19 @@
+{
+  "name": "remote1993",
+  "owner": {
+    "name": "remote1993"
+  },
+  "metadata": {
+    "description": "Plugins by remote1993",
+    "homepage": "https://github.com/remote1993/ccx-mem"
+  },
+  "plugins": [
+    {
+      "name": "ccx-ecc-mem",
+      "version": "0.1.2",
+      "source": "./plugin",
+      "description": "融合 ccx-mem 持久记忆能力与 Everything Claude Code 资源集合的中文本地化 Claude Code 插件"
+    }
+  ],
+  "version": "0.1.2"
+}

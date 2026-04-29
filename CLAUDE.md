@@ -4,50 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project goal
 
-This repository is intended to fuse and Chinese-localize two Claude Code related projects from `/home/remote/workspace`:
+This repository builds `ccx-ecc-mem` as a low-dependency, Chinese-first, bilingual Claude Code local capability platform.
 
-- `everything-claude-code`: present at `/home/remote/workspace/everything-claude-code`.
-- `ccx-mem`: present at `/home/remote/workspace/ccx-mem`.
+The product goal is no longer to expose `ccx-mem` and Everything Claude Code as two visible halves. Instead, the project uses a capability-oriented model:
 
-The user has authorized copying files from the source project directories into this repository for implementation work.
+- Runtime, hooks, worker APIs, memory capture, local retrieval, and Viewer are owned by this repository.
+- High-value Everything Claude Code assets are internalized through `plugin/fusion/registry.json` as named capabilities.
+- The full ECC import remains source/reference material, not the default runtime surface.
+- Default behavior should stay local-first and low-dependency; heavy or external-service capabilities must be optional and explicit.
 
 ## Commands
 
-No commands are defined in this repository yet because it currently has no package manifest, build configuration, or test configuration.
+Verified from `package.json` after importing `ccx-mem`:
 
-When source files are copied in, update this section from verified project files such as `package.json`, `pyproject.toml`, `Makefile`, CI configuration, or README instructions. Include at minimum:
+- Build: `npm run build`
+- Test all: `npm test`
+- Single test area examples:
+  - `npm run test:server`
+  - `npm run test:search`
+  - `npm run test:context`
+- Worker status: `npm run worker:status`
+- Worker start/stop/restart:
+  - `npm run worker:start`
+  - `npm run worker:stop`
+  - `npm run worker:restart`
+- Package dry run: `npm pack --dry-run`
 
-- build command
-- lint command
-- test command
-- single-test command
-- local development command, if the merged project has one
+Avoid `npm run build-and-sync` unless explicitly needed, because it syncs to the local Claude plugin marketplace and restarts the installed worker.
 
 ## Architecture
 
-There is no local application architecture yet. The intended architecture should be derived from the copied source projects, not invented in advance.
+- CLI entry: `src/npx-cli/index.ts`
+- MCP server: `src/servers/mcp-server.ts`
+- Hook command entry: `src/cli/hook-command.ts`
+- Worker service: `src/services/worker-service.ts`
+- Claude Code plugin slice: `plugin/`
+- Plugin manifest: `plugin/.claude-plugin/plugin.json`
+- Plugin hooks: `plugin/hooks/hooks.json`
+- Plugin skills: `plugin/skills/`
+- Viewer UI source: `src/ui/viewer/`
+- Built viewer asset: `plugin/ui/viewer.html`
+- Capability registry: `plugin/fusion/registry.json`
+- Capability active view: `plugin/fusion/active-view.json`
+- Everything Claude Code reference namespace: `plugin/ecc/`
 
-When fusion work begins, document the big-picture structure here after inspecting the imported files:
+The runtime chain is `plugin/hooks/hooks.json` -> `src/cli/hook-command.ts` -> `src/services/worker-service.ts` -> `src/services/worker/http/routes/*` -> `src/ui/viewer/*`. `plugin/fusion/registry.json` is the source of truth for the user-visible capability surface, while `plugin/ecc/` is reference/source material until a capability is internalized.
 
-- plugin/package boundaries
-- CLI or hook entry points
-- memory/storage components
-- Claude Code integration points
-- localization/i18n strategy
-- generated or vendored assets that should not be edited directly
-
-## Fusion and localization workflow
+## Capability and localization workflow
 
 Use an evidence-first, Karpathy-inspired workflow:
 
-- Build the smallest runnable merged slice first, then expand coverage.
+- Build the smallest runnable capability slice first, then expand coverage.
 - Prefer direct, readable integration over framework-heavy rewrites.
-- Preserve upstream behavior until a deliberate localization or fusion change requires otherwise.
-- Keep Chinese localization complete and consistent for user-facing text, README content, plugin metadata, prompts, and command descriptions.
-- Separate source import, behavior changes, and localization changes when practical so diffs remain reviewable.
-- Verify each meaningful change by running the relevant command once commands exist.
+- Preserve upstream behavior until a deliberate localization or internalization change requires otherwise.
+- Keep Chinese localization complete and consistent for user-facing text, README content, plugin metadata, prompts, command descriptions, and Viewer labels.
+- Keep Everything Claude Code resources source-only until naming, permissions, dependencies, and hook behavior have been reviewed.
+- Do not enable imported ECC hooks automatically; review `plugin/ecc/hooks/hooks.json` before any internalization into `plugin/hooks/hooks.json`.
+- Default capabilities must avoid Python, Go, Cargo, Playwright, PM2, ccg-workflow, external service credentials, and raw ECC runtimes.
+- Verify each meaningful change with the relevant command.
 - Do not invent compatibility layers, fallback behavior, or abstractions before the merged code demonstrates a need.
 
-## Updating this file
+## Licensing
 
-As soon as real source files are copied into this repository, replace the placeholder command and architecture sections with verified details from the merged codebase.
+The runtime core imported from `ccx-mem` is AGPL-3.0. Everything Claude Code resources are MIT licensed. Preserve upstream license files and source attribution when importing ECC assets.

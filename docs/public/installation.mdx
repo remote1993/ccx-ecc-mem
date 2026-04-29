@@ -1,0 +1,146 @@
+---
+title: "Installation"
+description: "Install ccx-mem for Claude Code or Codex CLI"
+---
+
+# Installation Guide
+
+## Quick Start
+
+### Option 1: npx (Recommended)
+
+Install and configure ccx-mem with a single command:
+
+```bash
+npx ccx-mem install
+```
+
+The interactive installer will:
+- Detect the supported local hosts (Claude Code and Codex CLI)
+- Copy plugin files to the correct locations
+- Register the Claude Code marketplace plugin locally
+- Prepare runtime dependencies by reusing the downloaded package cache when available
+- Configure Codex worker-managed transcript ingestion only when you select Codex CLI
+
+### Option 2: Plugin Marketplace
+
+Install ccx-mem directly from the plugin marketplace inside Claude Code:
+
+```bash
+/plugin marketplace add remote1993/ccx-mem
+/plugin install ccx-mem
+```
+
+The marketplace path covers Claude Code only. If you also want Codex CLI, run `npx ccx-mem install --ide codex-cli` afterward.
+
+After installation, start the worker manually:
+
+```bash
+npx ccx-mem start
+```
+
+Then restart Claude Code or open Codex CLI in your project workspace.
+
+> **Important:** ccx-mem is published on npm, but running `npm install -g ccx-mem` installs the
+> **SDK/library only**. It does **not** register plugin hooks or start the worker service.
+> Always install via `npx ccx-mem install` or the `/plugin` commands above.
+
+## System Requirements
+
+- **Node.js**: 18.0.0 or higher
+- **Claude Code**: Latest version with plugin support
+- **Codex CLI**: Optional, for transcript-based integration
+- **Bun**: JavaScript runtime and process manager (auto-installed if missing)
+- **uv**: Optional Python package manager for Chroma vector search
+- **SQLite 3**: For persistent storage (bundled)
+
+## Advanced Installation
+
+For development or testing, you can clone and build from source:
+
+### Clone and Build
+
+```bash
+# Clone the repository
+git clone https://github.com/remote1993/ccx-mem.git
+cd ccx-mem
+
+# Install dependencies
+npm install
+
+# Build hooks and worker service
+npm run build
+
+# Start the worker service
+npm run worker:start
+
+# Verify worker is running
+npm run worker:status
+```
+
+### Post-Installation Verification
+
+#### 1. Verify Runtime Command Wiring
+
+```bash
+npx ccx-mem status
+```
+
+If the worker is not running yet, the command should print `Worker is not running`.
+
+#### 2. Verify Claude Code Registration
+
+Check that the plugin is registered locally:
+```bash
+cat ~/.claude/plugins/installed_plugins.json
+```
+
+#### 3. Verify Codex Transcript Ingestion
+
+If you installed Codex CLI support, check:
+```bash
+cat ~/.claude-mem/transcript-watch.json
+cat ~/.claude-mem/settings.json
+```
+
+#### 4. Data Directory Location
+
+Data is stored in `~/.claude-mem/`:
+- Database: `~/.claude-mem/claude-mem.db`
+- PID file: `~/.claude-mem/.worker.pid`
+- Port file: `~/.claude-mem/.worker.port`
+- Logs: `~/.claude-mem/logs/worker-YYYY-MM-DD.log`
+- Settings: `~/.claude-mem/settings.json`
+
+Override with environment variable:
+```bash
+export CLAUDE_MEM_DATA_DIR=/custom/path
+```
+
+#### 5. Check Worker Logs
+
+```bash
+npm run worker:logs
+```
+
+#### 6. Test Context Retrieval
+
+```bash
+npm run test:context
+```
+
+## Upgrading
+
+For npm-based installs, update with the latest published package:
+
+```bash
+npx ccx-mem install
+```
+
+For Claude Code marketplace installs, re-run the marketplace install flow or update the plugin from Claude Code's plugin UI. Current release notes are published on GitHub releases and summarized in [CHANGELOG](https://github.com/remote1993/ccx-mem/blob/main/CHANGELOG.md).
+
+## Next Steps
+
+- [Getting Started Guide](usage/getting-started) - Learn how ccx-mem works automatically
+- [Search Tools](usage/search-tools) - Query your project history
+- [Configuration](configuration) - Customize ccx-mem behavior

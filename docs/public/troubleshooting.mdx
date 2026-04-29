@@ -1,0 +1,340 @@
+---
+title: "Troubleshooting"
+description: "Diagnose current worker-backed ccx-ecc-mem issues using the unified hook entry and local worker runtime"
+---
+
+# Troubleshooting
+
+ccx-ecc-mem now runs through a unified hook entry and a local worker-backed runtime. Most problems fall into one of four places:
+
+1. the hook entry in [plugin/hooks/hooks.json](plugin/hooks/hooks.json)
+2. the unified hook command in [src/cli/hook-command.ts](src/cli/hook-command.ts)
+3. the local worker HTTP API on port `37777`
+4. SQLite storage in `~/.claude-mem/claude-mem.db`
+
+If you are debugging current behavior, start from the current runtime path rather than old script names like `context-hook.js`, `new-hook.js`, or `save-hook.js`.
+
+## Current Runtime Path
+
+```text
+plugin/hooks/hooks.json
+  → bun-runner.js / worker-service.cjs
+  → worker-service.cjs hook claude-code <event>
+  → src/cli/hook-command.ts
+  → src/cli/handlers/*
+  → local worker HTTP API
+  → SQLite / optional Chroma
+```
+
+## Fast Triage
+
+Check these in order:
+
+1. **Is the worker running?**
+   ```bash
+   npm run worker:status
+   curl http://localhost:37777/health
+   ```
+
+2. **Is the worker ready for requests?**
+   ```bash
+   curl http://localhost:37777/api/readiness
+   ```
+
+3. **Are hooks wired to the unified entry?**
+   ```bash
+   cat plugin/hooks/hooks.json
+   ```
+
+4. **Are dependencies and runtime tools installed?**
+   ```bash
+   which bun
+   bun --version
+   node --version
+   ```
+
+5. **Do logs show the failing stage?**
+   ```bash
+   npm run worker:logs
+   ```
+
+## Common Failure Areas
+
+### Worker is not reachable
+
+**Symptoms**
+- Viewer does not load at `http://localhost:37777`
+- Health check fails
+- Hook requests fail during session start or prompt submission
+
+**Checks**
+```bash
+npm run worker:status
+curl http://localhost:37777/health
+npm run worker:logs
+```
+
+**Fixes**
+```bash
+npm run worker:restart
+```
+
+If port `37777` is occupied:
+
+```bash
+lsof -i :37777
+export CLAUDE_MEM_WORKER_PORT=38000
+npm run worker:restart
+```
+
+### Worker is healthy but not ready
+
+**Symptoms**
+- `/health` responds, but requests still fail
+- Session start waits for initialization
+- Viewer loads partially but data routes fail
+
+**Checks**
+```bash
+curl http://localhost:37777/api/readiness
+npm run worker:logs
+```
+
+Focus on startup problems in:
+- [src/services/worker-service.ts](src/services/worker-service.ts)
+- [src/services/server/Server.ts](src/services/server/Server.ts)
+- [src/services/worker/http/routes/SessionRoutes.ts](src/services/worker/http/routes/SessionRoutes.ts)
+
+### Hooks are configured but behavior is missing
+
+**Symptoms**
+- No prior context on `SessionStart`
+- Prompts are not saved on `UserPromptSubmit`
+- Tool-use observations are not processed after `PostToolUse`
+- File-context hints do not appear before `Read`
+
+**Checks**
+```bash
+cat plugin/hooks/hooks.json
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code context
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code user-prompt-submit
+```
+
+Current implementation entrypoints:
+- [src/cli/handlers/context.ts](src/cli/handlers/context.ts)
+- [src/cli/handlers/session-init.ts](src/cli/handlers/session-init.ts)
+- [src/cli/handlers/observation.ts](src/cli/handlers/observation.ts)
+- [src/cli/handlers/file-context.ts](src/cli/handlers/file-context.ts)
+- [src/cli/handlers/summarize.ts](src/cli/handlers/summarize.ts)
+- [src/cli/handlers/session-complete.ts](src/cli/handlers/session-complete.ts)
+
+Do not start by testing removed historical script entrypoints.
+
+### Observations are queued but not processed
+
+**Symptoms**
+- Prompts or observations appear saved
+- Summaries do not appear
+- Pending work accumulates after a crash or restart
+
+**Checks**
+```bash
+npm run worker:status
+npm run worker:logs
+curl http://localhost:37777/api/pending-queue
+```
+
+Inspect queue state directly if needed:
+
+```bash
+sqlite3 ~/.claude-mem/claude-mem.db "
+  SELECT status, COUNT(*)
+  FROM pending_messages
+  GROUP BY status;
+"
+```
+
+**Recovery**
+```bash
+bun scripts/check-pending-queue.ts
+bun scripts/check-pending-queue.ts --process
+```
+
+### Custom API processing fails
+
+**Symptoms**
+- Worker runs, but extraction never stores results
+- Pending messages move to failed state
+- Logs show malformed or non-XML model output
+
+**Checks**
+- Verify custom API settings in `~/.claude-mem/settings.json`
+- Check `CLAUDE_MEM_CUSTOM_API_KEY` and related custom settings
+- Inspect logs from:
+  - [src/services/worker/CustomApiAgent.ts](src/services/worker/CustomApiAgent.ts)
+  - [src/services/worker/agents/ResponseProcessor.ts](src/services/worker/agents/ResponseProcessor.ts)
+
+Relevant runtime fact:
+- non-XML extraction output is treated as retryable failure and is not stored
+
+### Viewer loads but real-time updates fail
+
+**Symptoms**
+- `http://localhost:37777` opens
+- feed does not update live
+- UI shows disconnected SSE status
+
+**Checks**
+```bash
+curl -N http://localhost:37777/stream
+npm run worker:logs
+```
+
+Also inspect browser DevTools for failed EventSource requests.
+
+Relevant implementation:
+- [src/services/worker/http/routes/ViewerRoutes.ts](src/services/worker/http/routes/ViewerRoutes.ts)
+- [src/services/worker/agents/ObservationBroadcaster.ts](src/services/worker/agents/ObservationBroadcaster.ts)
+
+### Settings do not persist
+
+**Symptoms**
+- UI settings revert after refresh
+- worker settings endpoint returns unexpected values
+
+**Checks**
+```bash
+curl http://localhost:37777/api/settings
+```
+
+Browser-side persistence also uses local storage. If UI-only settings reset, inspect local storage in DevTools.
+
+Relevant implementation:
+- [src/services/worker/http/routes/SettingsRoutes.ts](src/services/worker/http/routes/SettingsRoutes.ts)
+- [src/ui/viewer/hooks/useSettings.ts](src/ui/viewer/hooks/useSettings.ts)
+- [src/ui/viewer/components/ContextSettingsModal.tsx](src/ui/viewer/components/ContextSettingsModal.tsx)
+
+## Database Problems
+
+### Database is locked
+
+**Checks**
+```bash
+lsof ~/.claude-mem/claude-mem.db
+sqlite3 ~/.claude-mem/claude-mem.db "PRAGMA integrity_check;"
+```
+
+**Fixes**
+```bash
+npm run worker:stop
+npm run worker:start
+```
+
+### Database appears corrupted
+
+**Checks**
+```bash
+sqlite3 ~/.claude-mem/claude-mem.db "PRAGMA integrity_check;"
+```
+
+**Repair attempts**
+```bash
+cp ~/.claude-mem/claude-mem.db ~/.claude-mem/claude-mem.db.backup
+sqlite3 ~/.claude-mem/claude-mem.db "VACUUM;"
+```
+
+### Search returns poor or empty results
+
+Current retrieval is worker-backed. Start with worker and SQLite checks before assuming MCP compatibility issues.
+
+**Checks**
+```bash
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM observations;"
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM session_summaries;"
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_fts';"
+```
+
+Relevant implementation:
+- [src/services/worker/http/routes/SearchRoutes.ts](src/services/worker/http/routes/SearchRoutes.ts)
+- [src/services/sqlite/SessionSearch.ts](src/services/sqlite/SessionSearch.ts)
+- [docs/public/architecture/search-architecture.mdx](architecture/search-architecture)
+
+## Dependency and Runtime Tooling Issues
+
+### Bun is missing
+
+The worker runtime depends on Bun.
+
+**Checks**
+```bash
+which bun
+bun --version
+```
+
+### Dependencies are stale after update
+
+**Checks**
+```bash
+cat ~/.claude/plugins/marketplaces/remote1993/ccx-mem/.install-version
+cat ~/.claude/plugins/marketplaces/remote1993/ccx-mem/package.json | grep version
+```
+
+**Fixes**
+```bash
+rm ~/.claude/plugins/marketplaces/remote1993/ccx-mem/.install-version
+cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem && npm install
+```
+
+## Manual Debugging Commands
+
+Use the current unified entry when testing hook behavior manually:
+
+```bash
+# SessionStart path
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code context
+
+# UserPromptSubmit path
+printf '{}' | node plugin/scripts/worker-service.cjs hook claude-code user-prompt-submit
+```
+
+Useful worker checks:
+
+```bash
+npm run worker:status
+npm run worker:logs
+curl http://localhost:37777/health
+curl http://localhost:37777/api/readiness
+curl http://localhost:37777/api/settings
+curl http://localhost:37777/api/pending-queue
+```
+
+Useful database checks:
+
+```bash
+sqlite3 ~/.claude-mem/claude-mem.db ".schema"
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM sdk_sessions;"
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM observations;"
+sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM session_summaries;"
+```
+
+## Historical Boundary
+
+If you find references to `context-hook.js`, `new-hook.js`, `save-hook.js`, standalone per-hook scripts, or MCP as the default runtime path, treat them as historical compatibility material.
+
+For current implementation details, use:
+- [Architecture Overview](architecture/overview)
+- [Hook Lifecycle](architecture/hooks)
+- [Worker Service](architecture/worker-service)
+- [Configuration](configuration)
+- [Development](development)
+
+## Getting Help
+
+If the issue still reproduces after worker health, readiness, hook wiring, and database checks:
+
+1. collect the failing command or lifecycle event
+2. include relevant worker logs
+3. include the output of `/health` and `/api/readiness`
+4. include the affected project / session context if known
+
+Then file an issue at [GitHub Issues](https://github.com/remote1993/ccx-mem/issues).

@@ -1,0 +1,154 @@
+---
+title: "Hook Lifecycle"
+description: "Current unified hook entry, lifecycle coverage, and worker handoff architecture"
+---
+
+# Hook Lifecycle
+
+ccx-ecc-mem now uses a unified hook entry centered on `plugin/hooks/hooks.json`, `worker-service.cjs hook claude-code <event>`, and the `src/cli/` handler pipeline. The older per-hook-script model is historical reference material, not the main implementation shape.
+
+## Current Architecture
+
+### Hook entry flow
+
+```text
+plugin/hooks/hooks.json
+  → bun-runner.js / worker-service.cjs
+  → worker-service.cjs hook claude-code <event>
+  → src/cli/hook-command.ts
+  → src/cli/handlers/*
+  → local worker HTTP API
+```
+
+### Runtime split
+
+```text
+host lifecycle event
+  → lightweight hook entry
+  → local worker HTTP request
+  → worker session/search runtime
+  → SQLite / optional Chroma
+```
+
+This split keeps hook execution fast while moving persistence, retrieval, and extraction into the worker.
+
+## Active Lifecycle Coverage
+
+The current runtime uses these hook events:
+
+| Stage | Hook event | Main purpose |
+|-------|------------|--------------|
+| **0. Setup** | `Setup` | Ensure runtime dependencies are available |
+| **1. SessionStart** | `SessionStart` | Start/health-check worker and inject prior context |
+| **2. UserPromptSubmit** | `UserPromptSubmit` | Create/get session and save prompt |
+| **3. PostToolUse** | `PostToolUse` | Queue observations for asynchronous processing |
+| **4. PreToolUse (Read)** | `PreToolUse` | Inject file-context hints before `Read` |
+| **5. Stop** | `Stop` | Summarize the session |
+| **6. SessionEnd** | `SessionEnd` | Mark session complete |
+
+The older simplified 5-stage description is no longer complete because the current runtime also includes `Setup` and `PreToolUse`.
+
+## Lifecycle Details
+
+### 0. Setup
+
+**Purpose**: Ensure Bun and other runtime dependencies are available before the main session flow starts.
+
+**Where configured**: [plugin/hooks/hooks.json](plugin/hooks/hooks.json)
+
+This is a runtime preparation step, not the same thing as context injection.
+
+### 1. SessionStart
+
+**Purpose**:
+1. ensure the worker is running
+2. wait for health/readiness
+3. inject prior context from the worker
+
+**Main implementation**: `src/cli/handlers/context.ts`
+
+**Worker interaction**:
+- worker health/readiness checks
+- context injection through the worker HTTP API
+
+### 2. UserPromptSubmit
+
+**Purpose**:
+- create or reuse the logical session
+- save the user prompt
+- initialize session runtime state in the worker
+
+**Main implementation**: `src/cli/handlers/session-init.ts`
+
+**Worker interaction**:
+- session initialization route in the worker HTTP API
+
+### 3. PostToolUse
+
+**Purpose**: send tool-use observations to the worker for asynchronous extraction and storage.
+
+**Main implementation**: `src/cli/handlers/observation.ts`
+
+**Important behavior**:
+- hook execution stays lightweight
+- worker processing happens asynchronously
+- the main extraction path now follows the custom API runtime
+
+### 4. PreToolUse (`Read`)
+
+**Purpose**: add file-context hints before `Read` tool execution.
+
+**Main implementation**: `src/cli/handlers/file-context.ts`
+
+This is part of the active runtime contract and is easy to miss if you only read older docs.
+
+### 5. Stop
+
+**Purpose**: summarize session progress and completed work near the end of an interaction.
+
+**Main implementation**: `src/cli/handlers/summarize.ts`
+
+### 6. SessionEnd
+
+**Purpose**: mark the session complete and clean up runtime state.
+
+**Main implementation**: `src/cli/handlers/session-complete.ts`
+
+## Worker Handoff
+
+The hook entry layer does not own heavy processing. It hands off quickly to the local worker, which owns:
+- session orchestration
+- pending queue management
+- storage and retrieval
+- custom API extraction
+- viewer/SSE updates
+
+Relevant implementation areas:
+- `src/cli/hook-command.ts`
+- `src/cli/handlers/`
+- `src/services/worker/http/routes/SessionRoutes.ts`
+- `src/services/worker/http/routes/SearchRoutes.ts`
+- `src/services/server/Server.ts`
+
+## Practical Guidance
+
+When modifying hook behavior, start here:
+1. [plugin/hooks/hooks.json](plugin/hooks/hooks.json)
+2. `src/cli/hook-command.ts`
+3. `src/cli/handlers/`
+4. worker HTTP route modules if the downstream contract changes
+
+Do **not** start by assuming `src/hooks/` or old script names like `context-hook.js`, `new-hook.js`, or `save-hook.js` are still the canonical implementation.
+
+## Historical Boundary
+
+If you need historical context for older releases or commits, use [Legacy Hooks Architecture](../hooks-architecture).
+
+That page describes the earlier per-hook-script design and should be treated as reference-only material.
+
+## Related Docs
+
+- [Architecture Overview](/architecture/overview)
+- [Worker Service](/architecture/worker-service)
+- [Configuration](/configuration)
+- [Legacy Hooks Architecture](../hooks-architecture)

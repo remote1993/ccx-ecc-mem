@@ -1,0 +1,195 @@
+# Progressive Disclosure
+
+Progressive disclosure is ccx-ecc-mem's retrieval pattern for the current worker-backed runtime: show a compact index first, let the agent decide what is worth fetching, and only load deeper detail on demand.
+
+## Core Principle
+
+**Show what exists and what it will cost to retrieve before loading full details.**
+
+In ccx-ecc-mem, that means:
+
+1. start with lightweight worker-backed search or context output
+2. inspect summaries, IDs, timestamps, and categories
+3. fetch full details only for the records that matter
+4. read source files only when stored context is not enough
+
+## Why This Matters
+
+A large context window is still limited attention. Dumping everything into the session wastes budget and hides the user’s current request under irrelevant history.
+
+Progressive disclosure keeps the current task in focus:
+
+- the worker provides a compact retrieval surface first
+- the agent chooses whether more detail is needed
+- each deeper read has a visible cost and purpose
+
+## Current Retrieval Shape
+
+ccx-ecc-mem now uses a worker-backed retrieval flow:
+
+```text
+User query
+  → worker-backed retrieval surface
+  → local worker HTTP API
+  → search / timeline / data routes
+  → SQLite FTS5 / optional Chroma
+  → formatted results
+```
+
+This is the current primary path.
+
+Compatibility MCP surfaces may still exist, but they are add-on retrieval surfaces rather than the main runtime model.
+
+## The Three Layers
+
+### Layer 1: Index
+
+Start with a compact list of what exists.
+
+Typical index information includes:
+- record IDs
+- timestamps
+- short titles or summaries
+- categories or types
+- approximate retrieval cost
+
+The goal is not full understanding yet. The goal is to answer: **is anything here relevant?**
+
+### Layer 2: Context
+
+Once something looks relevant, fetch a narrower contextual slice.
+
+This may be:
+- a timeline around a specific record
+- related observations from the same session
+- nearby summaries or prompts
+- grouped results for the same file or topic
+
+The goal is to understand narrative shape before paying for every detail.
+
+### Layer 3: Details
+
+Fetch full observation or summary payloads only for the records that are clearly useful.
+
+Only after that should you move to source-file reads if the stored context still leaves ambiguity.
+
+## Practical Workflow
+
+Use this order when retrieving past context:
+
+1. **Search or inspect the index first**
+2. **Pick only the most relevant records**
+3. **Fetch detail for those records**
+4. **Read code or files only if needed**
+
+This avoids the common failure mode where the agent re-reads large parts of the codebase before checking whether ccx-ecc-mem already contains the decision, bug history, or implementation context.
+
+## Example Mental Model
+
+```text
+Index first   → What exists?
+Context next  → Which part matters?
+Details last  → What exactly happened?
+Code after    → What is true in the repo right now?
+```
+
+Stored memory and current code serve different purposes:
+
+- ccx-ecc-mem helps answer **what happened, what was learned, and why it mattered**
+- the codebase helps answer **what exists right now**
+
+Good retrieval usually needs both, but not at the same time and not at full depth upfront.
+
+## Worker-Backed Retrieval Surfaces
+
+In the current architecture, progressive disclosure can flow through worker-backed surfaces such as:
+
+- session-start context injection
+- worker search routes
+- timeline-style retrieval
+- batched observation or summary reads
+- viewer inspection flows
+
+Relevant implementation areas:
+- [src/services/worker/http/routes/SearchRoutes.ts](../src/services/worker/http/routes/SearchRoutes.ts)
+- [src/services/worker/http/routes/SessionRoutes.ts](../src/services/worker/http/routes/SessionRoutes.ts)
+- [src/services/sqlite/SessionSearch.ts](../src/services/sqlite/SessionSearch.ts)
+- [docs/public/architecture/search-architecture.mdx](architecture/search-architecture)
+
+## Benefits
+
+### Lower context waste
+
+The agent spends tokens on likely-relevant context instead of loading everything by default.
+
+### Better autonomy
+
+The agent can make retrieval decisions using the current task, rather than relying on a fixed prefetch rule.
+
+### Faster path to useful information
+
+Small indexes are cheap to scan. That makes it faster to find the one decision, gotcha, or summary that matters.
+
+### Clearer separation of history vs current state
+
+ccx-ecc-mem helps with historical reasoning. The codebase verifies current truth.
+
+## Anti-Patterns
+
+### Loading everything up front
+
+Bad pattern:
+- inject large amounts of prior context automatically
+- read full observation payloads before checking relevance
+- re-read many source files before consulting the memory index
+
+### Skipping the index layer
+
+Bad pattern:
+- guessing which records are relevant without first inspecting the compact list
+- jumping directly to full-detail fetches for many IDs
+
+### Treating compatibility MCP as the main architecture
+
+Bad pattern:
+- explaining retrieval as if MCP is the default runtime path
+- teaching search flows that ignore the worker HTTP API
+
+Current reality:
+- worker-backed retrieval is primary
+- compatibility MCP surfaces are optional or historical support paths
+
+## Design Guidance for Contributors
+
+If you change retrieval behavior, preserve the progressive disclosure shape:
+
+1. keep the first step lightweight
+2. expose enough metadata to support selection
+3. make deeper retrieval explicit
+4. avoid forcing large payloads into every session
+
+Useful places to inspect when changing this behavior:
+- [docs/public/architecture/overview.mdx](architecture/overview)
+- [docs/public/architecture/search-architecture.mdx](architecture/search-architecture)
+- [docs/public/architecture/hooks.mdx](architecture/hooks)
+- [src/cli/handlers/context.ts](../src/cli/handlers/context.ts)
+- [src/services/worker/http/routes/SearchRoutes.ts](../src/services/worker/http/routes/SearchRoutes.ts)
+
+## Historical Boundary
+
+If you encounter older docs that describe retrieval mainly through MCP search tools, or that present MCP as the system’s primary runtime path, treat them as historical or compatibility-oriented guidance.
+
+For the current implementation, prefer:
+- [Architecture Overview](architecture/overview)
+- [Search Architecture](architecture/search-architecture)
+- [Hook Lifecycle](architecture/hooks)
+- [Worker Service](architecture/worker-service)
+
+## Key Takeaway
+
+Progressive disclosure is not just a UI or prompt-writing preference. It is the retrieval discipline that keeps ccx-ecc-mem useful in a worker-backed system:
+
+- compact first
+- selective next
+- detailed only when justified
+- current code verified separately

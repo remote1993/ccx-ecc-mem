@@ -1,0 +1,178 @@
+---
+title: "Search Architecture"
+description: "Current worker-backed retrieval architecture, with legacy MCP compatibility notes"
+---
+
+# Search Architecture
+
+ccx-ecc-mem now uses a **worker-backed retrieval architecture** centered on the local worker HTTP API. Historical MCP assets still exist as compatibility surfaces, but they are no longer the primary architecture target for this project.
+
+## Current Overview
+
+**Current architecture**: Retrieval surface → Worker HTTP API → Search services → SQLite / Chroma
+
+**Primary components**:
+1. **Retrieval surfaces** - Worker-backed HTTP retrieval, context injection, viewer APIs, and any compatibility surface still wired to the worker
+2. **Worker HTTP API** - Search and context endpoints exposed by the local worker service
+3. **Search services** - `SessionSearch`, `SearchManager`, formatters, and timeline helpers
+4. **SQLite** - Persistent sessions, prompts, observations, summaries, and FTS5 indexes
+5. **Chroma** - Optional semantic retrieval layer for hybrid search
+
+**Current project direction**:
+- Runtime is custom-only for extraction/compression work
+- Search remains worker-centric even when older MCP wrappers still proxy to the same endpoints
+- Documentation should describe compatibility layers as compatibility layers, not as the main design
+
+## Current Retrieval Flow
+
+### 1. Query enters a retrieval surface
+
+A request can originate from:
+- worker-backed retrieval used by hooks and internal features
+- viewer/API consumers hitting the worker directly
+- compatibility surfaces such as the legacy MCP wrapper, if still enabled
+
+### 2. Worker HTTP API receives the request
+
+Common endpoints include:
+
+```text
+GET  /api/search
+GET  /api/timeline
+POST /api/observations/batch
+GET  /api/context/inject
+```
+
+### 3. Search services execute the query
+
+The worker routes requests into services such as:
+- `src/services/sqlite/SessionSearch.ts`
+- `src/services/worker/SearchManager.ts`
+- `src/services/worker/search/ResultFormatter.ts`
+- `src/services/worker/FormattingService.ts`
+
+These services combine:
+- FTS5 full-text search in SQLite
+- structured filtering by project, type, date, and pagination
+- optional semantic retrieval via Chroma
+- timeline/context expansion for selected anchors
+
+### 4. Results are formatted and returned
+
+The worker returns compact search results, timeline context, or full observation payloads depending on the endpoint. Retrieval clients can progressively narrow from index → context → details without coupling that workflow to a specific transport.
+
+## Worker HTTP API
+
+**Primary runtime location**: `src/services/worker-service.ts`
+
+**Search-related routes**:
+```text
+GET  /api/search
+GET  /api/timeline
+POST /api/observations/batch
+GET  /api/context/inject
+GET  /health
+```
+
+**Supporting route modules**:
+- `src/services/worker/http/routes/SearchRoutes.ts`
+- `src/services/worker/http/routes/DataRoutes.ts`
+- `src/services/worker/http/routes/ViewerRoutes.ts`
+
+### Data access model
+
+The worker uses:
+- `SessionSearch` for FTS5-backed lookup
+- `SessionStore` for structured reads/writes
+- Chroma sync and semantic retrieval when enabled
+
+### FTS5 query role
+
+At the core, full-text search is still SQLite FTS5-backed. The exact query shape depends on filters and route-specific handling, but the architectural role is unchanged: search endpoints narrow candidate observations efficiently before context/detail expansion.
+
+## Progressive Disclosure Pattern
+
+The project still follows a **progressive disclosure** retrieval pattern:
+
+1. **Index** - Search for candidate observations
+2. **Context** - Expand around an anchor with timeline/context views
+3. **Details** - Fetch selected observations in full
+
+This is a retrieval strategy, not a transport-specific requirement.
+
+### Why it still matters
+
+- avoids fetching large observation payloads too early
+- keeps tool/API responses compact
+- lets the caller decide when to pay for deeper context
+- works equally well for worker-backed retrieval and older compatibility surfaces
+
+## Current vs. Legacy MCP Layer
+
+### Current primary design
+
+```text
+Retrieval client → Worker HTTP API → Search services → SQLite / Chroma
+```
+
+### Legacy compatibility design
+
+```text
+Legacy MCP wrapper → Worker HTTP API → Search services → SQLite / Chroma
+```
+
+The important distinction is that the **worker HTTP API is now the source of truth**. The old MCP server is only a wrapper when present.
+
+## Legacy MCP Compatibility Notes
+
+Some historical MCP assets still exist for migration and backward compatibility:
+- `src/servers/mcp-server.ts`
+- `plugin/scripts/mcp-server.cjs`
+- workflow text that references `search`, `timeline`, and `get_observations`
+
+Those assets may continue to proxy to worker endpoints such as `/api/search`, `/api/timeline`, and `/api/observations/batch`, but they should not be treated as the canonical architecture for this project.
+
+### What remains true from the old design
+
+- the worker is still the search source of truth
+- batch detail fetch is still supported via `POST /api/observations/batch`
+- index → context → details is still the preferred retrieval pattern
+
+### What is no longer the right mental model
+
+- “search architecture equals MCP architecture”
+- MCP tool definitions are the main contract to understand first
+- compatibility wrappers define the project direction
+
+## Security
+
+### Local-only worker surface
+
+Search runs through the local worker on localhost. Compatibility wrappers, when enabled, still depend on the same local worker endpoints.
+
+### FTS5 safety
+
+Search input is normalized and escaped before FTS5 processing in the search pipeline. Validation and filtering remain concentrated in the worker/search layers rather than in each retrieval surface.
+
+## Performance Characteristics
+
+- **FTS5 search** gives the fast candidate set
+- **Pagination** keeps large result sets bounded
+- **Batch fetch** via `/api/observations/batch` avoids repeated per-ID round trips
+- **Optional Chroma** improves semantic recall without replacing the worker as orchestration layer
+
+## Practical Guidance
+
+When updating search behavior, check these in order:
+1. `src/services/worker/http/routes/SearchRoutes.ts`
+2. `src/services/worker/SearchManager.ts`
+3. `src/services/sqlite/SessionSearch.ts`
+4. `src/services/worker/search/` and formatter helpers
+5. compatibility layers like `src/servers/mcp-server.ts` only if the change must preserve them
+
+## Next Steps
+
+- [Memory Search Usage](/usage/search-tools) - User guide with examples
+- [Worker Service Architecture](/architecture/worker-service) - HTTP API details
+- [Database Schema](/architecture/database) - SQLite and FTS5 details
+- [Architecture Overview](/architecture/overview) - System-level component map

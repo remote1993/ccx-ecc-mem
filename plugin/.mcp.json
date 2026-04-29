@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mcp-search": {
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "ROOT=\"${CLAUDE_PLUGIN_ROOT:-}\"; case \"$ROOT\" in ''|*'$'*) ROOT=\"\";; esac; for CANDIDATE in \"$ROOT\" \"$(dirname \"$(dirname \"$0\")\")\" \"$HOME/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin\"; do [ -n \"$CANDIDATE\" ] && [ -f \"$CANDIDATE/scripts/mcp-server.cjs\" ] && exec bun \"$CANDIDATE/scripts/mcp-server.cjs\"; done; echo 'ccx-mem mcp-server.cjs not found' >&2; exit 1", "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.cjs"]
+    }
+  }
+}

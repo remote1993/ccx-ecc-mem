@@ -1,0 +1,115 @@
+---
+title: "Introduction"
+description: "Persistent memory system for Claude Code and Codex CLI"
+---
+
+# ccx-mem
+
+**Worker-backed persistent memory for Claude Code and Codex CLI**
+
+ccx-mem preserves coding-session context across Claude Code and Codex CLI by capturing lifecycle events, storing structured observations in a local worker-backed runtime, and injecting relevant project history into future sessions.
+
+## Quick Start
+
+Install with a single command:
+
+```bash
+npx ccx-mem install
+```
+
+Install only the Codex CLI integration directly:
+
+```bash
+npx ccx-mem install --ide codex-cli
+```
+
+Or install from the plugin marketplace inside Claude Code:
+
+```bash
+/plugin marketplace add remote1993/ccx-mem
+/plugin install ccx-mem
+```
+
+For Claude Code, restart the client after installation. For Codex CLI, install with `--ide codex-cli`, start the worker with `npx ccx-mem start`, and work from your project directory so the worker-managed transcript watcher can capture sessions.
+
+## Key Features
+
+- 🧠 **Persistent Memory** - Project context survives across Claude Code and Codex CLI sessions
+- 🔁 **Unified Hook Entry** - Lifecycle events flow through one worker-backed runtime
+- 📊 **Progressive Disclosure** - Search starts with compact indexes, then fetches full observations only when needed
+- 🔍 **Worker-Backed Retrieval** - Query project history through HTTP APIs, skills, MCP compatibility surfaces, and the web viewer
+- 🌐 **Web Viewer UI** - Real-time memory stream, settings, logs, source filters, and context preview at http://localhost:37777
+- 🔒 **Privacy Control** - Use `<private>` tags to exclude sensitive content from storage
+- ⚙️ **Custom API Extraction** - Configure a third-party compatible API for structured observation processing
+- 🧩 **Focused Host Integrations** - Claude Code plugin support plus optional Codex CLI transcript ingestion
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Claude Code / Codex activity enters through integrations    │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Unified hook/transcript adapters normalize lifecycle events │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Local worker stores prompts, sessions, and observations     │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Custom API extraction creates structured reusable memory    │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Future sessions retrieve compact, relevant project context  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Core Components:**
+1. **Hook Entry Layer** - `src/cli/` adapters and handlers translate Claude Code lifecycle events into worker requests
+2. **Transcript Integration** - Optional Codex CLI transcript ingestion imports sessions from project workspaces after Codex support is installed
+3. **Worker Service** - HTTP API on port 37777 manages sessions, storage, search, settings, logs, SSE, and custom API extraction
+4. **SQLite Database** - Stores sessions, prompts, observations, summaries, and project/source metadata
+5. **Retrieval Surfaces** - Web viewer, HTTP APIs, skills, and MCP compatibility tools expose worker-backed history
+6. **Web Viewer UI** - Real-time visualization with source filters, settings, logs, context preview, and infinite scroll
+
+See [Architecture Overview](architecture/overview) for details.
+
+## System Requirements
+
+- **Node.js**: 18.0.0 or higher
+- **Claude Code**: Latest version with plugin support
+- **Codex CLI**: Optional, for transcript-based integration
+- **Bun**: JavaScript runtime and process manager (auto-installed if missing)
+- **uv**: Optional Python package manager for Chroma vector search
+- **SQLite 3**: For persistent storage (bundled)
+
+## Current Release
+
+**v0.1.1 - ccx-mem canonical release:**
+- Published as `ccx-mem` on npm and `remote1993/ccx-mem` on GitHub
+- Supports `npx ccx-mem install` for local plugin setup
+- Supports Claude Code marketplace installation with `/plugin marketplace add remote1993/ccx-mem`
+- Fixes viewer source filtering so only detected integrations are shown
+- Adds viewer bundle cache busting so updated UI code is not hidden by browser cache
+- Keeps the supported host surface focused on Claude Code and Codex CLI
+- Treats VS Code as unsupported reference material, not a runtime host
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Quick start & advanced installation
+  </Card>
+  <Card title="Getting Started" icon="rocket" href="/usage/getting-started">
+    Learn how ccx-mem works automatically
+  </Card>
+  <Card title="Search Tools" icon="magnifying-glass" href="/usage/search-tools">
+    Query worker-backed project history
+  </Card>
+  <Card title="Private Tags" icon="shield" href="/usage/private-tags">
+    Exclude sensitive content from storage
+  </Card>
+</CardGroup>
