@@ -32,22 +32,33 @@ function stripProjectRoot(filePath: string): string {
   return parts.length > 3 ? parts.slice(-3).join('/') : filePath;
 }
 
+function parseStringArray(value?: string | null): string[] {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export function ObservationCard({ observation, labels }: ObservationCardProps) {
   const [showFacts, setShowFacts] = useState(false);
   const [showNarrative, setShowNarrative] = useState(false);
   const date = formatDate(observation.created_at_epoch);
 
   // Parse JSON fields
-  const facts = observation.facts ? JSON.parse(observation.facts) : [];
-  const concepts = observation.concepts ? JSON.parse(observation.concepts) : [];
-  const filesRead = observation.files_read ? JSON.parse(observation.files_read).map(stripProjectRoot) : [];
-  const filesModified = observation.files_modified ? JSON.parse(observation.files_modified).map(stripProjectRoot) : [];
+  const facts = parseStringArray(observation.facts);
+  const concepts = parseStringArray(observation.concepts);
+  const filesRead = parseStringArray(observation.files_read).map(stripProjectRoot);
+  const filesModified = parseStringArray(observation.files_modified).map(stripProjectRoot);
 
   // Show facts toggle if there are facts, concepts, or files
   const hasFactsContent = facts.length > 0 || concepts.length > 0 || filesRead.length > 0 || filesModified.length > 0;
 
   return (
-    <div className="card">
+    <article className="card observation-card">
       {/* Header with toggle buttons in top right */}
       <div className="card-header">
         <div className="card-header-left">
@@ -70,8 +81,10 @@ export function ObservationCard({ observation, labels }: ObservationCardProps) {
               className={`view-mode-toggle ${showFacts ? 'active' : ''}`}
               onClick={() => {
                 setShowFacts(!showFacts);
-                if (!showFacts) setShowNarrative(false); // Turn off narrative when turning on facts
+                if (!showFacts) setShowNarrative(false);
               }}
+              aria-pressed={showFacts}
+              title={labels.facts}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 11 12 14 22 4"></polyline>
@@ -85,8 +98,10 @@ export function ObservationCard({ observation, labels }: ObservationCardProps) {
               className={`view-mode-toggle ${showNarrative ? 'active' : ''}`}
               onClick={() => {
                 setShowNarrative(!showNarrative);
-                if (!showNarrative) setShowFacts(false); // Turn off facts when turning on narrative
+                if (!showNarrative) setShowFacts(false);
               }}
+              aria-pressed={showNarrative}
+              title={labels.narrative}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -126,16 +141,9 @@ export function ObservationCard({ observation, labels }: ObservationCardProps) {
       <div className="card-meta">
         <span className="meta-date">#{observation.id} • {date}</span>
         {showFacts && (concepts.length > 0 || filesRead.length > 0 || filesModified.length > 0) && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+          <div className="meta-detail-row">
             {concepts.map((concept: string, i: number) => (
-              <span key={i} style={{
-                padding: '2px 8px',
-                background: 'var(--color-type-badge-bg)',
-                color: 'var(--color-type-badge-text)',
-                borderRadius: '3px',
-                fontWeight: '500',
-                fontSize: '10px'
-              }}>
+              <span key={i} className="concept-chip">
                 {concept}
               </span>
             ))}
@@ -152,6 +160,6 @@ export function ObservationCard({ observation, labels }: ObservationCardProps) {
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }

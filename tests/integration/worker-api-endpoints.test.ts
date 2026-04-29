@@ -312,6 +312,50 @@ describe('Worker API Endpoints Integration', () => {
       expect(aliasSessionId).toBe(initBody.sessionDbId);
     });
 
+    it('should skip hook work for expired sessions instead of queueing repeated warnings', async () => {
+      const { store } = await registerSessionRoutes();
+      await startServer(server);
+
+      const initResponse = await fetch(`http://127.0.0.1:${testPort}/api/sessions/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentSessionId: 'session-route-expired',
+          project: 'worker-api-test',
+          prompt: 'hello',
+          platformSource: 'claude-code'
+        })
+      });
+      const initBody = await initResponse.json();
+      const expiredEpoch = Date.now() - 5 * 60 * 60 * 1000;
+      store.db.prepare('UPDATE sdk_sessions SET started_at_epoch = ? WHERE id = ?')
+        .run(expiredEpoch, initBody.sessionDbId);
+
+      const observationResponse = await fetch(`http://127.0.0.1:${testPort}/api/sessions/observations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentSessionId: 'session-route-expired',
+          tool_name: 'Write',
+          tool_input: { file_path: '/tmp/example.txt' },
+          tool_response: { ok: true },
+          cwd: '/tmp/project',
+          platformSource: 'claude-code'
+        })
+      });
+
+      expect(observationResponse.status).toBe(200);
+      expect(await observationResponse.json()).toEqual({ status: 'skipped', reason: 'session_expired' });
+
+      const pending = store.db.prepare('SELECT COUNT(*) AS count FROM pending_messages WHERE session_db_id = ?')
+        .get(initBody.sessionDbId) as { count: number };
+      const session = store.db.prepare('SELECT status FROM sdk_sessions WHERE id = ?')
+        .get(initBody.sessionDbId) as { status: string };
+      expect(pending.count).toBe(0);
+      expect(session.status).toBe('failed');
+      expect(loggerSpies[2]).not.toHaveBeenCalled();
+    });
+
     it('should return completed_db_only for non-active sessions and mark them completed', async () => {
       const { store } = await registerSessionRoutes();
       await startServer(server);

@@ -176,9 +176,8 @@ export class SessionManager {
       memory_session_id: dbSession.memory_session_id
     });
 
-    // Log warning if we're discarding a stale memory_session_id (Issue #817)
     if (dbSession.memory_session_id) {
-      logger.warn('SESSION', `Discarding stale memory_session_id from previous worker instance (Issue #817)`, {
+      logger.info('SESSION', `Discarding stale memory_session_id from previous worker instance (Issue #817)`, {
         sessionDbId,
         staleMemorySessionId: dbSession.memory_session_id,
         reason: 'SDK context lost on worker restart - will capture new ID'

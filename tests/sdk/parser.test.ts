@@ -1,4 +1,4 @@
-import { describe, it, expect, mock } from 'bun:test';
+import { beforeEach, describe, it, expect, mock } from 'bun:test';
 
 // Mock ModeManager before importing parser (it's used at module load time)
 mock.module('../../src/services/domain/ModeManager.js', () => ({
@@ -11,9 +11,25 @@ mock.module('../../src/services/domain/ModeManager.js', () => ({
   },
 }));
 
+const loggerMock = {
+  debug: mock(() => {}),
+  warn: mock(() => {}),
+  error: mock(() => {}),
+};
+
+mock.module('../../src/utils/logger.js', () => ({
+  logger: loggerMock,
+}));
+
 import { parseObservations } from '../../src/sdk/parser.js';
 
 describe('parseObservations', () => {
+  beforeEach(() => {
+    loggerMock.debug.mockClear();
+    loggerMock.warn.mockClear();
+    loggerMock.error.mockClear();
+  });
+
   it('returns a populated observation when title is present', () => {
     const xml = `<observation>
       <type>discovery</type>
@@ -76,6 +92,8 @@ describe('parseObservations', () => {
     const result = parseObservations(xml);
 
     expect(result).toHaveLength(0);
+    expect(loggerMock.warn).not.toHaveBeenCalled();
+    expect(loggerMock.error).not.toHaveBeenCalled();
   });
 
   it('filters out ghost observation with empty tags but no text content (#1625)', () => {
@@ -131,6 +149,22 @@ describe('parseObservations', () => {
     expect(result).toHaveLength(1);
     // First type in mocked mode is 'bugfix'
     expect(result[0].type).toBe('bugfix');
+    expect(loggerMock.warn).toHaveBeenCalledTimes(1);
+    expect(loggerMock.error).not.toHaveBeenCalled();
+  });
+
+  it('uses fallback type for invalid type without logging an error', () => {
+    const xml = `<observation>
+      <type>environment</type>
+      <title>Invalid type field</title>
+    </observation>`;
+
+    const result = parseObservations(xml);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('bugfix');
+    expect(loggerMock.warn).toHaveBeenCalledTimes(1);
+    expect(loggerMock.error).not.toHaveBeenCalled();
   });
 
   it('returns empty array when no observation blocks are present', () => {

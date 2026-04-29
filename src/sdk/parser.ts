@@ -50,25 +50,30 @@ export function parseObservations(text: string, correlationId?: string): ParsedO
     const files_read = extractArrayElements(obsContent, 'files_read', 'file');
     const files_modified = extractArrayElements(obsContent, 'files_modified', 'file');
 
-    // All fields except type are nullable in schema.
-    // If type is missing or invalid, use first type from mode as fallback.
+    // Empty observations are a normal model skip/degradation path. Drop them
+    // before type validation so a bare <observation/> does not look like a
+    // system error in the Web UI logs.
+    if (!title && !narrative && facts.length === 0 && concepts.length === 0) {
+      logger.debug('PARSER', 'Skipping empty observation block', {
+        correlationId,
+        hasType: !!type,
+      });
+      continue;
+    }
 
-    // Determine final type using active mode's valid types
     const mode = ModeManager.getInstance().getActiveMode();
     const validTypes = mode.observation_types.map(t => t.id);
-    const fallbackType = validTypes[0]; // First type in mode's list is the fallback
+    const fallbackType = validTypes[0];
     let finalType = fallbackType;
     if (type) {
       if (validTypes.includes(type.trim())) {
         finalType = type.trim();
       } else {
-        logger.error('PARSER', `Invalid observation type: ${type}, using "${fallbackType}"`, { correlationId });
+        logger.warn('PARSER', `Invalid observation type: ${type}, using "${fallbackType}"`, { correlationId });
       }
     } else {
-      logger.error('PARSER', `Observation missing type field, using "${fallbackType}"`, { correlationId });
+      logger.warn('PARSER', `Observation missing type field, using "${fallbackType}"`, { correlationId });
     }
-
-    // All other fields are optional - save whatever we have
 
     // Filter out type from concepts array (types and concepts are separate dimensions)
     const cleanedConcepts = concepts.filter(c => c !== finalType);
@@ -88,7 +93,7 @@ export function parseObservations(text: string, correlationId?: string): ParsedO
     // (subtitle and file lists are intentionally excluded from this guard: an observation
     // with only a subtitle is still too thin to be useful on its own.)
     if (!title && !narrative && facts.length === 0 && cleanedConcepts.length === 0) {
-      logger.warn('PARSER', 'Skipping empty observation (all content fields null)', {
+      logger.debug('PARSER', 'Skipping empty observation after concept cleanup', {
         correlationId,
         type: finalType
       });

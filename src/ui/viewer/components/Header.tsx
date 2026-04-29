@@ -55,7 +55,7 @@ export function Header({
     <div className="header">
       <div className="header-main">
         <h1>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+          <div className="logo-mark-wrap">
             <img src="ccx-ecc-mem-logomark.webp" alt="" className={`logomark ${isProcessing ? 'spinning' : ''}`} />
             {queueDepth > 0 && (
               <div className="queue-bubble">
@@ -80,6 +80,10 @@ export function Header({
         </div>
       </div>
       <div className="status">
+        <span className={`connection-pill ${isConnected ? 'connected' : ''}`}>
+          <span className={`status-dot ${isConnected ? 'connected' : ''}`} />
+          {isConnected ? labels.connectionLive : labels.connectionOffline}
+        </span>
         <a
           href="https://github.com/remote1993/ccx-ecc-mem"
           target="_blank"

@@ -153,13 +153,11 @@ export async function httpShutdown(port: number): Promise<boolean> {
     }
     return true;
   } catch (error) {
-    // Connection refused is expected if worker already stopped
-    if (error instanceof Error && error.message?.includes('ECONNREFUSED')) {
-      logger.debug('SYSTEM', 'Worker already stopped', {}, error);
+    if (error instanceof Error) {
+      logger.debug('SYSTEM', 'Worker shutdown request could not connect; worker may already be stopped', {}, error);
       return false;
     }
-    // Unexpected error - log full details
-    logger.error('SYSTEM', 'Shutdown request failed unexpectedly', {}, error as Error);
+    logger.debug('SYSTEM', 'Worker shutdown request failed with non-Error value', { error: String(error) });
     return false;
   }
 }

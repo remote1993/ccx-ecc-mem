@@ -6,6 +6,8 @@ export interface ViewerLabels {
   project: string;
   closeEsc: string;
   toggleConsole: string;
+  connectionLive: string;
+  connectionOffline: string;
   documentation: string;
   followOnX: string;
   joinDiscord: string;
@@ -108,6 +110,8 @@ const en: ViewerLabels = {
   project: 'Project',
   closeEsc: 'Close (Esc)',
   toggleConsole: 'Toggle Console',
+  connectionLive: 'Live',
+  connectionOffline: 'Offline',
   documentation: 'Documentation',
   followOnX: 'Follow us on X',
   joinDiscord: 'Join our Discord community',
@@ -211,6 +215,8 @@ const zh: ViewerLabels = {
   project: '项目',
   closeEsc: '关闭（Esc）',
   toggleConsole: '切换控制台',
+  connectionLive: '实时',
+  connectionOffline: '离线',
   documentation: '文档',
   followOnX: '在 X 上关注我们',
   joinDiscord: '加入 Discord 社区',

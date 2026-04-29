@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 import net from 'net';
 import {
+  httpShutdown,
   isPortInUse,
   waitForHealth,
   waitForPortFree,
   getInstalledPluginVersion,
   checkVersionMatch
 } from '../../src/services/infrastructure/index.js';
+import { logger } from '../../src/utils/logger.js';
 
 describe('HealthMonitor', () => {
   const originalFetch = global.fetch;
@@ -307,6 +309,19 @@ describe('HealthMonitor', () => {
 
       expect(result).toBe(true);
       spy.mockRestore();
+    });
+  });
+
+  describe('httpShutdown', () => {
+    it('should not log an error when the worker is already unreachable', async () => {
+      global.fetch = mock(() => Promise.reject(new Error('Unable to connect. Is the computer able to access the url?')));
+      const errorSpy = spyOn(logger, 'error');
+
+      const result = await httpShutdown(39999);
+
+      expect(result).toBe(false);
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
     });
   });
 });

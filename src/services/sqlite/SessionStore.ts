@@ -1057,6 +1057,16 @@ export class SessionStore {
     `).run(nowIso, nowEpoch, sessionDbId);
   }
 
+  markSessionFailed(sessionDbId: number): void {
+    const nowEpoch = Date.now();
+    const nowIso = new Date(nowEpoch).toISOString();
+    this.db.prepare(`
+      UPDATE sdk_sessions
+      SET status = 'failed', completed_at = ?, completed_at_epoch = ?
+      WHERE id = ?
+    `).run(nowIso, nowEpoch, sessionDbId);
+  }
+
   /**
    * Ensures memory_session_id is registered in sdk_sessions before FK-constrained INSERT.
    * This fixes Issue #846 where observations fail after worker restart because the

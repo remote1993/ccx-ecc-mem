@@ -11,13 +11,14 @@ interface FeedProps {
   observations: Observation[];
   summaries: Summary[];
   prompts: UserPrompt[];
+  intro?: React.ReactNode;
   onLoadMore: () => void;
   isLoading: boolean;
   hasMore: boolean;
   labels: ViewerLabels;
 }
 
-export function Feed({ observations, summaries, prompts, onLoadMore, isLoading, hasMore, labels }: FeedProps) {
+export function Feed({ observations, summaries, prompts, intro, onLoadMore, isLoading, hasMore, labels }: FeedProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const onLoadMoreRef = useRef(onLoadMore);
@@ -66,35 +67,38 @@ export function Feed({ observations, summaries, prompts, onLoadMore, isLoading, 
     <div className="feed" ref={feedRef}>
       <ScrollToTop targetRef={feedRef} labels={labels} />
       <div className="feed-content">
-        {items.map(item => {
-          const key = `${item.itemType}-${item.id}`;
-          if (item.itemType === 'observation') {
-            return <ObservationCard key={key} observation={item} labels={labels} />;
-          } else if (item.itemType === 'summary') {
-            return <SummaryCard key={key} summary={item} labels={labels} />;
-          } else {
-            return <PromptCard key={key} prompt={item} labels={labels} />;
-          }
-        })}
-        {items.length === 0 && !isLoading && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#8b949e' }}>
-            {labels.noItems}
-          </div>
-        )}
-        {isLoading && (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#8b949e' }}>
-            <div className="spinner" style={{ display: 'inline-block', marginRight: '10px' }}></div>
-            {labels.loadingMore}
-          </div>
-        )}
-        {hasMore && !isLoading && items.length > 0 && (
-          <div ref={loadMoreRef} style={{ height: '20px', margin: '10px 0' }} />
-        )}
-        {!hasMore && items.length > 0 && (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#8b949e', fontSize: '14px' }}>
-            {labels.noMoreItems}
-          </div>
-        )}
+        {intro}
+        <div className="timeline-feed">
+          {items.map(item => {
+            const key = `${item.itemType}-${item.id}`;
+            if (item.itemType === 'observation') {
+              return <ObservationCard key={key} observation={item} labels={labels} />;
+            } else if (item.itemType === 'summary') {
+              return <SummaryCard key={key} summary={item} labels={labels} />;
+            } else {
+              return <PromptCard key={key} prompt={item} labels={labels} />;
+            }
+          })}
+          {items.length === 0 && !isLoading && (
+            <div className="feed-state">
+              {labels.noItems}
+            </div>
+          )}
+          {isLoading && (
+            <div className="feed-state feed-state-inline">
+              <div className="spinner"></div>
+              {labels.loadingMore}
+            </div>
+          )}
+          {hasMore && !isLoading && items.length > 0 && (
+            <div ref={loadMoreRef} className="load-more-sentinel" />
+          )}
+          {!hasMore && items.length > 0 && (
+            <div className="feed-state feed-state-compact">
+              {labels.noMoreItems}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

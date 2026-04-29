@@ -28,6 +28,7 @@ export class SessionRoutes extends BaseRouteHandler {
   private completionHandler: SessionCompletionHandler;
   private spawnInProgress = new Map<number, boolean>();
   private crashRecoveryScheduled = new Set<number>();
+  private expiredSessionNotices = new Set<number>();
 
   constructor(
     private sessionManager: SessionManager,
@@ -63,28 +64,56 @@ export class SessionRoutes extends BaseRouteHandler {
   private static readonly STALE_GENERATOR_THRESHOLD_MS = 30_000; // 30 seconds (#1099)
   private static readonly MAX_SESSION_WALL_CLOCK_MS = 4 * 60 * 60 * 1000; // 4 hours (#1590)
 
+  private getSessionAgeMs(sessionDbId: number, fallbackStartTime?: number): number {
+    const dbSessionRecord = this.dbManager.getSessionStore().db
+      .prepare('SELECT started_at_epoch FROM sdk_sessions WHERE id = ? LIMIT 1')
+      .get(sessionDbId) as { started_at_epoch: number } | undefined;
+    const sessionOriginMs = dbSessionRecord?.started_at_epoch ?? fallbackStartTime ?? Date.now();
+    return Date.now() - sessionOriginMs;
+  }
+
+  private expireSessionIfTooOld(sessionDbId: number, source: string): boolean {
+    const session = this.sessionManager.getSession(sessionDbId);
+    const sessionAgeMs = this.getSessionAgeMs(sessionDbId, session?.startTime);
+    if (sessionAgeMs <= SessionRoutes.MAX_SESSION_WALL_CLOCK_MS) {
+      return false;
+    }
+
+    const logPayload = {
+      sessionId: sessionDbId,
+      ageHours: Math.round(sessionAgeMs / 3_600_000 * 10) / 10,
+      limitHours: SessionRoutes.MAX_SESSION_WALL_CLOCK_MS / 3_600_000,
+      source
+    };
+    const alreadyExpired = this.expiredSessionNotices.has(sessionDbId);
+    if (!alreadyExpired) {
+      this.expiredSessionNotices.add(sessionDbId);
+      logger.info('SESSION', 'Session exceeded wall-clock age limit — future hook work will be skipped', logPayload);
+    } else {
+      logger.debug('SESSION', 'Skipping hook work for expired session', logPayload);
+    }
+
+    if (alreadyExpired && !session) {
+      return true;
+    }
+
+    if (session && !session.abortController.signal.aborted) {
+      session.abortController.abort();
+    }
+
+    const pendingStore = this.sessionManager.getPendingMessageStore();
+    pendingStore.markAllSessionMessagesAbandoned(sessionDbId);
+    this.dbManager.getSessionStore().markSessionFailed(sessionDbId);
+    this.sessionManager.removeSessionImmediate(sessionDbId);
+    this.eventBroadcaster.broadcastSessionCompleted(sessionDbId);
+    return true;
+  }
+
   private ensureGeneratorRunning(sessionDbId: number, source: string): void {
     const session = this.sessionManager.getSession(sessionDbId);
     if (!session) return;
 
-    const dbSessionRecord = this.dbManager.getSessionStore().db
-      .prepare('SELECT started_at_epoch FROM sdk_sessions WHERE id = ? LIMIT 1')
-      .get(sessionDbId) as { started_at_epoch: number } | undefined;
-    const sessionOriginMs = dbSessionRecord?.started_at_epoch ?? session.startTime;
-    const sessionAgeMs = Date.now() - sessionOriginMs;
-    if (sessionAgeMs > SessionRoutes.MAX_SESSION_WALL_CLOCK_MS) {
-      logger.warn('SESSION', 'Session exceeded wall-clock age limit — aborting to prevent runaway spend', {
-        sessionId: sessionDbId,
-        ageHours: Math.round(sessionAgeMs / 3_600_000 * 10) / 10,
-        limitHours: SessionRoutes.MAX_SESSION_WALL_CLOCK_MS / 3_600_000,
-        source
-      });
-      if (!session.abortController.signal.aborted) {
-        session.abortController.abort();
-      }
-      const pendingStore = this.sessionManager.getPendingMessageStore();
-      pendingStore.markAllSessionMessagesAbandoned(sessionDbId);
-      this.sessionManager.removeSessionImmediate(sessionDbId);
+    if (this.expireSessionIfTooOld(sessionDbId, source)) {
       return;
     }
 
@@ -363,6 +392,11 @@ export class SessionRoutes extends BaseRouteHandler {
 
     const session = this.sessionManager.initializeSession(sessionDbId, userPrompt, promptNumber);
 
+    if (this.expireSessionIfTooOld(sessionDbId, 'init')) {
+      res.json({ status: 'skipped', reason: 'session_expired', sessionDbId, port: getWorkerPort() });
+      return;
+    }
+
     // Get the latest user_prompt for this session to sync to Chroma
     const latestPrompt = this.dbManager.getSessionStore().getLatestUserPrompt(session.contentSessionId);
 
@@ -425,6 +459,11 @@ export class SessionRoutes extends BaseRouteHandler {
 
     const { tool_name, tool_input, tool_response, prompt_number, cwd } = req.body;
 
+    if (this.expireSessionIfTooOld(sessionDbId, 'observation')) {
+      res.json({ status: 'skipped', reason: 'session_expired' });
+      return;
+    }
+
     this.sessionManager.queueObservation(sessionDbId, {
       tool_name,
       tool_input,
@@ -451,6 +490,11 @@ export class SessionRoutes extends BaseRouteHandler {
     if (sessionDbId === null) return;
 
     const { last_assistant_message } = req.body;
+
+    if (this.expireSessionIfTooOld(sessionDbId, 'summarize')) {
+      res.json({ status: 'skipped', reason: 'session_expired' });
+      return;
+    }
 
     this.sessionManager.queueSummarize(sessionDbId, last_assistant_message);
 
@@ -568,6 +612,11 @@ export class SessionRoutes extends BaseRouteHandler {
       return;
     }
 
+    if (this.expireSessionIfTooOld(sessionDbId, 'observation')) {
+      res.json({ status: 'skipped', reason: 'session_expired' });
+      return;
+    }
+
     // Privacy check: skip if user prompt was entirely private
     const userPrompt = PrivacyCheckValidator.checkUserPromptPrivacy(
       store,
@@ -651,6 +700,11 @@ export class SessionRoutes extends BaseRouteHandler {
     // Get or create session
     const sessionDbId = store.createSDKSession(contentSessionId, '', '', undefined, platformSource);
     const promptNumber = store.getPromptNumberFromUserPrompts(contentSessionId);
+
+    if (this.expireSessionIfTooOld(sessionDbId, 'summarize')) {
+      res.json({ status: 'skipped', reason: 'session_expired' });
+      return;
+    }
 
     // Privacy check: skip if user prompt was entirely private
     const userPrompt = PrivacyCheckValidator.checkUserPromptPrivacy(

@@ -136,16 +136,7 @@ describe('Server', () => {
       expect(httpServerBefore).not.toBeNull();
       expect(httpServerBefore!.listening).toBe(true);
 
-      // Close the server - may throw ERR_SERVER_NOT_RUNNING on some platforms
-      // because closeAllConnections() might immediately close the server
-      try {
-        await server.close();
-      } catch (e: any) {
-        // ERR_SERVER_NOT_RUNNING is acceptable - closeAllConnections() already closed it
-        if (e.code !== 'ERR_SERVER_NOT_RUNNING') {
-          throw e;
-        }
-      }
+      await expect(server.close()).resolves.toBeUndefined();
 
       // The server should no longer be listening (even if ref is not null due to early throw)
       const httpServerAfter = server.getHttpServer();
@@ -165,15 +156,7 @@ describe('Server', () => {
       server = new Server(mockOptions);
       const testPort = await listenOnEphemeralPort(server);
 
-      // Close the server
-      try {
-        await server.close();
-      } catch (e: any) {
-        // ERR_SERVER_NOT_RUNNING is acceptable
-        if (e.code !== 'ERR_SERVER_NOT_RUNNING') {
-          throw e;
-        }
-      }
+      await expect(server.close()).resolves.toBeUndefined();
 
       // Small delay to ensure port is released
       await new Promise(resolve => setTimeout(resolve, 100));

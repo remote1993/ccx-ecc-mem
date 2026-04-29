@@ -26,6 +26,15 @@ interface LogContext {
 
 const DEFAULT_DATA_DIR = join(homedir(), '.claude-mem');
 
+function resolveLogDir(): string {
+  const explicitLogDir = process.env.CLAUDE_MEM_LOG_DIR;
+  if (explicitLogDir?.trim()) {
+    return explicitLogDir.trim();
+  }
+
+  return join(resolveDataDir(), 'logs');
+}
+
 function resolveDataDir(): string {
   if (process.env.CLAUDE_MEM_DATA_DIR) {
     return process.env.CLAUDE_MEM_DATA_DIR;
@@ -70,7 +79,7 @@ class Logger {
     this.logFileInitialized = true;
 
     try {
-      const logsDir = join(resolveDataDir(), 'logs');
+      const logsDir = resolveLogDir();
 
       // Ensure logs directory exists
       if (!existsSync(logsDir)) {
