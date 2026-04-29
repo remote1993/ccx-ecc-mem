@@ -1,6 +1,6 @@
 ---
 name: agentic-engineering
-description: Operate as an agentic engineer using eval-first execution, decomposition, and cost-aware model routing.
+description: "中文优先：用于智能体式工程相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Operate as an agentic engineer using eval-first execution, decomposition, and cost-aware model routing."
 origin: ECC
 ---
 

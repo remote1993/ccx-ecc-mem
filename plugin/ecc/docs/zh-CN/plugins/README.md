@@ -44,12 +44,9 @@ claude plugin install typescript-lsp@claude-plugins-official
 
 * `typescript-lsp` - TypeScript 智能支持
 * `pyright-lsp` - Python 类型检查
-* `hookify` - 通过对话创建钩子
-* `code-simplifier` - 代码重构
 
 **代码质量：**
 
-* `code-review` - 代码审查
 * `pr-review-toolkit` - PR 自动化
 * `security-guidance` - 安全检查
 
@@ -61,8 +58,6 @@ claude plugin install typescript-lsp@claude-plugins-official
 **工作流：**
 
 * `commit-commands` - Git 工作流
-* `frontend-design` - UI 模式
-* `feature-dev` - 功能开发
 
 ***
 

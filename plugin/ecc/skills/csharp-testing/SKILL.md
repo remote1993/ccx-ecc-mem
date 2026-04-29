@@ -1,6 +1,6 @@
 ---
 name: csharp-testing
-description: C# and .NET testing patterns with xUnit, FluentAssertions, mocking, integration tests, and test organization best practices.
+description: "中文优先：用于C#测试相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: C# and .NET testing patterns with xUnit, FluentAssertions, mocking, integration tests, and test organization best practices."
 origin: ECC
 ---
 

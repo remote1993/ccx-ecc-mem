@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
   CUSTOM_MODEL_TEST: '/api/settings/custom-models/test',
   VIEWER_INTEGRATIONS: '/api/viewer/integrations',
   VIEWER_CAPABILITIES: '/api/viewer/capabilities',
+  VIEWER_COMMANDS: '/api/viewer/commands',
   STATS: '/api/stats',
   PROCESSING_STATUS: '/api/processing-status',
   STREAM: '/stream',

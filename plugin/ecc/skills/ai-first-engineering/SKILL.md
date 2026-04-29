@@ -1,6 +1,6 @@
 ---
 name: ai-first-engineering
-description: Engineering operating model for teams where AI agents generate a large share of implementation output.
+description: "中文优先：用于AI优先工程相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Engineering operating model for teams where AI agents generate a large share of implementation output."
 origin: ECC
 ---
 

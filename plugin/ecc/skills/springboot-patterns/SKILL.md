@@ -1,6 +1,6 @@
 ---
 name: springboot-patterns
-description: Spring Boot architecture patterns, REST API design, layered services, data access, caching, async processing, and logging. Use for Java Spring Boot backend work.
+description: "中文优先：用于Spring Boot模式相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Spring Boot architecture patterns, REST API design, layered services, data access, caching, async processing, and logging. Use for Java Spring Boot backend work."
 origin: ECC
 ---
 

@@ -190,6 +190,16 @@ describe('Plugin Distribution - package.json Files Field', () => {
   });
 });
 
+describe('Plugin Distribution - Native Claude Resource Dedupe', () => {
+  it('should not re-bundle skills already provided by official Claude plugins', () => {
+    const installModules = JSON.parse(readFileSync(path.join(projectRoot, 'plugin/ecc/manifests/install-modules.json'), 'utf-8'));
+    const installPaths = installModules.modules.flatMap((module: any) => module.paths ?? []);
+
+    expect(existsSync(path.join(projectRoot, 'plugin/ecc/skills/frontend-design/SKILL.md'))).toBe(false);
+    expect(installPaths).not.toContain('skills/frontend-design');
+  });
+});
+
 describe('Plugin Distribution - package.json Entry Points', () => {
   it('should point bin and non-wildcard exports at files produced by the build', () => {
     const packageJsonPath = path.join(projectRoot, 'package.json');

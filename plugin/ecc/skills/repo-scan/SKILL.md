@@ -1,6 +1,6 @@
 ---
 name: repo-scan
-description: Cross-stack source code asset audit — classifies every file, detects embedded third-party libraries, and delivers actionable four-level verdicts per module with interactive HTML reports.
+description: "中文优先：用于repo扫描相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Cross-stack source code asset audit — classifies every file, detects embedded third-party libraries, and delivers actionable four-level verdicts per module with interactive HTML reports."
 origin: community
 ---
 

@@ -125,6 +125,17 @@ function ToggleSwitch({
   );
 }
 
+function parseSkipTools(value?: string): string[] {
+  return (value || '')
+    .split(',')
+    .map(tool => tool.trim())
+    .filter(Boolean);
+}
+
+function serializeSkipTools(tools: string[]): string {
+  return Array.from(new Set(tools)).join(',');
+}
+
 export function ContextSettingsModal({
   isOpen,
   onClose,
@@ -241,6 +252,56 @@ export function ContextSettingsModal({
     updateSetting(key, newValue);
   }, [formState, updateSetting]);
 
+  const setSlashCommandRecording = useCallback((enabled: boolean) => {
+    const skipTools = parseSkipTools(formState.CLAUDE_MEM_SKIP_TOOLS);
+    const nextTools = enabled
+      ? skipTools.filter(tool => tool !== 'SlashCommand')
+      : [...skipTools, 'SlashCommand'];
+    updateSetting('CLAUDE_MEM_SKIP_TOOLS', serializeSkipTools(nextTools));
+  }, [formState.CLAUDE_MEM_SKIP_TOOLS, updateSetting]);
+
+  const applyContextPreset = useCallback((preset: 'lean' | 'balanced' | 'deep') => {
+    const presets: Record<typeof preset, Partial<Settings>> = {
+      lean: {
+        CLAUDE_MEM_CONTEXT_OBSERVATIONS: '25',
+        CLAUDE_MEM_CONTEXT_SESSION_COUNT: '5',
+        CLAUDE_MEM_CONTEXT_FULL_COUNT: '1',
+        CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY: 'true',
+        CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE: 'false',
+        CLAUDE_MEM_SEMANTIC_INJECT_LIMIT: '3',
+      },
+      balanced: {
+        CLAUDE_MEM_CONTEXT_OBSERVATIONS: '50',
+        CLAUDE_MEM_CONTEXT_SESSION_COUNT: '10',
+        CLAUDE_MEM_CONTEXT_FULL_COUNT: '3',
+        CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY: 'true',
+        CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE: 'false',
+        CLAUDE_MEM_SEMANTIC_INJECT_LIMIT: '5',
+      },
+      deep: {
+        CLAUDE_MEM_CONTEXT_OBSERVATIONS: '120',
+        CLAUDE_MEM_CONTEXT_SESSION_COUNT: '20',
+        CLAUDE_MEM_CONTEXT_FULL_COUNT: '8',
+        CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY: 'true',
+        CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE: 'true',
+        CLAUDE_MEM_SEMANTIC_INJECT_LIMIT: '10',
+      },
+    };
+    setFormState(prev => ({ ...prev, ...presets[preset] }));
+  }, []);
+
+  const totalContextLoad =
+    Number(formState.CLAUDE_MEM_CONTEXT_OBSERVATIONS || 0) +
+    Number(formState.CLAUDE_MEM_CONTEXT_SESSION_COUNT || 0) * 3 +
+    Number(formState.CLAUDE_MEM_CONTEXT_FULL_COUNT || 0) * 4 +
+    (formState.CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE === 'true' ? 12 : 0);
+  const contextLoadLabel = totalContextLoad > 140
+    ? labels.contextHeavy
+    : totalContextLoad > 70
+      ? labels.contextBalanced
+      : labels.contextLean;
+  const slashCommandRecordingEnabled = !parseSkipTools(formState.CLAUDE_MEM_SKIP_TOOLS).includes('SlashCommand');
+
   // Handle ESC key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -315,7 +376,105 @@ export function ContextSettingsModal({
 
           {/* Right column - Settings Panel */}
           <div className="settings-column">
-            {/* Section 1: Loading */}
+            <CollapsibleSection
+              title={labels.contextManagement}
+              description={labels.contextManagementDescription}
+            >
+              <div className="context-health-grid">
+                <div className="context-health-card">
+                  <span>{labels.contextHealth}</span>
+                  <strong>{contextLoadLabel}</strong>
+                </div>
+                <div className="context-health-card">
+                  <span>{labels.observations}</span>
+                  <strong>{formState.CLAUDE_MEM_CONTEXT_OBSERVATIONS || '50'}</strong>
+                </div>
+                <div className="context-health-card">
+                  <span>{labels.sessions}</span>
+                  <strong>{formState.CLAUDE_MEM_CONTEXT_SESSION_COUNT || '10'}</strong>
+                </div>
+              </div>
+              <div className="context-preset-grid">
+                <button type="button" className="context-preset-btn" onClick={() => applyContextPreset('lean')}>
+                  <strong>{labels.contextPresetLean}</strong>
+                  <span>{labels.contextPresetLeanDescription}</span>
+                </button>
+                <button type="button" className="context-preset-btn" onClick={() => applyContextPreset('balanced')}>
+                  <strong>{labels.contextPresetBalanced}</strong>
+                  <span>{labels.contextPresetBalancedDescription}</span>
+                </button>
+                <button type="button" className="context-preset-btn" onClick={() => applyContextPreset('deep')}>
+                  <strong>{labels.contextPresetDeep}</strong>
+                  <span>{labels.contextPresetDeepDescription}</span>
+                </button>
+              </div>
+              <div className="toggle-group">
+                <ToggleSwitch
+                  id="semantic-context"
+                  label={labels.semanticContext}
+                  description={labels.semanticContextDescription}
+                  checked={formState.CLAUDE_MEM_SEMANTIC_INJECT === 'true'}
+                  onChange={() => toggleBoolean('CLAUDE_MEM_SEMANTIC_INJECT')}
+                />
+                <ToggleSwitch
+                  id="show-last-summary"
+                  label={labels.includeLastSummary}
+                  description={labels.includeLastSummaryDescription}
+                  checked={formState.CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY === 'true'}
+                  onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY')}
+                />
+                <ToggleSwitch
+                  id="show-last-message"
+                  label={labels.includeLastMessage}
+                  description={labels.includeLastMessageDescription}
+                  checked={formState.CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE === 'true'}
+                  onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE')}
+                />
+                <ToggleSwitch
+                  id="show-terminal-output"
+                  label={labels.includeTerminalOutput}
+                  description={labels.includeTerminalOutputDescription}
+                  checked={formState.CLAUDE_MEM_CONTEXT_SHOW_TERMINAL_OUTPUT === 'true'}
+                  onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_TERMINAL_OUTPUT')}
+                />
+              </div>
+              <FormField
+                label={labels.semanticContextLimit}
+                tooltip={labels.semanticContextLimitTooltip}
+              >
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={formState.CLAUDE_MEM_SEMANTIC_INJECT_LIMIT || '5'}
+                  onChange={(e) => updateSetting('CLAUDE_MEM_SEMANTIC_INJECT_LIMIT', e.target.value)}
+                />
+              </FormField>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title={labels.commandRecording}
+              description={labels.commandRecordingDescription}
+              defaultOpen={false}
+            >
+              <div className="toggle-group">
+                <ToggleSwitch
+                  id="record-claude-commands"
+                  label={labels.claudeCommandRecording}
+                  description={labels.claudeCommandRecordingDescription}
+                  checked={slashCommandRecordingEnabled}
+                  onChange={setSlashCommandRecording}
+                />
+                <ToggleSwitch
+                  id="record-codex-commands"
+                  label={labels.codexCommandRecording}
+                  description={labels.codexCommandRecordingDescription}
+                  checked={formState.CLAUDE_MEM_TRANSCRIPTS_ENABLED === 'true'}
+                  onChange={() => toggleBoolean('CLAUDE_MEM_TRANSCRIPTS_ENABLED')}
+                />
+              </div>
+            </CollapsibleSection>
+
             <CollapsibleSection
               title={labels.loading}
               description={labels.loadingDescription}
@@ -565,23 +724,6 @@ export function ContextSettingsModal({
                   onChange={(e) => updateSetting('CLAUDE_MEM_WORKER_PORT', e.target.value)}
                 />
               </FormField>
-
-              <div className="toggle-group" style={{ marginTop: '12px' }}>
-                <ToggleSwitch
-                  id="show-last-summary"
-                  label={labels.includeLastSummary}
-                  description={labels.includeLastSummaryDescription}
-                  checked={formState.CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY === 'true'}
-                  onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY')}
-                />
-                <ToggleSwitch
-                  id="show-last-message"
-                  label={labels.includeLastMessage}
-                  description={labels.includeLastMessageDescription}
-                  checked={formState.CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE === 'true'}
-                  onChange={() => toggleBoolean('CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE')}
-                />
-              </div>
             </CollapsibleSection>
           </div>
         </div>

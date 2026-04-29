@@ -1,6 +1,6 @@
 ---
 name: dotnet-patterns
-description: Idiomatic C# and .NET patterns, conventions, dependency injection, async/await, and best practices for building robust, maintainable .NET applications.
+description: "中文优先：用于dotnet模式相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Idiomatic C# and .NET patterns, conventions, dependency injection, async/await, and best practices for building robust, maintainable .NET applications."
 origin: ECC
 ---
 

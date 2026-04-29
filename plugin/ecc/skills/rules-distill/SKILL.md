@@ -1,6 +1,6 @@
 ---
 name: rules-distill
-description: "Scan skills to extract cross-cutting principles and distill them into rules — append, revise, or create new rule files"
+description: "中文优先：用于规则提炼相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Scan skills to extract cross-cutting principles and distill them into rules — append, revise, or create new rule files"
 origin: ECC
 ---
 

@@ -3,6 +3,7 @@ export interface ViewerLabels {
   allProjects: string;
   settings: string;
   source: string;
+  allSources: string;
   project: string;
   closeEsc: string;
   toggleConsole: string;
@@ -92,6 +93,42 @@ export interface ViewerLabels {
   themeDarkTitle: string;
   themeSystemTitle: string;
   scrollToTop: string;
+  commands: string;
+  commandCenter: string;
+  commandCenterDescription: string;
+  commandHistory: string;
+  recommendedCommands: string;
+  commandLibrary: string;
+  commandSearchPlaceholder: string;
+  noCommandHistory: string;
+  noCommands: string;
+  commandRecording: string;
+  commandRecordingDescription: string;
+  claudeCommandRecording: string;
+  claudeCommandRecordingDescription: string;
+  codexCommandRecording: string;
+  codexCommandRecordingDescription: string;
+  openSettings: string;
+  usageCount: string;
+  latestUse: string;
+  contextManagement: string;
+  contextManagementDescription: string;
+  contextPresetLean: string;
+  contextPresetBalanced: string;
+  contextPresetDeep: string;
+  contextPresetLeanDescription: string;
+  contextPresetBalancedDescription: string;
+  contextPresetDeepDescription: string;
+  contextHealth: string;
+  contextLean: string;
+  contextBalanced: string;
+  contextHeavy: string;
+  semanticContext: string;
+  semanticContextDescription: string;
+  semanticContextLimit: string;
+  semanticContextLimitTooltip: string;
+  includeTerminalOutput: string;
+  includeTerminalOutputDescription: string;
   capabilityCenter: string;
   capabilityCenterDescription: string;
   capabilityProfile: string;
@@ -107,6 +144,7 @@ const en: ViewerLabels = {
   allProjects: 'All Projects',
   settings: 'Settings',
   source: 'Source',
+  allSources: 'All sources',
   project: 'Project',
   closeEsc: 'Close (Esc)',
   toggleConsole: 'Toggle Console',
@@ -196,6 +234,42 @@ const en: ViewerLabels = {
   themeDarkTitle: 'Theme: Dark (click for System)',
   themeSystemTitle: 'Theme: System (click for Light)',
   scrollToTop: 'Scroll to top',
+  commands: 'Commands',
+  commandCenter: 'Command Center',
+  commandCenterDescription: 'Recorded Claude and Codex command usage plus the local command catalog.',
+  commandHistory: 'Recent command usage',
+  recommendedCommands: 'Recommended commands',
+  commandLibrary: 'Command library',
+  commandSearchPlaceholder: 'Search commands, descriptions, or projects...',
+  noCommandHistory: 'No recorded command usage yet',
+  noCommands: 'No commands match the current filter',
+  commandRecording: 'Command recording',
+  commandRecordingDescription: 'Capture useful slash-command activity from Claude and Codex without duplicating native plugin resources.',
+  claudeCommandRecording: 'Record Claude slash commands',
+  claudeCommandRecordingDescription: 'Allow SlashCommand hook events to become memory observations when they carry useful work.',
+  codexCommandRecording: 'Record Codex transcript commands',
+  codexCommandRecordingDescription: 'Use the Codex transcript watcher so slash-like Codex prompts appear in command history.',
+  openSettings: 'Open settings',
+  usageCount: 'Uses',
+  latestUse: 'Latest',
+  contextManagement: 'Context Management',
+  contextManagementDescription: 'Tune context size, semantic recall, and retention behavior with practical presets.',
+  contextPresetLean: 'Lean',
+  contextPresetBalanced: 'Balanced',
+  contextPresetDeep: 'Deep',
+  contextPresetLeanDescription: 'Lower token load for focused work.',
+  contextPresetBalancedDescription: 'Default range for day-to-day coding.',
+  contextPresetDeepDescription: 'Broader recall for long investigations.',
+  contextHealth: 'Context load',
+  contextLean: 'Lean',
+  contextBalanced: 'Balanced',
+  contextHeavy: 'Heavy',
+  semanticContext: 'Semantic recall',
+  semanticContextDescription: 'Inject the most relevant vector-search memories on each prompt.',
+  semanticContextLimit: 'Semantic recall limit',
+  semanticContextLimitTooltip: 'Maximum relevant observations to inject per prompt when semantic recall is enabled (1-20)',
+  includeTerminalOutput: 'Include terminal output',
+  includeTerminalOutputDescription: 'Allow terminal output to appear in generated context when useful.',
   capabilityCenter: 'Capability Center',
   capabilityCenterDescription: 'Unified view of the active, optional, reference, and archived ccx-ecc-mem capabilities.',
   capabilityProfile: 'Profile',
@@ -212,6 +286,7 @@ const zh: ViewerLabels = {
   allProjects: '全部项目',
   settings: '设置',
   source: '来源',
+  allSources: '全部来源',
   project: '项目',
   closeEsc: '关闭（Esc）',
   toggleConsole: '切换控制台',
@@ -301,6 +376,42 @@ const zh: ViewerLabels = {
   themeDarkTitle: '主题：深色（点击切换为跟随系统）',
   themeSystemTitle: '主题：跟随系统（点击切换为浅色）',
   scrollToTop: '回到顶部',
+  commands: '命令',
+  commandCenter: '命令中心',
+  commandCenterDescription: '集中查看 Claude 与 Codex 的命令使用记录，以及本地可用命令目录。',
+  commandHistory: '最近命令记录',
+  recommendedCommands: '推荐命令',
+  commandLibrary: '命令目录',
+  commandSearchPlaceholder: '搜索命令、描述或项目...',
+  noCommandHistory: '还没有记录到命令使用',
+  noCommands: '没有匹配当前筛选的命令',
+  commandRecording: '命令记录',
+  commandRecordingDescription: '记录有价值的 Claude 与 Codex 命令活动，同时避免重复安装官方原生命令。',
+  claudeCommandRecording: '记录 Claude 斜杠命令',
+  claudeCommandRecordingDescription: '允许 SlashCommand hook 事件在有实际工作内容时进入记忆观察。',
+  codexCommandRecording: '记录 Codex 转录命令',
+  codexCommandRecordingDescription: '启用 Codex 转录监听，让类似斜杠命令的 Codex 提示进入命令历史。',
+  openSettings: '打开设置',
+  usageCount: '次数',
+  latestUse: '最近使用',
+  contextManagement: '上下文管理',
+  contextManagementDescription: '用实用预设调节上下文规模、语义召回和保留策略。',
+  contextPresetLean: '精简',
+  contextPresetBalanced: '均衡',
+  contextPresetDeep: '深度',
+  contextPresetLeanDescription: '降低 token 负载，适合聚焦任务。',
+  contextPresetBalancedDescription: '适合日常编码的默认范围。',
+  contextPresetDeepDescription: '适合长线排查和跨会话召回。',
+  contextHealth: '上下文负载',
+  contextLean: '轻',
+  contextBalanced: '适中',
+  contextHeavy: '重',
+  semanticContext: '语义召回',
+  semanticContextDescription: '每次提示时注入最相关的向量检索记忆。',
+  semanticContextLimit: '语义召回数量',
+  semanticContextLimitTooltip: '启用语义召回时，每次提示最多注入的相关观察数量（1-20）',
+  includeTerminalOutput: '包含终端输出',
+  includeTerminalOutputDescription: '在有价值时允许终端输出进入生成的上下文。',
   capabilityCenter: '能力中心',
   capabilityCenterDescription: '统一查看 ccx-ecc-mem 已启用、可选增强、参考资源和归档能力。',
   capabilityProfile: '能力配置',
@@ -312,6 +423,6 @@ const zh: ViewerLabels = {
 };
 
 export function getViewerLabels(mode?: string): ViewerLabels {
-  if (mode?.endsWith('--zh')) return zh;
-  return en;
+  if (mode === 'code' || mode?.endsWith('--en')) return en;
+  return zh;
 }

@@ -1,6 +1,6 @@
 ---
 name: agent-introspection-debugging
-description: Structured self-debugging workflow for AI agent failures using capture, diagnosis, contained recovery, and introspection reports.
+description: "中文优先：用于智能体内省调试相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Structured self-debugging workflow for AI agent failures using capture, diagnosis, contained recovery, and introspection reports."
 origin: ECC
 ---
 

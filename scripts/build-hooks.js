@@ -306,7 +306,7 @@ async function buildHooks() {
       name: 'ccx-ecc-mem-plugin',
       version: version,
       private: true,
-      description: 'Runtime dependencies for the ccx-ecc-mem bundled plugin',
+      description: 'ccx-ecc-mem 插件运行时依赖。Runtime dependencies for the bundled plugin.',
       type: 'module',
       dependencies: {
         'tree-sitter-cli': '^0.26.5',

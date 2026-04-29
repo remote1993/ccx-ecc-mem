@@ -1,6 +1,6 @@
 ---
 name: agent-eval
-description: Head-to-head comparison of coding agents (Claude Code, Aider, Codex, etc.) on custom tasks with pass rate, cost, time, and consistency metrics
+description: "中文优先：用于智能体评估相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Head-to-head comparison of coding agents (Claude Code, Aider, Codex, etc.) on custom tasks with pass rate, cost, time, and consistency metrics"
 origin: ECC
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---

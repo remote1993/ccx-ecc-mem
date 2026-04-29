@@ -1,6 +1,6 @@
 ---
 name: rust-patterns
-description: Idiomatic Rust patterns, ownership, error handling, traits, concurrency, and best practices for building safe, performant applications.
+description: "中文优先：用于Rust模式相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Idiomatic Rust patterns, ownership, error handling, traits, concurrency, and best practices for building safe, performant applications."
 origin: ECC
 ---
 

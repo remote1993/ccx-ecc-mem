@@ -334,7 +334,7 @@ everything-claude-code/
 |   |-- tdd.md              # /tdd - 测试驱动开发
 |   |-- plan.md             # /plan - 实现规划
 |   |-- e2e.md              # /e2e - 生成端到端测试
-|   |-- code-review.md      # /code-review - 代码质量审查
+|   |-- quality-gate.md     # /quality-gate - 发布前质量门禁
 |   |-- build-fix.md        # /build-fix - 修复构建错误
 |   |-- refactor-clean.md   # /refactor-clean - 清理无效代码
 |   |-- learn.md            # /learn - 会话中提取模式（长文本指南）
@@ -345,7 +345,7 @@ everything-claude-code/
 |   |-- go-review.md        # /go-review - Go 代码审查（新增）
 |   |-- go-test.md          # /go-test - Go TDD 工作流（新增）
 |   |-- go-build.md         # /go-build - 修复 Go 构建错误（新增）
-|   |-- skill-create.md     # /skill-create - 从 Git 历史生成技能（新增）
+|   |-- skill-health.md     # /skill-health - 技能质量检查（新增）
 |   |-- instinct-status.md  # /instinct-status - 查看已学习本能（新增）
 |   |-- instinct-import.md  # /instinct-import - 导入本能（新增）
 |   |-- instinct-export.md  # /instinct-export - 导出本能（新增）

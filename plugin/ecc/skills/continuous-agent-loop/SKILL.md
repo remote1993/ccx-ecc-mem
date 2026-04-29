@@ -1,6 +1,6 @@
 ---
 name: continuous-agent-loop
-description: Patterns for continuous autonomous agent loops with quality gates, evals, and recovery controls.
+description: "中文优先：用于持续智能体循环相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Patterns for continuous autonomous agent loops with quality gates, evals, and recovery controls."
 origin: ECC
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: continuous-learning
-description: Automatically extract reusable patterns from Claude Code sessions and save them as learned skills for future use.
+description: "中文优先：用于持续学习相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Automatically extract reusable patterns from Claude Code sessions and save them as learned skills for future use."
 origin: ECC
 ---
 

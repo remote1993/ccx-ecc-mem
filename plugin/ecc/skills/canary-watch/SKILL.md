@@ -1,6 +1,6 @@
 ---
 name: canary-watch
-description: Use this skill to monitor a deployed URL for regressions after deploys, merges, or dependency upgrades.
+description: "中文优先：用于金丝雀监控相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Use this skill to monitor a deployed URL for regressions after deploys, merges, or dependency upgrades."
 origin: ECC
 ---
 

@@ -1,8 +1,8 @@
 ---
 name: api-connector-builder
-description: Build a new API connector or provider by matching the target repo's existing integration pattern exactly. Use when adding one more integration without inventing a second architecture.
+description: "中文优先：用于API连接器构建相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Build a new API connector or provider by matching the target repo's existing integration pattern exactly. Use when adding one more integration without inventing a second architecture."
 origin: ECC direct-port adaptation
-version: "1.0.0"
+version: 1.0.0
 ---
 
 # API Connector Builder

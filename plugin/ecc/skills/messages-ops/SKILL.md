@@ -1,6 +1,6 @@
 ---
 name: messages-ops
-description: Evidence-first live messaging workflow for ECC. Use when the user wants to read texts or DMs, recover a recent one-time code, inspect a thread before replying, or prove which message source was actually checked.
+description: "中文优先：用于消息运维相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Evidence-first live messaging workflow for ECC. Use when the user wants to read texts or DMs, recover a recent one-time code, inspect a thread before replying, or prove which message source was actually checked."
 origin: ECC
 ---
 

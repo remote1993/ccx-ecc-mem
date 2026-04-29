@@ -42,16 +42,25 @@ describe('Fusion agent profile toggles', () => {
     }
   });
 
-  it('makes agents deliberately available through developer and security profiles', () => {
+  it('makes non-native agents deliberately available through developer and security profiles', () => {
     const registry = readJson('plugin/fusion/registry.json');
     const developerIds = resolveProfileCapabilityIds(registry, 'developer');
     const securityIds = resolveProfileCapabilityIds(registry, 'security');
 
-    expect(developerIds).toContain('agent.codeExplorer');
-    expect(developerIds).toContain('agent.codeReviewer');
     expect(developerIds).toContain('agent.buildErrorResolver');
+    expect(developerIds).toContain('agent.docsLookup');
     expect(securityIds).toContain('agent.securityReviewer');
-    expect(securityIds).toContain('agent.silentFailureHunter');
+  });
+
+  it('does not re-bundle agents already provided by official Claude plugins', () => {
+    const registry = readJson('plugin/fusion/registry.json');
+    const ids = new Set((registry.capabilities ?? []).map((capability: any) => capability.id));
+
+    expect(ids.has('agent.codeArchitect')).toBe(false);
+    expect(ids.has('agent.codeExplorer')).toBe(false);
+    expect(ids.has('agent.codeReviewer')).toBe(false);
+    expect(ids.has('agent.silentFailureHunter')).toBe(false);
+    expect(ids.has('agent.typeDesignAnalyzer')).toBe(false);
   });
 
   it('does not expose agent paths or agent counts in the default plugin manifest', () => {

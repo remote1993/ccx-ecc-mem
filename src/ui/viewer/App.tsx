@@ -4,6 +4,7 @@ import { Feed } from './components/Feed';
 import { ContextSettingsModal } from './components/ContextSettingsModal';
 import { LogsDrawer } from './components/LogsModal';
 import { CapabilityCenter } from './components/CapabilityCenter';
+import { CommandCenter } from './components/CommandCenter';
 import { useSSE } from './hooks/useSSE';
 import { useSettings } from './hooks/useSettings';
 import { useStats } from './hooks/useStats';
@@ -11,6 +12,7 @@ import { usePagination } from './hooks/usePagination';
 import { useTheme } from './hooks/useTheme';
 import { useViewerIntegrations } from './hooks/useViewerIntegrations';
 import { useCapabilities } from './hooks/useCapabilities';
+import { useCommands } from './hooks/useCommands';
 import { Observation, Summary, UserPrompt } from './types';
 import { getViewerLabels } from './i18n';
 import { mergeAndDeduplicateByProject } from './utils/data';
@@ -20,6 +22,7 @@ export function App() {
   const [currentSource, setCurrentSource] = useState('all');
   const [contextPreviewOpen, setContextPreviewOpen] = useState(false);
   const [capabilityCenterOpen, setCapabilityCenterOpen] = useState(false);
+  const [commandCenterOpen, setCommandCenterOpen] = useState(false);
   const [logsModalOpen, setLogsModalOpen] = useState(false);
   const [paginatedObservations, setPaginatedObservations] = useState<Observation[]>([]);
   const [paginatedSummaries, setPaginatedSummaries] = useState<Summary[]>([]);
@@ -28,6 +31,7 @@ export function App() {
   const { observations, summaries, prompts, projects, sources, projectsBySource, isProcessing, queueDepth, isConnected } = useSSE();
   const { integrations } = useViewerIntegrations();
   const { capabilities, isLoading: capabilitiesLoading, error: capabilitiesError } = useCapabilities();
+  const { commands, isLoading: commandsLoading, error: commandsError } = useCommands();
   const { settings, saveSettings, isSaving, saveStatus } = useSettings();
   const { stats, refreshStats } = useStats();
   const { preference, resolvedTheme, setThemePreference } = useTheme();
@@ -88,6 +92,10 @@ export function App() {
     setCapabilityCenterOpen(prev => !prev);
   }, []);
 
+  const toggleCommandCenter = useCallback(() => {
+    setCommandCenterOpen(prev => !prev);
+  }, []);
+
   // Toggle logs modal
   const toggleLogsModal = useCallback(() => {
     setLogsModalOpen(prev => !prev);
@@ -141,7 +149,9 @@ export function App() {
         onThemeChange={setThemePreference}
         onContextPreviewToggle={toggleContextPreview}
         onCapabilityCenterToggle={toggleCapabilityCenter}
+        onCommandCenterToggle={toggleCommandCenter}
         isCapabilityCenterOpen={capabilityCenterOpen}
+        isCommandCenterOpen={commandCenterOpen}
         labels={labels}
       />
 
@@ -162,6 +172,20 @@ export function App() {
         labels={labels}
         isLoading={capabilitiesLoading}
         error={capabilitiesError}
+      />
+
+      <CommandCenter
+        isOpen={commandCenterOpen}
+        onClose={toggleCommandCenter}
+        data={commands}
+        settings={settings}
+        labels={labels}
+        isLoading={commandsLoading}
+        error={commandsError}
+        onOpenSettings={() => {
+          setCommandCenterOpen(false);
+          setContextPreviewOpen(true);
+        }}
       />
 
       <ContextSettingsModal

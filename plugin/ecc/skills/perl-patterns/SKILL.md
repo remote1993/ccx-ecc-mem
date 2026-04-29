@@ -1,6 +1,6 @@
 ---
 name: perl-patterns
-description: Modern Perl 5.36+ idioms, best practices, and conventions for building robust, maintainable Perl applications.
+description: "中文优先：用于Perl模式相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Modern Perl 5.36+ idioms, best practices, and conventions for building robust, maintainable Perl applications."
 origin: ECC
 ---
 

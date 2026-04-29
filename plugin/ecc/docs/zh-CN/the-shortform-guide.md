@@ -69,7 +69,7 @@
 ![PostToolUse 钩子反馈](../../assets/images/shortform/03-posttooluse-hook.png)
 *在 Claude Code 中运行 PostToolUse 钩子时获得的反馈示例*
 
-**专业提示：** 使用 `hookify` 插件以对话方式创建钩子，而不是手动编写 JSON。运行 `/hookify` 并描述你想要什么。
+**专业提示：** 钩子生成能力由 Claude 官方插件提供，ccx-ecc-mem 不再重复捆绑；如需使用，请在官方市场单独启用。
 
 ***
 
@@ -177,7 +177,6 @@ claude plugin marketplace add https://github.com/mixedbread-ai/mgrep
 # Enabled plugins example
 typescript-lsp@claude-plugins-official  # TypeScript intelligence
 pyright-lsp@claude-plugins-official     # Python type checking
-hookify@claude-plugins-official         # Create hooks conversationally
 mgrep@Mixedbread-Grep                   # Better search than ripgrep
 ```
 
@@ -292,16 +291,11 @@ mgrep --web "Next.js 15 app router changes"  # Web search
 
 ```markdown
 ralph-wiggum@claude-code-plugins       # 循环自动化
-frontend-design@claude-code-plugins    # UI/UX 模式
 commit-commands@claude-code-plugins    # Git 工作流
 security-guidance@claude-code-plugins  # 安全检查
 pr-review-toolkit@claude-code-plugins  # PR 自动化
 typescript-lsp@claude-plugins-official # TS 智能
-hookify@claude-plugins-official        # Hook 创建
-code-simplifier@claude-plugins-official
-feature-dev@claude-code-plugins
 explanatory-output-style@claude-code-plugins
-code-review@claude-code-plugins
 context7@claude-plugins-official       # 实时文档
 pyright-lsp@claude-plugins-official    # Python 类型
 mgrep@Mixedbread-Grep                  # 更好的搜索

@@ -1,7 +1,6 @@
 ---
 name: accessibility
-description: Design, implement, and audit inclusive digital products using WCAG 2.2 Level AA
-  standards. Use this skill to generate semantic ARIA for Web and accessibility traits for Web and Native platforms (iOS/Android).
+description: "中文优先：用于无障碍相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Design, implement, and audit inclusive digital products using WCAG 2.2 Level AA standards. Use this skill to generate semantic ARIA for Web and accessibility traits for Web and Native platforms (iOS/Android)."
 origin: ECC
 ---
 
@@ -141,6 +140,5 @@ Switch(
 ## Related Skills
 
 - `frontend-patterns`
-- `frontend-design`
 - `liquid-glass-design`
 - `swiftui-patterns`

@@ -1,8 +1,8 @@
 ---
 name: hipaa-compliance
-description: HIPAA-specific entrypoint for healthcare privacy and security work. Use when a task is explicitly framed around HIPAA, PHI handling, covered entities, BAAs, breach posture, or US healthcare compliance requirements.
+description: "中文优先：用于HIPAA合规相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: HIPAA-specific entrypoint for healthcare privacy and security work. Use when a task is explicitly framed around HIPAA, PHI handling, covered entities, BAAs, breach posture, or US healthcare compliance requirements."
 origin: ECC direct-port adaptation
-version: "1.0.0"
+version: 1.0.0
 ---
 
 # HIPAA Compliance

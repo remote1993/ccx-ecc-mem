@@ -1,6 +1,6 @@
 ---
 name: frontend-patterns
-description: Frontend development patterns for React, Next.js, state management, performance optimization, and UI best practices.
+description: "中文优先：用于前端模式相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Frontend development patterns for React, Next.js, state management, performance optimization, and UI best practices."
 origin: ECC
 ---
 

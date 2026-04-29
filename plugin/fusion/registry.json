@@ -442,30 +442,6 @@
       ]
     },
     {
-      "id": "command.featureDev",
-      "kind": "command",
-      "title": {
-        "zh-CN": "功能开发命令",
-        "en": "Feature Development Command"
-      },
-      "summary": {
-        "zh-CN": "通过 slash command 提供功能开发能力。",
-        "en": "Provide feature development capability via slash command."
-      },
-      "source": "internalized-ecc",
-      "status": "active",
-      "dependencyTier": "core",
-      "defaultEnabled": true,
-      "implementation": {
-        "path": "plugin/ecc/commands/feature-dev.md"
-      },
-      "risks": [],
-      "profileTags": [
-        "core",
-        "developer"
-      ]
-    },
-    {
       "id": "command.qualityGate",
       "kind": "command",
       "title": {
@@ -482,30 +458,6 @@
       "defaultEnabled": true,
       "implementation": {
         "path": "plugin/ecc/commands/quality-gate.md"
-      },
-      "risks": [],
-      "profileTags": [
-        "core",
-        "developer"
-      ]
-    },
-    {
-      "id": "command.reviewPr",
-      "kind": "command",
-      "title": {
-        "zh-CN": "PR 审查命令",
-        "en": "PR Review Command"
-      },
-      "summary": {
-        "zh-CN": "通过 slash command 提供PR 审查能力。",
-        "en": "Provide pr review capability via slash command."
-      },
-      "source": "internalized-ecc",
-      "status": "active",
-      "dependencyTier": "core",
-      "defaultEnabled": true,
-      "implementation": {
-        "path": "plugin/ecc/commands/review-pr.md"
       },
       "risks": [],
       "profileTags": [
@@ -585,75 +537,6 @@
       ]
     },
     {
-      "id": "agent.codeArchitect",
-      "kind": "agent",
-      "title": {
-        "zh-CN": "代码架构代理",
-        "en": "Code Architect"
-      },
-      "summary": {
-        "zh-CN": "提供代码架构专用分析能力。",
-        "en": "Provide specialized code architect analysis capability."
-      },
-      "source": "internalized-ecc",
-      "status": "optional",
-      "dependencyTier": "optional",
-      "defaultEnabled": false,
-      "implementation": {
-        "path": "plugin/ecc/agents/code-architect.md"
-      },
-      "risks": [],
-      "profileTags": [
-        "developer"
-      ]
-    },
-    {
-      "id": "agent.codeExplorer",
-      "kind": "agent",
-      "title": {
-        "zh-CN": "代码探索代理",
-        "en": "Code Explorer"
-      },
-      "summary": {
-        "zh-CN": "提供代码探索专用分析能力。",
-        "en": "Provide specialized code explorer analysis capability."
-      },
-      "source": "internalized-ecc",
-      "status": "optional",
-      "dependencyTier": "optional",
-      "defaultEnabled": false,
-      "implementation": {
-        "path": "plugin/ecc/agents/code-explorer.md"
-      },
-      "risks": [],
-      "profileTags": [
-        "developer"
-      ]
-    },
-    {
-      "id": "agent.codeReviewer",
-      "kind": "agent",
-      "title": {
-        "zh-CN": "代码审查代理",
-        "en": "Code Reviewer"
-      },
-      "summary": {
-        "zh-CN": "提供代码审查专用分析能力。",
-        "en": "Provide specialized code reviewer analysis capability."
-      },
-      "source": "internalized-ecc",
-      "status": "optional",
-      "dependencyTier": "optional",
-      "defaultEnabled": false,
-      "implementation": {
-        "path": "plugin/ecc/agents/code-reviewer.md"
-      },
-      "risks": [],
-      "profileTags": [
-        "developer"
-      ]
-    },
-    {
       "id": "agent.docsLookup",
       "kind": "agent",
       "title": {
@@ -698,53 +581,6 @@
       "profileTags": [
         "developer",
         "security"
-      ]
-    },
-    {
-      "id": "agent.silentFailureHunter",
-      "kind": "agent",
-      "title": {
-        "zh-CN": "静默失败检查代理",
-        "en": "Silent Failure Hunter"
-      },
-      "summary": {
-        "zh-CN": "提供静默失败检查专用分析能力。",
-        "en": "Provide specialized silent failure hunter analysis capability."
-      },
-      "source": "internalized-ecc",
-      "status": "optional",
-      "dependencyTier": "optional",
-      "defaultEnabled": false,
-      "implementation": {
-        "path": "plugin/ecc/agents/silent-failure-hunter.md"
-      },
-      "risks": [],
-      "profileTags": [
-        "developer",
-        "security"
-      ]
-    },
-    {
-      "id": "agent.typeDesignAnalyzer",
-      "kind": "agent",
-      "title": {
-        "zh-CN": "类型设计分析代理",
-        "en": "Type Design Analyzer"
-      },
-      "summary": {
-        "zh-CN": "提供类型设计分析专用分析能力。",
-        "en": "Provide specialized type design analyzer analysis capability."
-      },
-      "source": "internalized-ecc",
-      "status": "optional",
-      "dependencyTier": "optional",
-      "defaultEnabled": false,
-      "implementation": {
-        "path": "plugin/ecc/agents/type-design-analyzer.md"
-      },
-      "risks": [],
-      "profileTags": [
-        "developer"
       ]
     },
     {
@@ -822,9 +658,7 @@
         "docs.lookup",
         "command.contextBudget",
         "command.docs",
-        "command.featureDev",
         "command.qualityGate",
-        "command.reviewPr",
         "command.tdd",
         "command.updateDocs"
       ]
@@ -836,13 +670,8 @@
       ],
       "capabilities": [
         "agent.buildErrorResolver",
-        "agent.codeArchitect",
-        "agent.codeExplorer",
-        "agent.codeReviewer",
         "agent.docsLookup",
-        "agent.securityReviewer",
-        "agent.silentFailureHunter",
-        "agent.typeDesignAnalyzer"
+        "agent.securityReviewer"
       ]
     },
     "security": {
@@ -851,8 +680,7 @@
         "core"
       ],
       "capabilities": [
-        "agent.securityReviewer",
-        "agent.silentFailureHunter"
+        "agent.securityReviewer"
       ]
     },
     "research": {

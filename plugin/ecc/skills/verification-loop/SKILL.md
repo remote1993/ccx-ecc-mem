@@ -1,6 +1,6 @@
 ---
 name: verification-loop
-description: "A comprehensive verification system for Claude Code sessions."
+description: "中文优先：用于验证循环相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: A comprehensive verification system for Claude Code sessions."
 origin: ECC
 ---
 

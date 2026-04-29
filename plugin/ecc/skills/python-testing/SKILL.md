@@ -1,6 +1,6 @@
 ---
 name: python-testing
-description: Python testing strategies using pytest, TDD methodology, fixtures, mocking, parametrization, and coverage requirements.
+description: "中文优先：用于Python测试相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Python testing strategies using pytest, TDD methodology, fixtures, mocking, parametrization, and coverage requirements."
 origin: ECC
 ---
 

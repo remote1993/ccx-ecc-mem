@@ -1,6 +1,6 @@
 ---
 name: benchmark
-description: Use this skill to measure performance baselines, detect regressions before/after PRs, and compare stack alternatives.
+description: "中文优先：用于基准测试相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Use this skill to measure performance baselines, detect regressions before/after PRs, and compare stack alternatives."
 origin: ECC
 ---
 

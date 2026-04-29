@@ -1,6 +1,6 @@
 ---
 name: iterative-retrieval
-description: Pattern for progressively refining context retrieval to solve the subagent context problem
+description: "中文优先：用于迭代检索相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Pattern for progressively refining context retrieval to solve the subagent context problem"
 origin: ECC
 ---
 

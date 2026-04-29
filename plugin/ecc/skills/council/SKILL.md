@@ -1,6 +1,6 @@
 ---
 name: council
-description: Convene a four-voice council for ambiguous decisions, tradeoffs, and go/no-go calls. Use when multiple valid paths exist and you need structured disagreement before choosing.
+description: "中文优先：用于评审相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Convene a four-voice council for ambiguous decisions, tradeoffs, and go/no-go calls. Use when multiple valid paths exist and you need structured disagreement before choosing."
 origin: ECC
 ---
 

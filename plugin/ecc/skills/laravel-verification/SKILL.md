@@ -1,6 +1,6 @@
 ---
 name: laravel-verification
-description: "Verification loop for Laravel projects: env checks, linting, static analysis, tests with coverage, security scans, and deployment readiness."
+description: "中文优先：用于Laravel验证相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Verification loop for Laravel projects: env checks, linting, static analysis, tests with coverage, security scans, and deployment readiness."
 origin: ECC
 ---
 

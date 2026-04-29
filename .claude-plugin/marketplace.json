@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "ccx-ecc-mem",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "source": "./plugin",
       "description": "少依赖、中文优先的 Claude Code 本地能力编排、记忆与治理插件"
     }

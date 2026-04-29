@@ -1,6 +1,6 @@
 ---
 name: remotion-video-creation
-description: Best practices for Remotion - Video creation in React. 29 domain-specific rules covering 3D, animations, audio, captions, charts, transitions, and more.
+description: "中文优先：用于Remotion视频creation相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Best practices for Remotion - Video creation in React. 29 domain-specific rules covering 3D, animations, audio, captions, charts, transitions, and more."
 metadata:
   tags: remotion, video, react, animation, composition, three.js, lottie
 ---

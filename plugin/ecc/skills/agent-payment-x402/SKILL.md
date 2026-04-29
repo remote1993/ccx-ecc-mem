@@ -1,6 +1,6 @@
 ---
 name: agent-payment-x402
-description: Add x402 payment execution to AI agents — per-task budgets, spending controls, and non-custodial wallets via MCP tools. Use when agents need to pay for APIs, services, or other agents.
+description: "中文优先：用于智能体支付x402相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Add x402 payment execution to AI agents — per-task budgets, spending controls, and non-custodial wallets via MCP tools. Use when agents need to pay for APIs, services, or other agents."
 origin: community
 ---
 

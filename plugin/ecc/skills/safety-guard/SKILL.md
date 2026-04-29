@@ -1,6 +1,6 @@
 ---
 name: safety-guard
-description: Use this skill to prevent destructive operations when working on production systems or running agents autonomously.
+description: "中文优先：用于安全防护相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Use this skill to prevent destructive operations when working on production systems or running agents autonomously."
 origin: ECC
 ---
 

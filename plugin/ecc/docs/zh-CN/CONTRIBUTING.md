@@ -345,7 +345,7 @@ description: 在 /help 中显示的简要描述
 | 命令 | 目的 |
 |---------|---------|
 | `commit.md` | 创建 git 提交 |
-| `code-review.md` | 审查代码变更 |
+| `quality-gate.md` | 发布前质量门禁 |
 | `tdd.md` | TDD 工作流 |
 | `e2e.md` | E2E 测试 |
 

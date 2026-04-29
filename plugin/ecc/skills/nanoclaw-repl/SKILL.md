@@ -1,6 +1,6 @@
 ---
 name: nanoclaw-repl
-description: Operate and extend NanoClaw v2, ECC's zero-dependency session-aware REPL built on claude -p.
+description: "中文优先：用于NanoclawREPL相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Operate and extend NanoClaw v2, ECC's zero-dependency session-aware REPL built on claude -p."
 origin: ECC
 ---
 

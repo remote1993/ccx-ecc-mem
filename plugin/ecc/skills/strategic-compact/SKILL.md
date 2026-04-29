@@ -1,6 +1,6 @@
 ---
 name: strategic-compact
-description: Suggests manual context compaction at logical intervals to preserve context through task phases rather than arbitrary auto-compaction.
+description: "中文优先：用于战略压缩相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Suggests manual context compaction at logical intervals to preserve context through task phases rather than arbitrary auto-compaction."
 origin: ECC
 ---
 

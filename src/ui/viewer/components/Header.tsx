@@ -19,7 +19,9 @@ interface HeaderProps {
   onThemeChange: (theme: ThemePreference) => void;
   onContextPreviewToggle: () => void;
   onCapabilityCenterToggle: () => void;
+  onCommandCenterToggle: () => void;
   isCapabilityCenterOpen: boolean;
+  isCommandCenterOpen: boolean;
   labels: ViewerLabels;
 }
 
@@ -31,8 +33,7 @@ function formatSourceLabel(source: string, labels: ViewerLabels): string {
 }
 
 function buildSourceTabs(integrations: string[]): string[] {
-  const merged = ['all', ...integrations];
-  return Array.from(new Set(merged.filter(Boolean)));
+  return Array.from(new Set(integrations.filter(Boolean)));
 }
 
 export function Header({
@@ -49,7 +50,9 @@ export function Header({
   onThemeChange,
   onContextPreviewToggle,
   onCapabilityCenterToggle,
+  onCommandCenterToggle,
   isCapabilityCenterOpen,
+  isCommandCenterOpen,
   labels
 }: HeaderProps) {
   useSpinningFavicon(isProcessing);
@@ -70,17 +73,28 @@ export function Header({
           <span className="logo-text">ccx-ecc-mem</span>
         </h1>
         <div className="source-tabs" role="tablist" aria-label="Context source tabs">
+          <span className="source-tabs-label">
+            {currentSource === 'all' ? labels.allSources : labels.source}
+          </span>
           {availableSources.map(source => (
             <button
               key={source}
               type="button"
               className={`source-tab ${currentSource === source ? 'active' : ''}`}
-              onClick={() => onSourceChange(source)}
+              onClick={() => onSourceChange(currentSource === source ? 'all' : source)}
               aria-pressed={currentSource === source}
             >
               {formatSourceLabel(source, labels)}
             </button>
           ))}
+          <button
+            type="button"
+            className={`source-tab command-launch-tab ${isCommandCenterOpen ? 'active' : ''}`}
+            onClick={onCommandCenterToggle}
+            aria-pressed={isCommandCenterOpen}
+          >
+            {labels.commands}
+          </button>
           <button
             type="button"
             className={`source-tab capability-launch-tab ${isCapabilityCenterOpen ? 'active' : ''}`}

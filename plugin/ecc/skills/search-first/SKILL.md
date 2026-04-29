@@ -1,6 +1,6 @@
 ---
 name: search-first
-description: Research-before-coding workflow. Search for existing tools, libraries, and patterns before writing custom code. Invokes the researcher agent.
+description: "中文优先：用于搜索优先相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Research-before-coding workflow. Search for existing tools, libraries, and patterns before writing custom code. Invokes the researcher agent."
 origin: ECC
 ---
 

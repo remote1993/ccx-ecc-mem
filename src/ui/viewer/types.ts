@@ -88,6 +88,7 @@ export interface Settings {
   CLAUDE_MEM_CONTEXT_OBSERVATIONS: string;
   CLAUDE_MEM_WORKER_PORT: string;
   CLAUDE_MEM_WORKER_HOST: string;
+  CLAUDE_MEM_SKIP_TOOLS?: string;
 
   // Custom API Configuration
   CLAUDE_MEM_CUSTOM_API_KEY?: string;
@@ -118,6 +119,8 @@ export interface Settings {
   CLAUDE_MEM_FOLDER_USE_LOCAL_MD?: string;
   CLAUDE_MEM_TRANSCRIPTS_ENABLED?: string;
   CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH?: string;
+  CLAUDE_MEM_SEMANTIC_INJECT?: string;
+  CLAUDE_MEM_SEMANTIC_INJECT_LIMIT?: string;
 
   // Exclusion Settings
   CLAUDE_MEM_EXCLUDED_PROJECTS?: string;
@@ -162,6 +165,41 @@ export interface ViewerCapabilitiesResponse {
   activeCapabilities?: Capability[];
   capabilitiesByStatus: CapabilitiesByStatus;
   dependencySummary?: Record<string, number>;
+}
+
+export interface ViewerCommandCatalogItem {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  path: string;
+  status: 'recommended' | 'library';
+  source: string;
+  dependencyTier?: string;
+  platforms: string[];
+  tags: string[];
+}
+
+export interface ViewerCommandHistoryItem {
+  command: string;
+  platform_source: string;
+  project: string;
+  count: number;
+  latest_prompt_id: number;
+  latest_prompt_text: string;
+  latest_epoch: number;
+  content_session_id: string;
+}
+
+export interface ViewerCommandsResponse {
+  catalog: ViewerCommandCatalogItem[];
+  history: ViewerCommandHistoryItem[];
+  summary: {
+    catalogCount: number;
+    recommendedCount: number;
+    recordedCount: number;
+    bySource: Record<string, number>;
+  };
 }
 
 export interface WorkerStats {

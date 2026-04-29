@@ -1,6 +1,6 @@
 ---
 name: laravel-tdd
-description: Test-driven development for Laravel with PHPUnit and Pest, factories, database testing, fakes, and coverage targets.
+description: "中文优先：用于LaravelTDD相关任务，帮助识别、设计、实现或验证对应工作流。English keywords: Test-driven development for Laravel with PHPUnit and Pest, factories, database testing, fakes, and coverage targets."
 origin: ECC
 ---
 
