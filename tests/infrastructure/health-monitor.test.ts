@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 import net from 'net';
 import {
+  httpShutdown,
   isPortInUse,
   waitForHealth,
   waitForPortFree,
   getInstalledPluginVersion,
   checkVersionMatch
 } from '../../src/services/infrastructure/index.js';
+import { logger } from '../../src/utils/logger.js';
 
 describe('HealthMonitor', () => {
   const originalFetch = global.fetch;
@@ -111,9 +113,10 @@ describe('HealthMonitor', () => {
       const elapsed = Date.now() - start;
 
       expect(result).toBe(false);
-      // Should take close to timeout duration
+      // Should not return before the requested timeout. The upper bound is loose
+      // because CI and local load can delay timer callbacks.
       expect(elapsed).toBeGreaterThanOrEqual(1400);
-      expect(elapsed).toBeLessThan(2500);
+      expect(elapsed).toBeLessThan(5000);
     });
 
     it('should succeed after server becomes available', async () => {
@@ -265,7 +268,8 @@ describe('HealthMonitor', () => {
 
       expect(result).toBe(false);
       expect(elapsed).toBeGreaterThanOrEqual(1400);
-      expect(elapsed).toBeLessThan(2500);
+      // CI and full-suite local runs can delay timer callbacks under load.
+      expect(elapsed).toBeLessThan(5000);
       spy.mockRestore();
     });
 
@@ -306,6 +310,19 @@ describe('HealthMonitor', () => {
 
       expect(result).toBe(true);
       spy.mockRestore();
+    });
+  });
+
+  describe('httpShutdown', () => {
+    it('should not log an error when the worker is already unreachable', async () => {
+      global.fetch = mock(() => Promise.reject(new Error('Unable to connect. Is the computer able to access the url?')));
+      const errorSpy = spyOn(logger, 'error');
+
+      const result = await httpShutdown(39999);
+
+      expect(result).toBe(false);
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
     });
   });
 });

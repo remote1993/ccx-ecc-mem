@@ -2,7 +2,7 @@
 /**
  * Export memories matching a search query to a portable JSON format
  * Usage: npx tsx scripts/export-memories.ts <query> <output-file> [--project=name]
- * Example: npx tsx scripts/export-memories.ts "windows" windows-memories.json --project=claude-mem
+ * Example: npx tsx scripts/export-memories.ts "windows" windows-memories.json --project=ccx-ecc-mem
  */
 
 import { writeFileSync } from 'fs';
@@ -113,7 +113,7 @@ async function exportMemories(query: string, outputFile: string, project?: strin
 const args = process.argv.slice(2);
 if (args.length < 2) {
   console.error('Usage: npx tsx scripts/export-memories.ts <query> <output-file> [--project=name]');
-  console.error('Example: npx tsx scripts/export-memories.ts "windows" windows-memories.json --project=claude-mem');
+  console.error('Example: npx tsx scripts/export-memories.ts "windows" windows-memories.json --project=ccx-ecc-mem');
   console.error('         npx tsx scripts/export-memories.ts "authentication" auth.json');
   process.exit(1);
 }

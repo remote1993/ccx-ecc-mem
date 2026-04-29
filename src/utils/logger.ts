@@ -15,18 +15,47 @@ export enum LogLevel {
   SILENT = 4
 }
 
-export type Component = 'HOOK' | 'WORKER' | 'SDK' | 'PARSER' | 'DB' | 'SYSTEM' | 'HTTP' | 'SESSION' | 'CHROMA' | 'CHROMA_MCP' | 'CHROMA_SYNC' | 'FOLDER_INDEX' | 'CLAUDE_MD' | 'QUEUE';
+export type Component = string;
 
 interface LogContext {
-  sessionId?: number;
-  memorySessionId?: string;
+  sessionId?: number | string;
+  memorySessionId?: string | null;
   correlationId?: string;
   [key: string]: any;
 }
 
-// NOTE: This default must match DEFAULT_DATA_DIR in src/shared/SettingsDefaultsManager.ts
-// Inlined here to avoid circular dependency with SettingsDefaultsManager
 const DEFAULT_DATA_DIR = join(homedir(), '.claude-mem');
+
+function resolveLogDir(): string {
+  const explicitLogDir = process.env.CLAUDE_MEM_LOG_DIR;
+  if (explicitLogDir?.trim()) {
+    return explicitLogDir.trim();
+  }
+
+  return join(resolveDataDir(), 'logs');
+}
+
+function resolveDataDir(): string {
+  if (process.env.CLAUDE_MEM_DATA_DIR) {
+    return process.env.CLAUDE_MEM_DATA_DIR;
+  }
+
+  const settingsPath = join(DEFAULT_DATA_DIR, 'settings.json');
+  try {
+    if (existsSync(settingsPath)) {
+      const raw = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+      const settings = raw.env && typeof raw.env === 'object' ? raw.env : raw;
+      const configuredDataDir = settings.CLAUDE_MEM_DATA_DIR;
+      if (typeof configuredDataDir === 'string' && configuredDataDir.trim()) {
+        return configuredDataDir.trim();
+      }
+    }
+  } catch {
+    // Fall through to the default data directory.
+  }
+
+  return DEFAULT_DATA_DIR;
+}
 
 class Logger {
   private level: LogLevel | null = null;
@@ -50,9 +79,7 @@ class Logger {
     this.logFileInitialized = true;
 
     try {
-      // Use default data directory to avoid circular dependency with SettingsDefaultsManager
-      // The log directory is always based on the default, not user settings
-      const logsDir = join(DEFAULT_DATA_DIR, 'logs');
+      const logsDir = resolveLogDir();
 
       // Ensure logs directory exists
       if (!existsSync(logsDir)) {
@@ -101,7 +128,7 @@ class Logger {
     if (this.level === null) {
       try {
         // Read settings file directly to avoid circular dependency
-        const settingsPath = join(DEFAULT_DATA_DIR, 'settings.json');
+        const settingsPath = join(resolveDataDir(), 'settings.json');
         if (existsSync(settingsPath)) {
           const settingsData = readFileSync(settingsPath, 'utf-8');
           const settings = JSON.parse(settingsData);

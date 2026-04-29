@@ -15,7 +15,7 @@ import { logger } from '../utils/logger.js';
 
 // CRITICAL: Redirect console to stderr BEFORE other imports
 // MCP uses stdio transport where stdout is reserved for JSON-RPC protocol messages.
-// Any logs to stdout break the protocol (Claude Desktop parses "[2025..." as JSON array).
+// Any logs to stdout break stdio MCP clients that expect JSON-RPC messages.
 console['log'] = (...args: any[]) => {
   logger.error('CONSOLE', 'Intercepted console output (MCP protocol protection)', undefined, { args });
 };

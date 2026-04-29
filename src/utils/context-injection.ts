@@ -3,7 +3,7 @@
  *
  * Provides tag constants and a function to inject or update a
  * <claude-mem-context> section in any markdown file. Used by
- * MCP integrations and OpenCode installer.
+ * workspace-local context files such as Codex `AGENTS.md`.
  */
 
 import path from 'path';

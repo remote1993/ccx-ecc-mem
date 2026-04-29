@@ -77,7 +77,7 @@ export interface CustomModelOption {
 }
 
 export interface CustomModelsResponse {
-  provider: 'openrouter' | 'custom';
+  provider: 'custom';
   models: CustomModelOption[];
   error?: string;
 }
@@ -122,6 +122,46 @@ export interface Settings {
   // Exclusion Settings
   CLAUDE_MEM_EXCLUDED_PROJECTS?: string;
   CLAUDE_MEM_FOLDER_MD_EXCLUDE?: string;
+}
+
+export interface LocalizedText {
+  'zh-CN'?: string;
+  en?: string;
+}
+
+export interface Capability {
+  id: string;
+  kind: string;
+  title?: LocalizedText;
+  summary?: LocalizedText;
+  source?: string;
+  status?: 'active' | 'optional' | 'reference' | 'archived' | string;
+  dependencyTier?: 'core' | 'optional' | 'heavy' | 'external' | string;
+  defaultEnabled?: boolean;
+  implementation?: { path?: string };
+  risks?: string[];
+  profileTags?: string[];
+}
+
+export interface CapabilitiesByStatus {
+  active: Capability[];
+  optional: Capability[];
+  reference: Capability[];
+  archived: Capability[];
+  [status: string]: Capability[];
+}
+
+export interface ViewerCapabilitiesResponse {
+  version?: number;
+  schema?: string;
+  defaultProfile: string;
+  defaultLocale: string;
+  locales?: string[];
+  generatedAt?: string;
+  activeCapabilityIds?: string[];
+  activeCapabilities?: Capability[];
+  capabilitiesByStatus: CapabilitiesByStatus;
+  dependencySummary?: Record<string, number>;
 }
 
 export interface WorkerStats {

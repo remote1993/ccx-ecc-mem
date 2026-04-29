@@ -1,0 +1,1460 @@
+{
+  "version": 2,
+  "schema": "capability-registry",
+  "defaultProfile": "core",
+  "defaultLocale": "zh-CN",
+  "locales": [
+    "zh-CN",
+    "en"
+  ],
+  "generatedAt": "2026-04-29T22:12:18.766Z",
+  "activeCapabilityIds": [
+    "memory.search",
+    "code.smartExplore",
+    "history.timelineReport",
+    "planning.makePlan",
+    "planning.executePlan",
+    "code.tour",
+    "context.budget",
+    "quality.verificationLoop",
+    "architecture.backendPatterns",
+    "architecture.frontendPatterns",
+    "architecture.apiDesign",
+    "claude.api",
+    "context.tokenBudget",
+    "research.deepResearch",
+    "knowledge.ops",
+    "docs.lookup",
+    "command.contextBudget",
+    "command.docs",
+    "command.featureDev",
+    "command.qualityGate",
+    "command.reviewPr",
+    "command.tdd",
+    "command.updateDocs"
+  ],
+  "activeCapabilities": [
+    {
+      "id": "memory.search",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "记忆搜索",
+        "en": "Memory Search"
+      },
+      "summary": {
+        "zh-CN": "搜索跨会话记忆与项目观察。",
+        "en": "Search cross-session memories and project observations."
+      },
+      "source": "native",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/skills/mem-search"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "research"
+      ]
+    },
+    {
+      "id": "code.smartExplore",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "结构化代码探索",
+        "en": "Smart Code Explore"
+      },
+      "summary": {
+        "zh-CN": "用结构化搜索理解代码库，减少无效读取。",
+        "en": "Explore code structurally while reducing unnecessary reads."
+      },
+      "source": "native",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/skills/smart-explore"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "history.timelineReport",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "时间线报告",
+        "en": "Timeline Report"
+      },
+      "summary": {
+        "zh-CN": "从记忆时间线生成项目演进报告。",
+        "en": "Generate project journey reports from memory timelines."
+      },
+      "source": "native",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/skills/timeline-report"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "research"
+      ]
+    },
+    {
+      "id": "planning.makePlan",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "制定实施计划",
+        "en": "Make Implementation Plan"
+      },
+      "summary": {
+        "zh-CN": "为多阶段开发任务生成可执行计划。",
+        "en": "Create executable plans for multi-phase development work."
+      },
+      "source": "native",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/skills/make-plan"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "planning.executePlan",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "执行实施计划",
+        "en": "Execute Implementation Plan"
+      },
+      "summary": {
+        "zh-CN": "按阶段执行既定计划并协调子任务。",
+        "en": "Execute phased plans and coordinate task work."
+      },
+      "source": "native",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/skills/do"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "code.tour",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "代码导览",
+        "en": "Code Tour"
+      },
+      "summary": {
+        "zh-CN": "面向新任务快速建立代码库心智模型。",
+        "en": "Build a quick mental model of a codebase for new work."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/code-tour"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "context.budget",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "上下文预算",
+        "en": "Context Budget"
+      },
+      "summary": {
+        "zh-CN": "控制上下文读取范围，降低 token 浪费。",
+        "en": "Control context scope and reduce token waste."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/context-budget"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "quality.verificationLoop",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "验证闭环",
+        "en": "Verification Loop"
+      },
+      "summary": {
+        "zh-CN": "推动实现后构建、测试与手动验证闭环。",
+        "en": "Drive build, test, and manual verification after implementation."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/verification-loop"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "architecture.backendPatterns",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "后端模式",
+        "en": "Backend Patterns"
+      },
+      "summary": {
+        "zh-CN": "提供后端工程设计与实现模式建议。",
+        "en": "Provide backend engineering design and implementation patterns."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/backend-patterns"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "architecture.frontendPatterns",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "前端模式",
+        "en": "Frontend Patterns"
+      },
+      "summary": {
+        "zh-CN": "提供前端与 UI 工程模式建议。",
+        "en": "Provide frontend and UI engineering patterns."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/frontend-patterns"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "architecture.apiDesign",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "API 设计",
+        "en": "API Design"
+      },
+      "summary": {
+        "zh-CN": "提供接口设计、边界和兼容性建议。",
+        "en": "Guide API design, boundaries, and compatibility tradeoffs."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/api-design"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "claude.api",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "Claude API 开发",
+        "en": "Claude API Development"
+      },
+      "summary": {
+        "zh-CN": "支持 Claude API、SDK、缓存和工具调用开发。",
+        "en": "Support Claude API, SDK, caching, and tool-use development."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/claude-api"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "context.tokenBudget",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "Token 预算顾问",
+        "en": "Token Budget Advisor"
+      },
+      "summary": {
+        "zh-CN": "评估上下文成本并给出压缩建议。",
+        "en": "Assess context cost and recommend compaction strategies."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/token-budget-advisor"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "research"
+      ]
+    },
+    {
+      "id": "research.deepResearch",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "深度研究",
+        "en": "Deep Research"
+      },
+      "summary": {
+        "zh-CN": "组织多来源研究和证据归纳。",
+        "en": "Organize multi-source research and evidence synthesis."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/deep-research"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "research"
+      ]
+    },
+    {
+      "id": "knowledge.ops",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "知识运营",
+        "en": "Knowledge Operations"
+      },
+      "summary": {
+        "zh-CN": "把会话沉淀成可复用知识资产。",
+        "en": "Turn sessions into reusable knowledge assets."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/knowledge-ops"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "research"
+      ]
+    },
+    {
+      "id": "docs.lookup",
+      "kind": "skill",
+      "title": {
+        "zh-CN": "文档查找",
+        "en": "Documentation Lookup"
+      },
+      "summary": {
+        "zh-CN": "定位项目内外文档并提炼可执行信息。",
+        "en": "Locate docs and extract actionable information."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/skills/documentation-lookup"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer",
+        "research"
+      ]
+    },
+    {
+      "id": "command.contextBudget",
+      "kind": "command",
+      "title": {
+        "zh-CN": "上下文预算命令",
+        "en": "Context Budget Command"
+      },
+      "summary": {
+        "zh-CN": "通过 slash command 提供上下文预算能力。",
+        "en": "Provide context budget capability via slash command."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/commands/context-budget.md"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "command.docs",
+      "kind": "command",
+      "title": {
+        "zh-CN": "文档命令",
+        "en": "Docs Command"
+      },
+      "summary": {
+        "zh-CN": "通过 slash command 提供文档能力。",
+        "en": "Provide docs capability via slash command."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/commands/docs.md"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "command.featureDev",
+      "kind": "command",
+      "title": {
+        "zh-CN": "功能开发命令",
+        "en": "Feature Development Command"
+      },
+      "summary": {
+        "zh-CN": "通过 slash command 提供功能开发能力。",
+        "en": "Provide feature development capability via slash command."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/commands/feature-dev.md"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "command.qualityGate",
+      "kind": "command",
+      "title": {
+        "zh-CN": "质量门禁命令",
+        "en": "Quality Gate Command"
+      },
+      "summary": {
+        "zh-CN": "通过 slash command 提供质量门禁能力。",
+        "en": "Provide quality gate capability via slash command."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/commands/quality-gate.md"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "command.reviewPr",
+      "kind": "command",
+      "title": {
+        "zh-CN": "PR 审查命令",
+        "en": "PR Review Command"
+      },
+      "summary": {
+        "zh-CN": "通过 slash command 提供PR 审查能力。",
+        "en": "Provide pr review capability via slash command."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/commands/review-pr.md"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "command.tdd",
+      "kind": "command",
+      "title": {
+        "zh-CN": "TDD 命令",
+        "en": "TDD Command"
+      },
+      "summary": {
+        "zh-CN": "通过 slash command 提供TDD 能力。",
+        "en": "Provide tdd capability via slash command."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/commands/tdd.md"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    },
+    {
+      "id": "command.updateDocs",
+      "kind": "command",
+      "title": {
+        "zh-CN": "更新文档命令",
+        "en": "Update Docs Command"
+      },
+      "summary": {
+        "zh-CN": "通过 slash command 提供更新文档能力。",
+        "en": "Provide update docs capability via slash command."
+      },
+      "source": "internalized-ecc",
+      "status": "active",
+      "dependencyTier": "core",
+      "defaultEnabled": true,
+      "implementation": {
+        "path": "plugin/ecc/commands/update-docs.md"
+      },
+      "risks": [],
+      "profileTags": [
+        "core",
+        "developer"
+      ]
+    }
+  ],
+  "capabilitiesByStatus": {
+    "active": [
+      {
+        "id": "memory.search",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "记忆搜索",
+          "en": "Memory Search"
+        },
+        "summary": {
+          "zh-CN": "搜索跨会话记忆与项目观察。",
+          "en": "Search cross-session memories and project observations."
+        },
+        "source": "native",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/skills/mem-search"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "research"
+        ]
+      },
+      {
+        "id": "code.smartExplore",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "结构化代码探索",
+          "en": "Smart Code Explore"
+        },
+        "summary": {
+          "zh-CN": "用结构化搜索理解代码库，减少无效读取。",
+          "en": "Explore code structurally while reducing unnecessary reads."
+        },
+        "source": "native",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/skills/smart-explore"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "history.timelineReport",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "时间线报告",
+          "en": "Timeline Report"
+        },
+        "summary": {
+          "zh-CN": "从记忆时间线生成项目演进报告。",
+          "en": "Generate project journey reports from memory timelines."
+        },
+        "source": "native",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/skills/timeline-report"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "research"
+        ]
+      },
+      {
+        "id": "planning.makePlan",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "制定实施计划",
+          "en": "Make Implementation Plan"
+        },
+        "summary": {
+          "zh-CN": "为多阶段开发任务生成可执行计划。",
+          "en": "Create executable plans for multi-phase development work."
+        },
+        "source": "native",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/skills/make-plan"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "planning.executePlan",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "执行实施计划",
+          "en": "Execute Implementation Plan"
+        },
+        "summary": {
+          "zh-CN": "按阶段执行既定计划并协调子任务。",
+          "en": "Execute phased plans and coordinate task work."
+        },
+        "source": "native",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/skills/do"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "code.tour",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "代码导览",
+          "en": "Code Tour"
+        },
+        "summary": {
+          "zh-CN": "面向新任务快速建立代码库心智模型。",
+          "en": "Build a quick mental model of a codebase for new work."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/code-tour"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "context.budget",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "上下文预算",
+          "en": "Context Budget"
+        },
+        "summary": {
+          "zh-CN": "控制上下文读取范围，降低 token 浪费。",
+          "en": "Control context scope and reduce token waste."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/context-budget"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "quality.verificationLoop",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "验证闭环",
+          "en": "Verification Loop"
+        },
+        "summary": {
+          "zh-CN": "推动实现后构建、测试与手动验证闭环。",
+          "en": "Drive build, test, and manual verification after implementation."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/verification-loop"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "architecture.backendPatterns",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "后端模式",
+          "en": "Backend Patterns"
+        },
+        "summary": {
+          "zh-CN": "提供后端工程设计与实现模式建议。",
+          "en": "Provide backend engineering design and implementation patterns."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/backend-patterns"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "architecture.frontendPatterns",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "前端模式",
+          "en": "Frontend Patterns"
+        },
+        "summary": {
+          "zh-CN": "提供前端与 UI 工程模式建议。",
+          "en": "Provide frontend and UI engineering patterns."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/frontend-patterns"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "architecture.apiDesign",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "API 设计",
+          "en": "API Design"
+        },
+        "summary": {
+          "zh-CN": "提供接口设计、边界和兼容性建议。",
+          "en": "Guide API design, boundaries, and compatibility tradeoffs."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/api-design"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "claude.api",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "Claude API 开发",
+          "en": "Claude API Development"
+        },
+        "summary": {
+          "zh-CN": "支持 Claude API、SDK、缓存和工具调用开发。",
+          "en": "Support Claude API, SDK, caching, and tool-use development."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/claude-api"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "context.tokenBudget",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "Token 预算顾问",
+          "en": "Token Budget Advisor"
+        },
+        "summary": {
+          "zh-CN": "评估上下文成本并给出压缩建议。",
+          "en": "Assess context cost and recommend compaction strategies."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/token-budget-advisor"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "research"
+        ]
+      },
+      {
+        "id": "research.deepResearch",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "深度研究",
+          "en": "Deep Research"
+        },
+        "summary": {
+          "zh-CN": "组织多来源研究和证据归纳。",
+          "en": "Organize multi-source research and evidence synthesis."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/deep-research"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "research"
+        ]
+      },
+      {
+        "id": "knowledge.ops",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "知识运营",
+          "en": "Knowledge Operations"
+        },
+        "summary": {
+          "zh-CN": "把会话沉淀成可复用知识资产。",
+          "en": "Turn sessions into reusable knowledge assets."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/knowledge-ops"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "research"
+        ]
+      },
+      {
+        "id": "docs.lookup",
+        "kind": "skill",
+        "title": {
+          "zh-CN": "文档查找",
+          "en": "Documentation Lookup"
+        },
+        "summary": {
+          "zh-CN": "定位项目内外文档并提炼可执行信息。",
+          "en": "Locate docs and extract actionable information."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/skills/documentation-lookup"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer",
+          "research"
+        ]
+      },
+      {
+        "id": "command.contextBudget",
+        "kind": "command",
+        "title": {
+          "zh-CN": "上下文预算命令",
+          "en": "Context Budget Command"
+        },
+        "summary": {
+          "zh-CN": "通过 slash command 提供上下文预算能力。",
+          "en": "Provide context budget capability via slash command."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/commands/context-budget.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "command.docs",
+        "kind": "command",
+        "title": {
+          "zh-CN": "文档命令",
+          "en": "Docs Command"
+        },
+        "summary": {
+          "zh-CN": "通过 slash command 提供文档能力。",
+          "en": "Provide docs capability via slash command."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/commands/docs.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "command.featureDev",
+        "kind": "command",
+        "title": {
+          "zh-CN": "功能开发命令",
+          "en": "Feature Development Command"
+        },
+        "summary": {
+          "zh-CN": "通过 slash command 提供功能开发能力。",
+          "en": "Provide feature development capability via slash command."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/commands/feature-dev.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "command.qualityGate",
+        "kind": "command",
+        "title": {
+          "zh-CN": "质量门禁命令",
+          "en": "Quality Gate Command"
+        },
+        "summary": {
+          "zh-CN": "通过 slash command 提供质量门禁能力。",
+          "en": "Provide quality gate capability via slash command."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/commands/quality-gate.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "command.reviewPr",
+        "kind": "command",
+        "title": {
+          "zh-CN": "PR 审查命令",
+          "en": "PR Review Command"
+        },
+        "summary": {
+          "zh-CN": "通过 slash command 提供PR 审查能力。",
+          "en": "Provide pr review capability via slash command."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/commands/review-pr.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "command.tdd",
+        "kind": "command",
+        "title": {
+          "zh-CN": "TDD 命令",
+          "en": "TDD Command"
+        },
+        "summary": {
+          "zh-CN": "通过 slash command 提供TDD 能力。",
+          "en": "Provide tdd capability via slash command."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/commands/tdd.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      },
+      {
+        "id": "command.updateDocs",
+        "kind": "command",
+        "title": {
+          "zh-CN": "更新文档命令",
+          "en": "Update Docs Command"
+        },
+        "summary": {
+          "zh-CN": "通过 slash command 提供更新文档能力。",
+          "en": "Provide update docs capability via slash command."
+        },
+        "source": "internalized-ecc",
+        "status": "active",
+        "dependencyTier": "core",
+        "defaultEnabled": true,
+        "implementation": {
+          "path": "plugin/ecc/commands/update-docs.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "core",
+          "developer"
+        ]
+      }
+    ],
+    "optional": [
+      {
+        "id": "agent.buildErrorResolver",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "构建错误修复代理",
+          "en": "Build Error Resolver"
+        },
+        "summary": {
+          "zh-CN": "提供构建错误修复专用分析能力。",
+          "en": "Provide specialized build error resolver analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/build-error-resolver.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer"
+        ]
+      },
+      {
+        "id": "agent.codeArchitect",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "代码架构代理",
+          "en": "Code Architect"
+        },
+        "summary": {
+          "zh-CN": "提供代码架构专用分析能力。",
+          "en": "Provide specialized code architect analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/code-architect.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer"
+        ]
+      },
+      {
+        "id": "agent.codeExplorer",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "代码探索代理",
+          "en": "Code Explorer"
+        },
+        "summary": {
+          "zh-CN": "提供代码探索专用分析能力。",
+          "en": "Provide specialized code explorer analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/code-explorer.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer"
+        ]
+      },
+      {
+        "id": "agent.codeReviewer",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "代码审查代理",
+          "en": "Code Reviewer"
+        },
+        "summary": {
+          "zh-CN": "提供代码审查专用分析能力。",
+          "en": "Provide specialized code reviewer analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/code-reviewer.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer"
+        ]
+      },
+      {
+        "id": "agent.docsLookup",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "文档查找代理",
+          "en": "Docs Lookup Agent"
+        },
+        "summary": {
+          "zh-CN": "提供文档查找专用分析能力。",
+          "en": "Provide specialized docs lookup agent analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/docs-lookup.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer"
+        ]
+      },
+      {
+        "id": "agent.securityReviewer",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "安全审查代理",
+          "en": "Security Reviewer"
+        },
+        "summary": {
+          "zh-CN": "提供安全审查专用分析能力。",
+          "en": "Provide specialized security reviewer analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/security-reviewer.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer",
+          "security"
+        ]
+      },
+      {
+        "id": "agent.silentFailureHunter",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "静默失败检查代理",
+          "en": "Silent Failure Hunter"
+        },
+        "summary": {
+          "zh-CN": "提供静默失败检查专用分析能力。",
+          "en": "Provide specialized silent failure hunter analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/silent-failure-hunter.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer",
+          "security"
+        ]
+      },
+      {
+        "id": "agent.typeDesignAnalyzer",
+        "kind": "agent",
+        "title": {
+          "zh-CN": "类型设计分析代理",
+          "en": "Type Design Analyzer"
+        },
+        "summary": {
+          "zh-CN": "提供类型设计分析专用分析能力。",
+          "en": "Provide specialized type design analyzer analysis capability."
+        },
+        "source": "internalized-ecc",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc/agents/type-design-analyzer.md"
+        },
+        "risks": [],
+        "profileTags": [
+          "developer"
+        ]
+      },
+      {
+        "id": "retrieval.chromaMcp",
+        "kind": "retriever",
+        "title": {
+          "zh-CN": "增强向量检索",
+          "en": "Enhanced Vector Retrieval"
+        },
+        "summary": {
+          "zh-CN": "通过 Chroma MCP 提供可选增强检索。",
+          "en": "Provide optional enhanced retrieval through Chroma MCP."
+        },
+        "source": "native",
+        "status": "optional",
+        "dependencyTier": "optional",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "src/services/sync/ChromaMcpManager.ts"
+        },
+        "risks": [
+          "spawns-subprocess",
+          "optional-python-toolchain"
+        ],
+        "profileTags": [
+          "research"
+        ]
+      }
+    ],
+    "reference": [
+      {
+        "id": "reference.eccCatalog",
+        "kind": "viewer-panel",
+        "title": {
+          "zh-CN": "ECC 参考资源",
+          "en": "ECC Reference Catalog"
+        },
+        "summary": {
+          "zh-CN": "保留上游 ECC 全量资料作为参考，不进入默认运行面。",
+          "en": "Keep the full upstream ECC resources as reference material outside the default runtime surface."
+        },
+        "source": "reference-ecc",
+        "status": "reference",
+        "dependencyTier": "external",
+        "defaultEnabled": false,
+        "implementation": {
+          "path": "plugin/ecc"
+        },
+        "risks": [
+          "large-reference-surface",
+          "not-default-runtime"
+        ],
+        "profileTags": [
+          "full-reference"
+        ]
+      }
+    ],
+    "archived": []
+  },
+  "optionalProfiles": {
+    "developer": {
+      "description": "面向工程项目的增强能力包。",
+      "extends": [
+        "core"
+      ],
+      "capabilities": [
+        "agent.buildErrorResolver",
+        "agent.codeArchitect",
+        "agent.codeExplorer",
+        "agent.codeReviewer",
+        "agent.docsLookup",
+        "agent.securityReviewer",
+        "agent.silentFailureHunter",
+        "agent.typeDesignAnalyzer"
+      ]
+    },
+    "security": {
+      "description": "安全审查增强能力包。",
+      "extends": [
+        "core"
+      ],
+      "capabilities": [
+        "agent.securityReviewer",
+        "agent.silentFailureHunter"
+      ]
+    },
+    "research": {
+      "description": "研究与知识工作增强能力包。",
+      "extends": [
+        "core"
+      ],
+      "capabilities": [
+        "retrieval.chromaMcp"
+      ]
+    },
+    "full-reference": {
+      "description": "保留上游 ECC 全量资源作为参考，不作为默认运行面。",
+      "extends": [
+        "core"
+      ],
+      "capabilities": [
+        "reference.eccCatalog"
+      ]
+    }
+  },
+  "catalogPaths": {
+    "upstreamReference": "plugin/ecc",
+    "installModules": "plugin/ecc/manifests/install-modules.json",
+    "installProfiles": "plugin/ecc/manifests/install-profiles.json",
+    "mcpCatalog": "plugin/ecc/mcp-configs/mcp-servers.json"
+  },
+  "archived": {
+    "reason": "ECC 全量资源保留为参考素材；重依赖、外部服务和未内化 hooks 必须经内化重写或显式启用后才能进入运行面。",
+    "categories": [
+      "orchestration",
+      "media-generation",
+      "operator-workflows",
+      "external-service-mcp",
+      "python-instinct-runtime",
+      "ecc-hooks-runtime-reference"
+    ]
+  },
+  "dependencySummary": {
+    "core": 23,
+    "optional": 9,
+    "heavy": 0,
+    "external": 1
+  }
+}

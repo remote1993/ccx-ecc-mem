@@ -2,16 +2,16 @@
  * CorpusStore - File I/O for corpus JSON files
  *
  * Manages reading, writing, listing, and deleting corpus files
- * stored in ~/.claude-mem/corpora/
+ * stored in the configured ccx-ecc-mem data directory.
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
+import { DATA_DIR } from '../../../shared/paths.js';
 import { logger } from '../../../utils/logger.js';
 import type { CorpusFile, CorpusStats } from './types.js';
 
-const CORPORA_DIR = path.join(os.homedir(), '.claude-mem', 'corpora');
+const CORPORA_DIR = path.join(DATA_DIR, 'corpora');
 
 export class CorpusStore {
   private readonly corporaDir: string;

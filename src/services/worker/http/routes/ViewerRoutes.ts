@@ -8,14 +8,13 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { readFileSync, existsSync } from 'fs';
-import { homedir } from 'os';
 import { logger } from '../../../../utils/logger.js';
 import { getPackageRoot } from '../../../../shared/paths.js';
+import { DEFAULT_CONFIG_PATH } from '../../../transcripts/config.js';
 import { SSEBroadcaster } from '../../SSEBroadcaster.js';
 import { DatabaseManager } from '../../DatabaseManager.js';
 import { SessionManager } from '../../SessionManager.js';
 import { BaseRouteHandler } from '../BaseRouteHandler.js';
-import { getDetectedIDEs } from '../../../../npx-cli/commands/ide-detection.js';
 
 export class ViewerRoutes extends BaseRouteHandler {
   constructor(
@@ -35,6 +34,7 @@ export class ViewerRoutes extends BaseRouteHandler {
     app.get('/', this.handleViewerUI.bind(this));
     app.get('/stream', this.handleSSEStream.bind(this));
     app.get('/api/viewer/integrations', this.handleViewerIntegrations.bind(this));
+    app.get('/api/viewer/capabilities', this.handleViewerCapabilities.bind(this));
   }
 
   /**
@@ -79,28 +79,61 @@ export class ViewerRoutes extends BaseRouteHandler {
     res.json({ integrations });
   });
 
+  private handleViewerCapabilities = this.wrapHandler((req: Request, res: Response): void => {
+    const packageRoot = getPackageRoot();
+    const activeViewPaths = [
+      path.join(packageRoot, 'fusion', 'active-view.json'),
+      path.join(packageRoot, 'plugin', 'fusion', 'active-view.json')
+    ];
+    const activeViewPath = activeViewPaths.find(p => existsSync(p));
+
+    if (!activeViewPath) {
+      logger.error('HTTP', 'Viewer capabilities manifest not found', { packageRoot, activeViewPaths });
+      res.status(500).json({
+        error: 'Viewer capabilities manifest not found',
+        expectedPaths: activeViewPaths,
+      });
+      return;
+    }
+
+    const activeView = JSON.parse(readFileSync(activeViewPath, 'utf-8'));
+    const groups = activeView?.capabilitiesByStatus;
+    const requiredGroups = ['active', 'optional', 'reference', 'archived'];
+    const invalidGroup = requiredGroups.find(group => !Array.isArray(groups?.[group]));
+    if (
+      !activeView ||
+      typeof activeView.defaultProfile !== 'string' ||
+      !groups ||
+      typeof groups !== 'object' ||
+      invalidGroup
+    ) {
+      logger.error('HTTP', 'Viewer capabilities manifest has invalid structure', { activeViewPath, invalidGroup });
+      res.status(500).json({ error: 'Viewer capabilities manifest has invalid structure', activeViewPath, invalidGroup });
+      return;
+    }
+
+    res.json(activeView);
+  });
+
   private getViewerIntegrations(): string[] {
-    const detectedIds = new Set(getDetectedIDEs().map((ide) => ide.id));
     const integrations = ['claude'];
 
     if (this.isCodexInstalled()) integrations.push('codex');
-    if (detectedIds.has('opencode')) integrations.push('opencode');
-    if (detectedIds.has('gemini-cli')) integrations.push('gemini');
-    if (detectedIds.has('windsurf')) integrations.push('windsurf');
-    if (detectedIds.has('cursor')) integrations.push('cursor');
 
     return integrations;
   }
 
   private isCodexInstalled(): boolean {
-    const transcriptConfigPath = path.join(homedir(), '.claude-mem', 'transcript-watch.json');
+    const transcriptConfigPath = DEFAULT_CONFIG_PATH;
     if (!existsSync(transcriptConfigPath)) return false;
 
     try {
       const raw = readFileSync(transcriptConfigPath, 'utf-8');
       const parsed = JSON.parse(raw) as { watches?: Array<{ name?: string }> };
       return Array.isArray(parsed.watches) && parsed.watches.some((watch) => watch.name === 'codex');
-    } catch {
+    } catch (error: unknown) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      logger.warn('HTTP', 'Failed to read Codex transcript watch configuration', { transcriptConfigPath }, normalized);
       return false;
     }
   }

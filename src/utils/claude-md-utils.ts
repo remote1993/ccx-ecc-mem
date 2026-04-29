@@ -12,13 +12,11 @@
 
 import { existsSync, readFileSync, writeFileSync, renameSync } from 'fs';
 import path from 'path';
-import os from 'os';
 import { logger } from './logger.js';
 import { formatDate, groupByDate } from '../shared/timeline-formatting.js';
 import { SettingsDefaultsManager } from '../shared/SettingsDefaultsManager.js';
 import { workerHttpRequest } from '../shared/worker-utils.js';
-
-const SETTINGS_PATH = path.join(os.homedir(), '.claude-mem', 'settings.json');
+import { getUserSettingsPath } from '../shared/paths.js';
 
 /** Default target filename */
 const CLAUDE_MD_FILENAME = 'CLAUDE.md';
@@ -32,7 +30,7 @@ const CLAUDE_LOCAL_MD_FILENAME = 'CLAUDE.local.md';
  * otherwise returns 'CLAUDE.md'.
  */
 export function getTargetFilename(settings?: ReturnType<typeof SettingsDefaultsManager.loadFromFile>): string {
-  const s = settings ?? SettingsDefaultsManager.loadFromFile(SETTINGS_PATH);
+  const s = settings ?? SettingsDefaultsManager.loadFromFile(getUserSettingsPath());
   return s.CLAUDE_MEM_FOLDER_USE_LOCAL_MD === 'true' ? CLAUDE_LOCAL_MD_FILENAME : CLAUDE_MD_FILENAME;
 }
 
@@ -352,7 +350,7 @@ export async function updateFolderClaudeMdFiles(
   projectRoot?: string
 ): Promise<void> {
   // Load settings to get configurable observation limit, exclude list, and target filename
-  const settings = SettingsDefaultsManager.loadFromFile(SETTINGS_PATH);
+  const settings = SettingsDefaultsManager.loadFromFile(getUserSettingsPath());
   const limit = parseInt(settings.CLAUDE_MEM_CONTEXT_OBSERVATIONS, 10) || 50;
   const targetFilename = getTargetFilename(settings);
 

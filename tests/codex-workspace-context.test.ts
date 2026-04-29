@@ -25,4 +25,9 @@ describe('Codex workspace-local context', () => {
     expect(installerSource).toContain('cleanupLegacyCodexAgentsMdContext();');
     expect(installerSource).toContain('Removed legacy global context');
   });
+
+  it('enables transcript ingestion only when the Codex installer runs', () => {
+    expect(installerSource).toContain('enableCodexTranscriptInSettings();');
+    expect(installerSource).toContain("CLAUDE_MEM_TRANSCRIPTS_ENABLED = 'true'");
+  });
 });

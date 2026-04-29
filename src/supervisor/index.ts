@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, rmSync } from 'fs';
-import { homedir } from 'os';
 import path from 'path';
 import { logger } from '../utils/logger.js';
+import { DATA_DIR } from '../shared/paths.js';
 import {
   getProcessRegistry,
   verifyPidFileOwnership,
@@ -12,7 +12,6 @@ import {
 import { runShutdownCascade } from './shutdown.js';
 import { startHealthChecker, stopHealthChecker } from './health-checker.js';
 
-const DATA_DIR = path.join(homedir(), '.claude-mem');
 const PID_FILE = path.join(DATA_DIR, 'worker.pid');
 
 interface ValidateWorkerPidOptions {
@@ -193,10 +192,11 @@ export function validateWorkerPidFile(options: ValidateWorkerPidOptions = {}): V
     return 'alive';
   }
 
+  const stalePidInfo = pidInfo as PidInfo;
   logger.info('SYSTEM', 'Removing stale PID file (worker process is dead or PID has been reused)', {
-    pid: pidInfo.pid,
-    port: pidInfo.port,
-    startedAt: pidInfo.startedAt
+    pid: stalePidInfo.pid,
+    port: stalePidInfo.port,
+    startedAt: stalePidInfo.startedAt
   });
   rmSync(pidFilePath, { force: true });
   return 'stale';

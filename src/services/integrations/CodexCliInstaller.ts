@@ -1,15 +1,15 @@
 /**
- * CodexCliInstaller - Codex CLI integration for claude-mem
+ * CodexCliInstaller - Codex CLI integration for ccx-ecc-mem
  *
- * Uses transcript-only watching (no notify hook). The watcher infrastructure
+ * Uses worker-managed transcript ingestion (no notify hook). The watcher infrastructure
  * already exists in src/services/transcripts/. This installer:
  *
- * 1. Writes/merges transcript-watch config to ~/.claude-mem/transcript-watch.json
+ * 1. Writes/merges transcript-watch config to the configured transcript ingestion file
  * 2. Sets up watch for ~/.codex/sessions/**\/*.jsonl using existing watcher
  * 3. Injects context via workspace-local AGENTS.md files (Codex reads these natively)
  *
  * Anti-patterns:
- *   - Does NOT add notify hooks -- transcript watching is sufficient
+ *   - Does NOT add notify hooks -- worker-managed transcript ingestion is sufficient
  *   - Does NOT modify existing transcript watcher infrastructure
  *   - Does NOT overwrite existing transcript-watch.json -- merges only
  */
@@ -32,7 +32,8 @@ import type { TranscriptWatchConfig, WatchTarget } from '../transcripts/types.js
 
 const CODEX_DIR = path.join(homedir(), '.codex');
 const CODEX_AGENTS_MD_PATH = path.join(CODEX_DIR, 'AGENTS.md');
-const CLAUDE_MEM_DIR = path.join(homedir(), '.claude-mem');
+const TRANSCRIPT_CONFIG_DIR = path.dirname(DEFAULT_CONFIG_PATH);
+const DEFAULT_SETTINGS_PATH = path.join(homedir(), '.claude-mem', 'settings.json');
 
 /**
  * The watch name used to identify the Codex CLI entry in transcript-watch.json.
@@ -125,8 +126,49 @@ function mergeCodexWatchConfig(existingConfig: TranscriptWatchConfig): Transcrip
  * Write the merged transcript-watch.json config atomically.
  */
 function writeTranscriptWatchConfig(config: TranscriptWatchConfig): void {
-  mkdirSync(CLAUDE_MEM_DIR, { recursive: true });
+  mkdirSync(TRANSCRIPT_CONFIG_DIR, { recursive: true });
   writeFileSync(DEFAULT_CONFIG_PATH, JSON.stringify(config, null, 2) + '\n');
+}
+
+function readJsonObject(filePath: string): Record<string, any> {
+  if (!existsSync(filePath)) return {};
+
+  try {
+    const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function settingsPath(): string {
+  if (process.env.CLAUDE_MEM_DATA_DIR) {
+    return path.join(process.env.CLAUDE_MEM_DATA_DIR, 'settings.json');
+  }
+
+  const defaultSettings = readJsonObject(DEFAULT_SETTINGS_PATH);
+  const settings = defaultSettings.env && typeof defaultSettings.env === 'object'
+    ? defaultSettings.env
+    : defaultSettings;
+  const configuredDataDir = settings.CLAUDE_MEM_DATA_DIR;
+
+  if (typeof configuredDataDir === 'string' && configuredDataDir.trim()) {
+    return path.join(configuredDataDir.trim(), 'settings.json');
+  }
+
+  return DEFAULT_SETTINGS_PATH;
+}
+
+function enableCodexTranscriptInSettings(): void {
+  const targetPath = settingsPath();
+  const settings = readJsonObject(targetPath);
+  const target = settings.env && typeof settings.env === 'object' ? settings.env : settings;
+
+  target.CLAUDE_MEM_TRANSCRIPTS_ENABLED = 'true';
+  target.CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH = DEFAULT_CONFIG_PATH;
+
+  mkdirSync(path.dirname(targetPath), { recursive: true });
+  writeFileSync(targetPath, JSON.stringify(settings, null, 2) + '\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -134,15 +176,15 @@ function writeTranscriptWatchConfig(config: TranscriptWatchConfig): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Remove legacy claude-mem context from ~/.codex/AGENTS.md.
+ * Remove legacy ccx-ecc-mem context from ~/.codex/AGENTS.md.
  * Codex now uses workspace-local AGENTS.md files to avoid cross-project bleed.
  * Preserves any existing user content outside the tags.
  */
 function removeCodexAgentsMdContext(): void {
   if (!existsSync(CODEX_AGENTS_MD_PATH)) return;
 
-  const startTag = '<claude-mem-context>';
-  const endTag = '</claude-mem-context>';
+  const startTag = '<ccx-ecc-mem-context>';
+  const endTag = '</ccx-ecc-mem-context>';
 
   try {
     readAndStripContextTags(startTag, endTag);
@@ -175,7 +217,7 @@ function readAndStripContextTags(startTag: string, endTag: string): void {
 
 /**
  * @deprecated Codex now uses workspace-local AGENTS.md via transcript processor fallback.
- * Preserves user content outside the <claude-mem-context> tags.
+ * Preserves user content outside the <ccx-ecc-mem-context> tags.
  */
 const cleanupLegacyCodexAgentsMdContext = removeCodexAgentsMdContext;
 
@@ -184,15 +226,15 @@ const cleanupLegacyCodexAgentsMdContext = removeCodexAgentsMdContext;
 // ---------------------------------------------------------------------------
 
 /**
- * Install Codex CLI integration for claude-mem.
+ * Install Codex CLI integration for ccx-ecc-mem.
  *
- * 1. Merges Codex transcript-watch config into ~/.claude-mem/transcript-watch.json
+ * 1. Merges Codex transcript-watch config into the configured transcript ingestion file
  * 2. Cleans up any legacy global context block in ~/.codex/AGENTS.md
  *
  * @returns 0 on success, 1 on failure
  */
 export async function installCodexCli(): Promise<number> {
-  console.log('\nInstalling Claude-Mem for Codex CLI (transcript watching)...\n');
+  console.log('\nInstalling ccx-ecc-mem for Codex CLI (worker-managed transcript ingestion)...\n');
 
   // Step 1: Merge transcript-watch config
   const existingConfig = loadExistingTranscriptWatchConfig();
@@ -210,7 +252,9 @@ export async function installCodexCli(): Promise<number> {
 
 function writeConfigAndShowCodexInstructions(mergedConfig: TranscriptWatchConfig): void {
   writeTranscriptWatchConfig(mergedConfig);
+  enableCodexTranscriptInSettings();
   console.log(`  Updated ${DEFAULT_CONFIG_PATH}`);
+  console.log(`  Enabled CLAUDE_MEM_TRANSCRIPTS_ENABLED in ${settingsPath()}`);
   console.log(`  Watch path: ~/.codex/sessions/**/*.jsonl`);
   console.log(`  Schema: codex (v${SAMPLE_CONFIG.schemas?.codex?.version ?? '?'})`);
 
@@ -223,12 +267,12 @@ Transcript watch config: ${DEFAULT_CONFIG_PATH}
 Context files: <workspace>/AGENTS.md
 
 How it works:
-  - claude-mem watches Codex session JSONL files for new activity
-  - No hooks needed -- transcript watching is fully automatic
+  - ccx-ecc-mem watches Codex session JSONL files for new activity from the worker
+  - No hooks needed -- transcript ingestion starts automatically with the worker
   - Context from past sessions is injected via AGENTS.md in the active Codex workspace
 
 Next steps:
-  1. Start claude-mem worker: npx ccx-mem start
+  1. Start ccx-ecc-mem worker: npx ccx-ecc-mem start
   2. Use Codex CLI as usual -- memory capture is automatic!
 `);
 }
@@ -238,7 +282,7 @@ Next steps:
 // ---------------------------------------------------------------------------
 
 /**
- * Remove Codex CLI integration from claude-mem.
+ * Remove Codex CLI integration from ccx-ecc-mem.
  *
  * 1. Removes the codex watch and schema from transcript-watch.json (preserves others)
  * 2. Removes context section from AGENTS.md (preserves user content)
@@ -246,7 +290,7 @@ Next steps:
  * @returns 0 on success, 1 on failure
  */
 export function uninstallCodexCli(): number {
-  console.log('\nUninstalling Claude-Mem Codex CLI integration...\n');
+  console.log('\nUninstalling ccx-ecc-mem Codex CLI integration...\n');
 
   // Step 1: Remove codex watch from transcript-watch.json
   if (existsSync(DEFAULT_CONFIG_PATH)) {
@@ -276,7 +320,7 @@ export function uninstallCodexCli(): number {
   cleanupLegacyCodexAgentsMdContext();
 
   console.log('\nUninstallation complete!');
-  console.log('Restart ccx-mem worker to apply changes.\n');
+  console.log('Restart ccx-ecc-mem worker to apply changes.\n');
 
   return 0;
 }
@@ -291,13 +335,13 @@ export function uninstallCodexCli(): number {
  * @returns 0 always (informational)
  */
 export function checkCodexCliStatus(): number {
-  console.log('\nClaude-Mem Codex CLI Integration Status\n');
+  console.log('\nccx-ecc-mem Codex CLI Integration Status\n');
 
   // Check transcript-watch.json
   if (!existsSync(DEFAULT_CONFIG_PATH)) {
     console.log('Status: Not installed');
-    console.log(`  No transcript watch config at ${DEFAULT_CONFIG_PATH}`);
-    console.log('\nRun: npx ccx-mem install --ide codex-cli\n');
+    console.log(`  No transcript ingestion config at ${DEFAULT_CONFIG_PATH}`);
+    console.log('\nRun: npx ccx-ecc-mem install --ide codex-cli\n');
     return 0;
   }
 
@@ -324,7 +368,7 @@ export function checkCodexCliStatus(): number {
   if (!codexWatch) {
     console.log('Status: Not installed');
     console.log('  transcript-watch.json exists but no codex watch configured.');
-    console.log('\nRun: npx ccx-mem install --ide codex-cli\n');
+    console.log('\nRun: npx ccx-ecc-mem install --ide codex-cli\n');
     return 0;
   }
 
@@ -342,7 +386,7 @@ export function checkCodexCliStatus(): number {
 
   if (existsSync(CODEX_AGENTS_MD_PATH)) {
     const mdContent = readFileSync(CODEX_AGENTS_MD_PATH, 'utf-8');
-    if (mdContent.includes('<claude-mem-context>')) {
+    if (mdContent.includes('<ccx-ecc-mem-context>')) {
       console.log(`  Legacy global context: Present (${CODEX_AGENTS_MD_PATH})`);
     } else {
       console.log(`  Legacy global context: Not active`);

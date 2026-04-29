@@ -319,7 +319,7 @@ export function formatDiagnostics(diagnostics: SystemDiagnostics): string {
   let output = "";
 
   output += "## Environment\n\n";
-  output += `- **Claude-mem**: ${diagnostics.versions.claudeMem}\n`;
+  output += `- **ccx-ecc-mem**: ${diagnostics.versions.claudeMem}\n`;
   output += `- **Claude Code**: ${diagnostics.versions.claudeCode}\n`;
   output += `- **Node.js**: ${diagnostics.versions.node}\n`;
   output += `- **Bun**: ${diagnostics.versions.bun}\n`;

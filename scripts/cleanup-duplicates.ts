@@ -64,7 +64,7 @@ function main() {
   const batchWindowSeconds = TIME_WINDOW_MODES[windowMode];
 
   console.log('='.repeat(60));
-  console.log('Claude-Mem Duplicate Observation Cleanup');
+  console.log('ccx-ecc-mem Duplicate Observation Cleanup');
   console.log('='.repeat(60));
   console.log(`Mode: ${dryRun ? 'DRY RUN (use --execute to delete)' : 'EXECUTE'}`);
   console.log(`Database: ${DB_PATH}`);

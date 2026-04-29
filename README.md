@@ -1,201 +1,120 @@
-<h1 align="center">
-  <br>
-  <a href="https://github.com/remote1993/ccx-mem">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-dark-mode.webp">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-light-mode.webp">
-      <img src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-light-mode.webp" alt="ccx-mem" width="400">
-    </picture>
-  </a>
-  <br>
-</h1>
+# ccx-ecc-mem
 
-<p align="center">
-  <a href="docs/README.en.md">English</a>
-</p>
+`ccx-ecc-mem` 是一个少依赖、中文优先、支持中英文的 Claude Code 本地能力平台。它把记忆、检索、hook 治理、能力编排和 Viewer 控制台整合为一个统一产品，而不是把 `ccx-mem` 与 Everything Claude Code 作为两个可见系统硬拼在一起。
 
-<h4 align="center">围绕本地 worker 运行时、自定义第三方 API 提取路径，以及 Claude Code / Codex CLI 集成构建的持久记忆系统。</h4>
+项目采用 capability-oriented 设计：核心能力通过 `plugin/fusion/registry.json` 注册为带有双语元数据、依赖等级、来源、状态和实现路径的 capability。完整 ECC skills/commands/agents/docs/rules 作为本地预装能力库随包发布；ECC skills 暴露给 Claude Code 按描述自动选择，commands 通过 curated fusion 面暴露，agents、未内化 ECC hooks、外部 MCP 和重型运行时仍必须显式启用。
 
-<p align="center">
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License">
-  </a>
-  <a href="package.json">
-    <img src="https://img.shields.io/badge/version-0.1.1-green.svg" alt="Version">
-  </a>
-  <a href="package.json">
-    <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node">
-  </a>
-</p>
+## 当前状态
 
-<p align="center">
-  <a href="#快速开始">快速开始</a> •
-  <a href="#工作原理">工作原理</a> •
-  <a href="#搜索工具">搜索工具</a> •
-  <a href="#配置">配置</a> •
-  <a href="#故障排除">故障排除</a> •
-  <a href="#许可证与原项目致谢">许可证</a>
-</p>
-
-<p align="center">
-  ccx-mem 通过捕获 Claude Code 和 Codex CLI 的会话活动，将结构化观察存储到本地 worker 运行时，并在未来会话中注入相关项目历史，从而保留跨会话上下文。
-</p>
-
----
+- 默认产品面：本地 worker、hook lifecycle、记忆捕获、SQLite 轻量检索、Viewer 能力中心、核心 skills/commands。
+- 能力注册表：`plugin/fusion/registry.json`
+- 构建生成能力视图：`plugin/fusion/active-view.json`
+- Viewer 能力 API：`GET /api/viewer/capabilities`
+- ECC 精选 skills/commands：以内化 capability 形式进入默认 core。
+- ECC 完整资源：随发布包预装，skills 暴露给插件系统自动选择；commands 通过 curated fusion 暴露；hooks/MCP/runtimes 不自动运行。
+- 已验证构建：`npm run build`
+- 已验证测试：`npm test`
+- 已验证打包：`npm pack --dry-run`
 
 ## 快速开始
 
-使用一条命令安装：
+安装依赖并构建：
 
 ```bash
-npx ccx-mem install
-```
-
-安装 Codex CLI transcript 采集支持：
-
-```bash
-npx ccx-mem install --ide codex-cli
-```
-
-也可以在 Claude Code 内通过插件 marketplace 安装：
-
-```bash
-/plugin marketplace add remote1993/ccx-mem
-/plugin install ccx-mem
-```
-
-当前支持的宿主集成：
-
-- Claude Code：本地插件注册、worker-backed 上下文注入与检索
-- Codex CLI：transcript 监听和工作区 `AGENTS.md` 上下文同步
-
-安装后请重启宿主客户端。Claude Code 会读取本地插件状态；Codex CLI 在 worker 运行且 transcript watch 启用后开始写入记忆。
-
-> **注意：** ccx-mem 已发布到 npm，但 `npm install -g ccx-mem` 只会安装 **SDK/library**，不会注册 Claude Code 插件状态，也不会配置 Codex transcript 监听。请使用 `npx ccx-mem install`、`npx ccx-mem install --ide codex-cli` 或上面的 `/plugin` 命令安装。
-
-## 核心特性
-
-- **持久记忆**：项目上下文可跨 Claude Code 和 Codex CLI 会话延续
-- **统一 hook 入口**：生命周期事件进入同一个 worker-backed 运行时
-- **渐进式检索**：先读取紧凑索引，再按需展开时间线和完整观察
-- **worker-backed retrieval**：通过 Web UI、HTTP API、skills 和 MCP compatibility surfaces 查询项目历史
-- **Web Viewer UI**：在 http://localhost:37777 查看实时记忆流、设置、日志、来源筛选和上下文预览
-- **隐私控制**：使用 `<private>` 标签排除敏感内容存储
-- **自定义 API 提取**：可配置第三方兼容 API 处理结构化观察
-- **聚焦宿主集成**：Claude Code 插件支持，以及可选的 Codex CLI transcript ingestion
-
----
-
-## 文档
-
-- [安装指南](docs/public/installation.mdx) - 快速开始与高级安装
-- [Platform Integration Guide](docs/public/platform-integration.mdx) - Claude Code hooks 和 Codex transcript 集成模型
-- [使用指南](docs/public/usage/getting-started.mdx) - ccx-mem 如何自动工作
-- [搜索工具](docs/public/usage/search-tools.mdx) - 使用自然语言查询项目历史
-- [配置](docs/public/configuration.mdx) - 环境变量与设置
-- [故障排除](docs/public/troubleshooting.mdx) - 常见问题与解决方案
-
----
-
-## 工作原理
-
-核心组件：
-
-1. **统一 hook 入口**：Claude Code 生命周期事件通过 `plugin/scripts/worker-service.cjs hook claude-code <event>` 和 `src/cli/` handlers 进入系统
-2. **智能安装**：缓存依赖检查，降低 hook 启动成本
-3. **Worker Service**：端口 37777 上的 Express HTTP API，负责 sessions、storage、search、settings、logs、SSE 和 custom API processing
-4. **SQLite 数据库**：存储 sessions、prompts、observations、summaries 和 project/source 元数据
-5. **检索入口**：Web viewer、HTTP APIs、skills 和 MCP compatibility tools 共享同一套 worker-backed history
-6. **可选 Chroma Sync**：启用后可用向量 embedding 增强检索
-
-详见 [Architecture Overview](docs/public/architecture/overview.mdx)。
-
----
-
-## 搜索工具
-
-ccx-mem 通过 Web viewer、HTTP endpoints、skills 和 MCP compatibility tools 暴露 worker-backed memory search。检索遵循节省 token 的渐进式模式：先看紧凑索引，再查看时间线上下文，最后只为必要 ID 获取完整观察。
-
-三层检索流程：
-
-1. `search`：获取紧凑索引
-2. `timeline`：查看相关结果前后的上下文
-3. `get_observations`：只为筛选出的 ID 获取完整详情
-
-详见 [Search Tools Guide](docs/public/usage/search-tools.mdx)。
-
----
-
-## 系统要求
-
-- Node.js 18.0.0 或更高版本
-- 支持插件的最新版 Claude Code
-- Codex CLI（可选，用于 transcript-based memory capture）
-- Bun（缺失时自动安装）
-- uv（缺失时自动安装，用于向量搜索）
-- SQLite 3（已内置）
-
----
-
-## 配置
-
-设置文件位于 `~/.claude-mem/settings.json`，首次运行会自动创建。可配置模型、worker 端口、数据目录、日志级别和上下文注入行为。
-
-示例：
-
-```json
-{
-  "CLAUDE_MEM_MODE": "code--zh"
-}
-```
-
-模式文件位于 `plugin/modes/`。修改模式后请重启 Claude Code。
-
----
-
-## 开发
-
-```bash
-git clone https://github.com/remote1993/ccx-mem.git
-cd ccx-mem
 npm install
 npm run build
 ```
 
-详见 [Development Guide](docs/public/development.mdx)。
-
----
-
-## 故障排除
-
-如果遇到问题，请先检查 worker 状态：
+运行测试：
 
 ```bash
-npx ccx-mem status
+npm test
 ```
 
-安装后的插件目录中也提供日志命令：
+查看 CLI 帮助：
 
 ```bash
-cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem
-npm run worker:logs
+node dist/npx-cli/index.js --help
 ```
 
-详见 [Troubleshooting Guide](docs/public/troubleshooting.mdx)。
+检查 worker 状态：
 
----
+```bash
+npm run worker:status
+```
 
-## 支持
+检查 npm 发布包内容：
 
-- **文档**：[docs/](docs/)
-- **Issues**：[GitHub Issues](https://github.com/remote1993/ccx-mem/issues)
-- **仓库**：[github.com/remote1993/ccx-mem](https://github.com/remote1993/ccx-mem)
-- **作者**：Alex Newman ([@remote1993](https://github.com/remote1993))
+```bash
+npm pack --dry-run
+```
 
----
+## 命令
 
-## 许可证与原项目致谢
+- 构建：`npm run build`
+- 全量测试：`npm test`
+- Server 专项测试：`npm run test:server`
+- Search 专项测试：`npm run test:search`
+- Context 专项测试：`npm run test:context`
+- Infrastructure 专项测试：`npm run test:infra`
+- Worker 状态：`npm run worker:status`
+- Worker 启动：`npm run worker:start`
+- Worker 停止：`npm run worker:stop`
+- Worker 重启：`npm run worker:restart`
 
-ccx-mem 源自原始 **Claude-Mem** 项目，并保留原项目的 AGPL-3.0 许可与版权声明。许可证文件中的 `Copyright (C) 2025 Alex Newman (@thedotmack)` 是原项目版权信息，应当保留。
+避免在普通开发验证中运行 `npm run build-and-sync`，因为它会同步到本地 Claude 插件 marketplace 并重启已安装 worker。
 
-本仓库当前由 [@remote1993](https://github.com/remote1993) 维护为 `remote1993/ccx-mem` 发布线。详见 [LICENSE](LICENSE)。
+## 架构
+
+核心运行链路：
+
+```text
+plugin/hooks/hooks.json
+  -> src/cli/hook-command.ts
+  -> src/services/worker-service.ts
+  -> src/services/worker/http/routes/*
+  -> src/ui/viewer/*
+```
+
+关键模块：
+
+- CLI 入口：`src/npx-cli/index.ts`
+- MCP server：`src/servers/mcp-server.ts`
+- Hook command：`src/cli/hook-command.ts`
+- Worker service：`src/services/worker-service.ts`
+- Worker HTTP routes：`src/services/worker/http/routes/`
+- Viewer UI：`src/ui/viewer/` 构建到 `plugin/ui/`
+- 插件 manifest：`plugin/.claude-plugin/plugin.json`
+- 插件 hooks：`plugin/hooks/hooks.json`
+- 原生 skills：`plugin/skills/`
+- 能力注册表：`plugin/fusion/registry.json`
+- 能力 active view：`plugin/fusion/active-view.json`
+
+## 能力边界
+
+- `plugin/fusion/registry.json` 是用户可见能力面的唯一真源。
+- `scripts/build-hooks.js` 从 registry 生成 `plugin/fusion/active-view.json`。
+- `src/npx-cli/commands/install.ts` 安装时记录 capability profile、locale、启用能力和可选能力。
+- `src/services/worker/http/routes/ViewerRoutes.ts` 通过 `/api/viewer/capabilities` 暴露能力视图。
+- `src/ui/viewer/components/CapabilityCenter.tsx` 在 Viewer 中展示能力中心。
+- 默认 core 能力必须保持少依赖，不应引入外部服务凭据、未内化 ECC hooks、Playwright、PM2、ccg-workflow 或重型语言工具链。
+- 完整 ECC skills/commands/agents/docs/rules 随包预装；ECC skills 可按描述自动发现，ECC commands 仅通过 curated fusion 命令面暴露，ECC agents 仅在显式 profile 中启用。
+- 未内化 ECC hooks、外部 MCP catalog、媒体生成和重型运行时不自动接入 hook/MCP 主链，必须经显式配置或后续内化。
+
+## 系统要求
+
+- Node.js 18 或更高版本
+- Bun 1.0 或更高版本
+- 支持插件的 Claude Code
+- SQLite 3（运行时使用）
+- uv / Chroma MCP 等增强检索依赖仅作为可选能力使用
+
+## 语言策略
+
+中文是默认用户语言。CLI 文案、Viewer 标签、capability 标题/摘要、插件 metadata、提示词和命令描述应中文优先，并提供英文 fallback。代码标识符、协议字段、命令和路径保持原文。
+
+## 许可证与来源
+
+- 本项目运行时代码使用 AGPL-3.0，见 [LICENSE](LICENSE)。
+- 内化与预装的 Everything Claude Code 资源保留 MIT 许可归属，发布包内副本位于 `plugin/ecc/LICENSE.everything-claude-code` 与 `plugin/fusion/LICENSE.everything-claude-code`。
+- ECC 完整资源随发布包预装，但只有 skills/commands 作为可发现能力面暴露；hooks/MCP/runtimes 不自动运行。

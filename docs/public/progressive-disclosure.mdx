@@ -1,12 +1,12 @@
 # Progressive Disclosure
 
-Progressive disclosure is Claude-Mem's retrieval pattern for the current worker-backed runtime: show a compact index first, let the agent decide what is worth fetching, and only load deeper detail on demand.
+Progressive disclosure is ccx-ecc-mem's retrieval pattern for the current worker-backed runtime: show a compact index first, let the agent decide what is worth fetching, and only load deeper detail on demand.
 
 ## Core Principle
 
 **Show what exists and what it will cost to retrieve before loading full details.**
 
-In Claude-Mem, that means:
+In ccx-ecc-mem, that means:
 
 1. start with lightweight worker-backed search or context output
 2. inspect summaries, IDs, timestamps, and categories
@@ -25,7 +25,7 @@ Progressive disclosure keeps the current task in focus:
 
 ## Current Retrieval Shape
 
-Claude-Mem now uses a worker-backed retrieval flow:
+ccx-ecc-mem now uses a worker-backed retrieval flow:
 
 ```text
 User query
@@ -82,7 +82,7 @@ Use this order when retrieving past context:
 3. **Fetch detail for those records**
 4. **Read code or files only if needed**
 
-This avoids the common failure mode where the agent re-reads large parts of the codebase before checking whether Claude-Mem already contains the decision, bug history, or implementation context.
+This avoids the common failure mode where the agent re-reads large parts of the codebase before checking whether ccx-ecc-mem already contains the decision, bug history, or implementation context.
 
 ## Example Mental Model
 
@@ -95,7 +95,7 @@ Code after    → What is true in the repo right now?
 
 Stored memory and current code serve different purposes:
 
-- Claude-Mem helps answer **what happened, what was learned, and why it mattered**
+- ccx-ecc-mem helps answer **what happened, what was learned, and why it mattered**
 - the codebase helps answer **what exists right now**
 
 Good retrieval usually needs both, but not at the same time and not at full depth upfront.
@@ -132,7 +132,7 @@ Small indexes are cheap to scan. That makes it faster to find the one decision, 
 
 ### Clearer separation of history vs current state
 
-Claude-Mem helps with historical reasoning. The codebase verifies current truth.
+ccx-ecc-mem helps with historical reasoning. The codebase verifies current truth.
 
 ## Anti-Patterns
 
@@ -187,7 +187,7 @@ For the current implementation, prefer:
 
 ## Key Takeaway
 
-Progressive disclosure is not just a UI or prompt-writing preference. It is the retrieval discipline that keeps Claude-Mem useful in a worker-backed system:
+Progressive disclosure is not just a UI or prompt-writing preference. It is the retrieval discipline that keeps ccx-ecc-mem useful in a worker-backed system:
 
 - compact first
 - selective next

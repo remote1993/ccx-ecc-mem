@@ -41,7 +41,7 @@ sqlite3 ~/.claude-mem/claude-mem.db "
 
 ## Multi-Machine Setup
 
-If running ccx-mem on multiple machines, use `claude-mem-sync` to keep observations in sync:
+If running ccx-ecc-mem on multiple machines, use `claude-mem-sync` to keep observations in sync:
 
 ```bash
 claude-mem-sync push <remote-host>    # local -> remote

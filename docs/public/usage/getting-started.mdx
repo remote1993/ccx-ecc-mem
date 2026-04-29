@@ -1,11 +1,11 @@
 ---
 title: "Getting Started"
-description: "Learn how Claude-Mem works automatically through the current unified hook entry and worker-backed runtime"
+description: "Learn how ccx-ecc-mem works automatically through the current unified hook entry and worker-backed runtime"
 ---
 
-# Getting Started with Claude-Mem
+# Getting Started with ccx-ecc-mem
 
-Claude-Mem works automatically after installation. The current runtime uses a unified hook entry and a local worker-backed service to capture activity, store history, and inject relevant context into later sessions.
+ccx-ecc-mem works automatically after installation. The current runtime uses a unified hook entry and a local worker-backed service to capture activity, store history, and inject relevant context into later sessions.
 
 ## The Current Runtime Shape
 
@@ -26,7 +26,7 @@ If you encounter references to older per-hook scripts, treat them as historical 
 
 ### 1. Session start
 
-On `SessionStart`, Claude-Mem:
+On `SessionStart`, ccx-ecc-mem:
 - ensures the worker is running
 - waits for worker health/readiness
 - retrieves recent project context
@@ -34,25 +34,25 @@ On `SessionStart`, Claude-Mem:
 
 ### 2. Prompt submission
 
-On `UserPromptSubmit`, Claude-Mem:
+On `UserPromptSubmit`, ccx-ecc-mem:
 - creates or reuses the logical session
 - stores the user prompt
 - initializes worker-side session state
 
 ### 3. Tool observations
 
-On `PostToolUse`, Claude-Mem:
+On `PostToolUse`, ccx-ecc-mem:
 - forwards tool-use observations to the worker
 - queues them for asynchronous extraction
 - stores structured observations after processing succeeds
 
 ### 4. File-context hints
 
-Before `Read`, Claude-Mem can inject file-context hints through the active `PreToolUse (Read)` lifecycle step.
+Before `Read`, ccx-ecc-mem can inject file-context hints through the active `PreToolUse (Read)` lifecycle step.
 
 ### 5. Session summary and completion
 
-Near the end of the interaction, Claude-Mem:
+Near the end of the interaction, ccx-ecc-mem:
 - summarizes the session on `Stop`
 - marks the session complete on `SessionEnd`
 
@@ -82,7 +82,7 @@ Structured extraction commonly produces:
 
 ## Context Injection
 
-When a later session starts, Claude-Mem can retrieve:
+When a later session starts, ccx-ecc-mem can retrieve:
 - recent observations for the current project
 - recent session summaries
 - timeline-style context around recent work
@@ -91,7 +91,7 @@ This lets the next session start with project history already in view.
 
 ## Retrieval Model
 
-Claude-Mem now follows a progressive disclosure retrieval pattern:
+ccx-ecc-mem now follows a progressive disclosure retrieval pattern:
 
 1. inspect a compact index first
 2. fetch narrower context for the relevant items
@@ -133,13 +133,13 @@ sqlite3 ~/.claude-mem/claude-mem.db "SELECT COUNT(*) FROM session_summaries;"
 
 ## `/clear` Behavior
 
-`/clear` does not mean Claude-Mem forgets the session history.
+`/clear` does not mean ccx-ecc-mem forgets the session history.
 
 In the current runtime, it can trigger a fresh context injection path while session-level storage and worker history remain available for later retrieval and summarization.
 
 ## Historical Boundary
 
-If you find older docs that describe Claude-Mem mainly through per-hook scripts or MCP-first search flows, treat them as historical or compatibility-oriented material.
+If you find older docs that describe ccx-ecc-mem mainly through per-hook scripts or MCP-first search flows, treat them as historical or compatibility-oriented material.
 
 For the current system, continue with:
 - [Introduction](/introduction)

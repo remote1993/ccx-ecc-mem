@@ -53,9 +53,9 @@ describe('Version Consistency', () => {
     expect(marketplaceJson.plugins).toBeDefined();
     expect(marketplaceJson.plugins.length).toBeGreaterThan(0);
     
-    const ccxMemPlugin = marketplaceJson.plugins.find((p: any) => p.name === 'ccx-mem');
-    expect(ccxMemPlugin).toBeDefined();
-    expect(ccxMemPlugin.version).toBe(rootVersion);
+    const plugin = marketplaceJson.plugins.find((p: any) => p.name === 'ccx-ecc-mem');
+    expect(plugin).toBeDefined();
+    expect(plugin.version).toBe(rootVersion);
   });
 
   it('should have version injected into built worker-service.cjs', () => {

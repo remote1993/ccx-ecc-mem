@@ -195,6 +195,30 @@ describe('GracefulShutdown', () => {
       expect(mockSessionManager.shutdownAll).toHaveBeenCalledTimes(1);
     });
 
+    it('should treat an already-closed HTTP server as successful shutdown', async () => {
+      const closeError = new Error('Server is not running.') as NodeJS.ErrnoException;
+      closeError.code = 'ERR_SERVER_NOT_RUNNING';
+
+      const mockServer = {
+        closeAllConnections: mock(() => {}),
+        close: mock((cb: (err?: Error) => void) => {
+          cb(closeError);
+        })
+      } as unknown as http.Server;
+
+      const mockSessionManager: ShutdownableService = {
+        shutdownAll: mock(async () => {})
+      };
+
+      const config: GracefulShutdownConfig = {
+        server: mockServer,
+        sessionManager: mockSessionManager
+      };
+
+      await expect(performGracefulShutdown(config)).resolves.toBeUndefined();
+      expect(mockSessionManager.shutdownAll).toHaveBeenCalledTimes(1);
+    });
+
     it('should stop chroma server before database close', async () => {
       const callOrder: string[] = [];
 

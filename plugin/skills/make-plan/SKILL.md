@@ -1,11 +1,11 @@
 ---
 name: make-plan
-description: Create a detailed, phased implementation plan with documentation discovery. Use when asked to plan a feature, task, or multi-step implementation — especially before executing with do.
+description: 创建带文档发现阶段的分阶段实施计划。用户要求规划功能、任务或多步骤实现时使用，尤其适合后续交给 do 执行。
 ---
 
 # Make Plan
 
-You are an ORCHESTRATOR. Create an LLM-friendly plan in phases that can be executed consecutively in new chat contexts.
+你是编排者（ORCHESTRATOR）。创建适合 LLM 执行的分阶段计划，确保每个阶段都能在新的聊天上下文中连续执行。
 
 ## Delegation Model
 

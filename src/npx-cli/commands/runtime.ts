@@ -1,5 +1,5 @@
 /**
- * Runtime command routing for `npx ccx-mem start|stop|restart|status|search|transcript`.
+ * Runtime command routing for `npx ccx-ecc-mem start|stop|restart|status|search`.
  *
  * These commands delegate to the installed plugin's worker-service.cjs via Bun,
  * or hit the worker's HTTP API directly (for `search`).
@@ -20,8 +20,8 @@ import { isPluginInstalled, marketplaceDirectory } from '../utils/paths.js';
 
 function ensureInstalledOrExit(): void {
   if (!isPluginInstalled()) {
-    console.error(pc.red('claude-mem is not installed.'));
-    console.error(`Run: ${pc.bold('npx ccx-mem install')}`);
+    console.error(pc.red('ccx-ecc-mem is not installed.'));
+    console.error(`Run: ${pc.bold('npx ccx-ecc-mem install')}`);
     process.exit(1);
   }
 }
@@ -60,7 +60,7 @@ function spawnBunWorkerCommand(command: string, extraArgs: string[] = []): void 
 
   if (!existsSync(workerScript)) {
     console.error(pc.red(`Worker script not found at: ${workerScript}`));
-    console.error('The installation may be corrupted. Try: npx ccx-mem install');
+    console.error('The installation may be corrupted. Try: npx ccx-ecc-mem install');
     process.exit(1);
   }
 
@@ -115,7 +115,7 @@ export function runAdoptCommand(extraArgs: string[] = []): void {
 
   if (!existsSync(workerScript)) {
     console.error(pc.red(`Worker script not found at: ${workerScript}`));
-    console.error('The installation may be corrupted. Try: npx ccx-mem install');
+    console.error('The installation may be corrupted. Try: npx ccx-ecc-mem install');
     process.exit(1);
   }
 
@@ -148,7 +148,7 @@ export async function runSearchCommand(queryParts: string[]): Promise<void> {
 
   const query = queryParts.join(' ').trim();
   if (!query) {
-    console.error(pc.red('Usage: npx ccx-mem search <query>'));
+    console.error(pc.red('Usage: npx ccx-ecc-mem search <query>'));
     process.exit(1);
   }
 
@@ -162,7 +162,7 @@ export async function runSearchCommand(queryParts: string[]): Promise<void> {
     const cause = error instanceof Error ? (error as any).cause : undefined;
     if (cause?.code === 'ECONNREFUSED' || message.includes('ECONNREFUSED')) {
       console.error(pc.red('Worker is not running.'));
-      console.error(`Start it with: ${pc.bold('npx ccx-mem start')}`);
+      console.error(`Start it with: ${pc.bold('npx ccx-ecc-mem start')}`);
       process.exit(1);
     }
     console.error(pc.red(`Search failed: ${message}`));
@@ -172,7 +172,7 @@ export async function runSearchCommand(queryParts: string[]): Promise<void> {
   if (!response.ok) {
     if (response.status === 404) {
       console.error(pc.red('Search endpoint not found. Is the worker running?'));
-      console.error(`Try: ${pc.bold('npx ccx-mem start')}`);
+      console.error(`Try: ${pc.bold('npx ccx-ecc-mem start')}`);
       process.exit(1);
     }
     console.error(pc.red(`Search failed: HTTP ${response.status}`));
@@ -193,40 +193,4 @@ export async function runSearchCommand(queryParts: string[]): Promise<void> {
   } else {
     console.log(data);
   }
-}
-
-/**
- * Start the transcript watcher via Bun.
- */
-export function runTranscriptWatchCommand(): void {
-  ensureInstalledOrExit();
-  const bunPath = resolveBunOrExit();
-
-  const transcriptWatcherPath = join(
-    marketplaceDirectory(),
-    'plugin',
-    'scripts',
-    'transcript-watcher.cjs',
-  );
-
-  if (!existsSync(transcriptWatcherPath)) {
-    // Fall back to worker-service with transcript subcommand
-    spawnBunWorkerCommand('transcript', ['watch']);
-    return;
-  }
-
-  const child = spawn(bunPath, [transcriptWatcherPath, 'watch'], {
-    stdio: 'inherit',
-    cwd: marketplaceDirectory(),
-    env: process.env,
-  });
-
-  child.on('error', (error) => {
-    console.error(pc.red(`Failed to start transcript watcher: ${error.message}`));
-    process.exit(1);
-  });
-
-  child.on('close', (exitCode) => {
-    process.exit(exitCode ?? 0);
-  });
 }

@@ -1,101 +1,69 @@
-# Claude-Mem: AI Development Instructions
+# CLAUDE.md
 
-Claude-mem is a Claude Code plugin providing persistent memory across sessions. It captures lifecycle events through a unified hook entry, stores session data in the local worker-backed runtime, and injects relevant context into future sessions.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project goal
+
+This repository builds `ccx-ecc-mem` as a low-dependency, Chinese-first, bilingual Claude Code local capability platform.
+
+The product goal is no longer to expose `ccx-mem` and Everything Claude Code as two visible halves. Instead, the project uses a capability-oriented model:
+
+- Runtime, hooks, worker APIs, memory capture, local retrieval, and Viewer are owned by this repository.
+- High-value Everything Claude Code assets are internalized through `plugin/fusion/registry.json` as named capabilities.
+- The full ECC import remains source/reference material, not the default runtime surface.
+- Default behavior should stay local-first and low-dependency; heavy or external-service capabilities must be optional and explicit.
+
+## Commands
+
+Verified from `package.json` after importing `ccx-mem`:
+
+- Build: `npm run build`
+- Test all: `npm test`
+- Single test area examples:
+  - `npm run test:server`
+  - `npm run test:search`
+  - `npm run test:context`
+- Worker status: `npm run worker:status`
+- Worker start/stop/restart:
+  - `npm run worker:start`
+  - `npm run worker:stop`
+  - `npm run worker:restart`
+- Package dry run: `npm pack --dry-run`
+
+Avoid `npm run build-and-sync` unless explicitly needed, because it syncs to the local Claude plugin marketplace and restarts the installed worker.
 
 ## Architecture
 
-**任务/架构跟踪文档**：`ARCHITECTURE.md`
-- 当前改造目标与后续任务索引见 `ARCHITECTURE.md` 的“10. 当前改造目标（2026-04-23）”部分。
-- 后续涉及项目方向判断时，优先先核对该节，避免继续沿用原始 claude-mem 的默认目标。
+- CLI entry: `src/npx-cli/index.ts`
+- MCP server: `src/servers/mcp-server.ts`
+- Hook command entry: `src/cli/hook-command.ts`
+- Worker service: `src/services/worker-service.ts`
+- Claude Code plugin slice: `plugin/`
+- Plugin manifest: `plugin/.claude-plugin/plugin.json`
+- Plugin hooks: `plugin/hooks/hooks.json`
+- Plugin skills: `plugin/skills/`
+- Viewer UI source: `src/ui/viewer/`
+- Built viewer asset: `plugin/ui/viewer.html`
+- Capability registry: `plugin/fusion/registry.json`
+- Capability active view: `plugin/fusion/active-view.json`
+- Everything Claude Code reference namespace: `plugin/ecc/`
 
-**Hook Entry Layer** (`plugin/hooks/hooks.json` → `plugin/scripts/worker-service.cjs hook claude-code <event>` → `src/cli/hook-command.ts` → `src/cli/handlers/*`) - 当前生命周期事件统一通过这里进入本地 worker HTTP API
+The runtime chain is `plugin/hooks/hooks.json` -> `src/cli/hook-command.ts` -> `src/services/worker-service.ts` -> `src/services/worker/http/routes/*` -> `src/ui/viewer/*`. `plugin/fusion/registry.json` is the source of truth for the user-visible capability surface, while `plugin/ecc/` is reference/source material until a capability is internalized.
 
-**Lifecycle Coverage** - `Setup` → `SessionStart` → `UserPromptSubmit` → `PostToolUse` → `PreToolUse (Read)` → `Stop` → `SessionEnd`
+## Capability and localization workflow
 
-**Worker Service** (`src/services/worker-service.ts`) - Express API on port 37777, Bun-managed, orchestrates sessions, storage, search, SSE, and custom API processing
+Use an evidence-first, Karpathy-inspired workflow:
 
-**Database** (`src/services/sqlite/`) - SQLite3 at `~/.claude-mem/claude-mem.db`
+- Build the smallest runnable capability slice first, then expand coverage.
+- Prefer direct, readable integration over framework-heavy rewrites.
+- Preserve upstream behavior until a deliberate localization or internalization change requires otherwise.
+- Keep Chinese localization complete and consistent for user-facing text, README content, plugin metadata, prompts, command descriptions, and Viewer labels.
+- Keep Everything Claude Code resources source-only until naming, permissions, dependencies, and hook behavior have been reviewed.
+- Do not enable imported ECC hooks automatically; review `plugin/ecc/hooks/hooks.json` before any internalization into `plugin/hooks/hooks.json`.
+- Default capabilities must avoid Python, Go, Cargo, Playwright, PM2, ccg-workflow, external service credentials, and raw ECC runtimes.
+- Verify each meaningful change with the relevant command.
+- Do not invent compatibility layers, fallback behavior, or abstractions before the merged code demonstrates a need.
 
-**Search Skill** (`plugin/skills/mem-search/SKILL.md`) - Retrieval compatibility surface for searching past work; current primary retrieval path is the worker HTTP API
+## Licensing
 
-**Planning Skill** (`plugin/skills/make-plan/SKILL.md`) - Orchestrator instructions for creating phased implementation plans with documentation discovery
-
-**Execution Skill** (`plugin/skills/do/SKILL.md`) - Orchestrator instructions for executing phased plans using subagents
-
-**Chroma** (`src/services/sync/ChromaSync.ts`) - Optional vector embeddings for semantic search
-
-**Viewer UI** (`src/ui/viewer/`) - React interface at http://localhost:37777, built to `plugin/ui/viewer.html`
-
-## Privacy Tags
-- `<private>content</private>` - User-level privacy control (manual, prevents storage)
-
-**Implementation**: Tag stripping happens at the hook entry layer before data reaches worker/database. See `src/utils/tag-stripping.ts` for shared utilities.
-
-## Build Commands
-
-```bash
-npm run build-and-sync        # Build, sync to marketplace, restart worker
-```
-
-## Configuration
-
-Settings are managed in `~/.claude-mem/settings.json`. The file is auto-created with defaults on first run.
-
-- `CLAUDE_MEM_CUSTOM_MODEL` is free-form end-to-end for custom API requests.
-- `ResponseProcessor` treats non-XML agent output as retryable failure: pending messages are `markFailed()` and nothing is stored.
-
-## File Locations
-
-- **Source**: `<project-root>/src/`
-- **Built Plugin**: `<project-root>/plugin/`
-- **Installed Plugin**: `~/.claude/plugins/marketplaces/remote1993/ccx-mem/`
-- **Database**: `~/.claude-mem/claude-mem.db`
-- **Chroma**: `~/.claude-mem/chroma/`
-
-## Exit Code Strategy
-
-Claude-mem hooks use specific exit codes per Claude Code's hook contract:
-
-- **Exit 0**: Success or graceful shutdown (Windows Terminal closes tabs)
-- **Exit 1**: Non-blocking error (stderr shown to user, continues)
-- **Exit 2**: Blocking error (stderr fed to Claude for processing)
-
-**Philosophy**: Worker/hook errors exit with code 0 to prevent Windows Terminal tab accumulation. The wrapper/plugin layer handles restart logic. ERROR-level logging is maintained for diagnostics.
-
-See `private/context/claude-code/exit-codes.md` for full hook behavior matrix.
-
-## Requirements
-
-- **Bun** (all platforms - auto-installed if missing)
-- **uv** (all platforms - auto-installed if missing, provides Python for Chroma)
-- Node.js
-
-## Documentation
-
-**Public Docs**: https://docs.claude-mem.ai (Mintlify)
-**Source**: `docs/public/` - MDX files, edit `docs.json` for navigation
-**Deploy**: Auto-deploys from GitHub on push to main
-
-## Pro Features Architecture
-
-Claude-mem is designed with a clean separation between open-source core functionality and optional Pro features.
-
-**Open-Source Core** (this repository):
-
-- All worker API endpoints on localhost:37777 remain fully open and accessible
-- Pro features are headless - no proprietary UI elements in this codebase
-- Pro integration points are minimal: settings for license keys, tunnel provisioning logic
-- The architecture ensures Pro features extend rather than replace core functionality
-
-**Pro Features** (coming soon, external):
-
-- Enhanced UI (Memory Stream) connects to the same localhost:37777 endpoints as the open viewer
-- Additional features like advanced filtering, timeline scrubbing, and search tools
-- Access gated by license validation, not by modifying core endpoints
-- Users without Pro licenses continue using the full open-source viewer UI without limitation
-
-This architecture preserves the open-source nature of the project while enabling sustainable development through optional paid features.
-
-## Important
-
-No need to edit the changelog ever, it's generated automatically.
+The runtime core imported from `ccx-mem` is AGPL-3.0. Everything Claude Code resources are MIT licensed. Preserve upstream license files and source attribution when importing ECC assets.

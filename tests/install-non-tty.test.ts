@@ -81,17 +81,39 @@ describe('Install Non-TTY Support', () => {
   });
 
   describe('non-interactive install path', () => {
+    it('copies the root Claude marketplace manifest during install', () => {
+      expect(installSource).toContain("'.claude-plugin'");
+    });
+
+    it('cleans the marketplace directory before copying runtime files', () => {
+      expect(installSource).toContain('rmSync(marketplaceDir, { recursive: true, force: true })');
+    });
+
     it('defaults to claude-code when not interactive and no IDE specified', () => {
       // The non-interactive path should have a fallback
       expect(installSource).toContain("selectedIDEs = ['claude-code']");
     });
 
     it('uses console.log for intro in non-interactive mode', () => {
-      expect(installSource).toContain("console.log('claude-mem install')");
+      expect(installSource).toContain("console.log('ccx-ecc-mem install')");
     });
 
     it('uses console.log for note/summary in non-interactive mode', () => {
       expect(installSource).toContain("console.log(`\\n  ${installStatus}`)");
+    });
+
+    it('reloads worker after IDE-specific setup has written integration settings', () => {
+      const setupIndex = installSource.indexOf('const failedIDEs = await setupIDEs(selectedIDEs);');
+      const reloadIndex = installSource.indexOf("title: '重新加载 worker 设置'");
+
+      expect(setupIndex).toBeGreaterThan(0);
+      expect(reloadIndex).toBeGreaterThan(setupIndex);
+    });
+
+    it('removes the legacy ccx-mem plugin id during upgrade install', () => {
+      expect(installSource).toContain("const LEGACY_PLUGIN_IDS = ['ccx-mem@remote1993']");
+      expect(installSource).toContain('delete installedPlugins.plugins[legacyPluginId]');
+      expect(installSource).toContain('delete settings.enabledPlugins[legacyPluginId]');
     });
   });
 

@@ -14,6 +14,7 @@ import { summarizeHandler } from './summarize.js';
 import { userMessageHandler } from './user-message.js';
 import { fileEditHandler } from './file-edit.js';
 import { fileContextHandler } from './file-context.js';
+import { fusionPolicyHandler } from './fusion-policy.js';
 
 export type EventType =
   | 'context'           // SessionStart - inject context
@@ -21,8 +22,9 @@ export type EventType =
   | 'observation'       // PostToolUse - save observation
   | 'summarize'         // Stop - generate summary
   | 'user-message'      // SessionStart (parallel) - display to user
-  | 'file-edit'         // Cursor afterFileEdit
-  | 'file-context';     // PreToolUse - inject file observation history
+  | 'file-edit'         // Transcript-derived file edit observation
+  | 'file-context'      // PreToolUse - inject file observation history
+  | 'fusion-policy';    // PreToolUse - curated low-dependency policy guidance
 
 const handlers: Record<EventType, EventHandler> = {
   'context': contextHandler,
@@ -31,7 +33,8 @@ const handlers: Record<EventType, EventHandler> = {
   'summarize': summarizeHandler,
   'user-message': userMessageHandler,
   'file-edit': fileEditHandler,
-  'file-context': fileContextHandler
+  'file-context': fileContextHandler,
+  'fusion-policy': fusionPolicyHandler
 };
 
 /**
@@ -65,3 +68,4 @@ export { summarizeHandler } from './summarize.js';
 export { userMessageHandler } from './user-message.js';
 export { fileEditHandler } from './file-edit.js';
 export { fileContextHandler } from './file-context.js';
+export { fusionPolicyHandler } from './fusion-policy.js';

@@ -100,7 +100,20 @@ async function closeHttpServer(server: http.Server): Promise<void> {
 
   // Close the server
   await new Promise<void>((resolve, reject) => {
-    server.close(err => err ? reject(err) : resolve());
+    server.close(err => {
+      if (!err) {
+        resolve();
+        return;
+      }
+
+      if ((err as NodeJS.ErrnoException).code === 'ERR_SERVER_NOT_RUNNING') {
+        logger.debug('SYSTEM', 'HTTP server was already closed during shutdown');
+        resolve();
+        return;
+      }
+
+      reject(err);
+    });
   });
 
   // Extra delay on Windows to ensure port is fully released

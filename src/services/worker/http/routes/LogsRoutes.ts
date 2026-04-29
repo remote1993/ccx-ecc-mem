@@ -86,13 +86,17 @@ export function readLastLines(filePath: string, lineCount: number): { lines: str
 
 export class LogsRoutes extends BaseRouteHandler {
   private getLogFilePath(): string {
-    const dataDir = SettingsDefaultsManager.get('CLAUDE_MEM_DATA_DIR');
-    const logsDir = join(dataDir, 'logs');
+    const logsDir = this.getLogsDir();
     const date = new Date().toISOString().split('T')[0];
     return join(logsDir, `claude-mem-${date}.log`);
   }
 
   private getLogsDir(): string {
+    const explicitLogDir = process.env.CLAUDE_MEM_LOG_DIR;
+    if (explicitLogDir?.trim()) {
+      return explicitLogDir.trim();
+    }
+
     const dataDir = SettingsDefaultsManager.get('CLAUDE_MEM_DATA_DIR');
     return join(dataDir, 'logs');
   }

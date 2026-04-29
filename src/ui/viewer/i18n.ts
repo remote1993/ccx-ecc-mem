@@ -6,6 +6,8 @@ export interface ViewerLabels {
   project: string;
   closeEsc: string;
   toggleConsole: string;
+  connectionLive: string;
+  connectionOffline: string;
   documentation: string;
   followOnX: string;
   joinDiscord: string;
@@ -90,6 +92,14 @@ export interface ViewerLabels {
   themeDarkTitle: string;
   themeSystemTitle: string;
   scrollToTop: string;
+  capabilityCenter: string;
+  capabilityCenterDescription: string;
+  capabilityProfile: string;
+  capabilityLocale: string;
+  activeCapabilities: string;
+  optionalCapabilities: string;
+  referenceCapabilities: string;
+  archivedCapabilities: string;
 }
 
 const en: ViewerLabels = {
@@ -100,6 +110,8 @@ const en: ViewerLabels = {
   project: 'Project',
   closeEsc: 'Close (Esc)',
   toggleConsole: 'Toggle Console',
+  connectionLive: 'Live',
+  connectionOffline: 'Offline',
   documentation: 'Documentation',
   followOnX: 'Follow us on X',
   joinDiscord: 'Join our Discord community',
@@ -184,6 +196,14 @@ const en: ViewerLabels = {
   themeDarkTitle: 'Theme: Dark (click for System)',
   themeSystemTitle: 'Theme: System (click for Light)',
   scrollToTop: 'Scroll to top',
+  capabilityCenter: 'Capability Center',
+  capabilityCenterDescription: 'Unified view of the active, optional, reference, and archived ccx-ecc-mem capabilities.',
+  capabilityProfile: 'Profile',
+  capabilityLocale: 'Locale',
+  activeCapabilities: 'Active capabilities',
+  optionalCapabilities: 'Optional enhancements',
+  referenceCapabilities: 'Reference catalog',
+  archivedCapabilities: 'Archived capabilities',
 };
 
 const zh: ViewerLabels = {
@@ -195,6 +215,8 @@ const zh: ViewerLabels = {
   project: '项目',
   closeEsc: '关闭（Esc）',
   toggleConsole: '切换控制台',
+  connectionLive: '实时',
+  connectionOffline: '离线',
   documentation: '文档',
   followOnX: '在 X 上关注我们',
   joinDiscord: '加入 Discord 社区',
@@ -279,6 +301,14 @@ const zh: ViewerLabels = {
   themeDarkTitle: '主题：深色（点击切换为跟随系统）',
   themeSystemTitle: '主题：跟随系统（点击切换为浅色）',
   scrollToTop: '回到顶部',
+  capabilityCenter: '能力中心',
+  capabilityCenterDescription: '统一查看 ccx-ecc-mem 已启用、可选增强、参考资源和归档能力。',
+  capabilityProfile: '能力配置',
+  capabilityLocale: '界面语言',
+  activeCapabilities: '已启用能力',
+  optionalCapabilities: '可选增强',
+  referenceCapabilities: '参考资源',
+  archivedCapabilities: '已归档能力',
 };
 
 export function getViewerLabels(mode?: string): ViewerLabels {

@@ -316,6 +316,19 @@ describe('SettingsDefaultsManager', () => {
       // System settings
       expect(defaults.CLAUDE_MEM_DATA_DIR).toBeDefined();
       expect(defaults.CLAUDE_MEM_LOG_LEVEL).toBeDefined();
+      expect(defaults.CLAUDE_MEM_MODE).toBe('code--zh');
+      expect(defaults.CLAUDE_MEM_CHROMA_ENABLED).toBe('false');
+      expect(defaults.CLAUDE_MEM_TRANSCRIPTS_ENABLED).toBe('false');
+    });
+
+    it('should keep core memory enabled while heavy retrieval is opt-in', () => {
+      const defaults = SettingsDefaultsManager.getAllDefaults();
+
+      expect(parseInt(defaults.CLAUDE_MEM_CONTEXT_OBSERVATIONS, 10)).toBeGreaterThan(0);
+      expect(defaults.CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY).toBe('true');
+      expect(defaults.CLAUDE_MEM_CONTEXT_SHOW_TERMINAL_OUTPUT).toBe('true');
+      expect(defaults.CLAUDE_MEM_CHROMA_ENABLED).toBe('false');
+      expect(defaults.CLAUDE_MEM_TRANSCRIPTS_ENABLED).toBe('false');
     });
   });
 

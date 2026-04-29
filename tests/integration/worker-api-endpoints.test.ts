@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from 'bun:test';
 import express from 'express';
-import { mkdtempSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { logger } from '../../src/utils/logger.js';
@@ -38,11 +38,13 @@ mock.module('../../src/services/worker/CustomApiAgent.js', () => ({
 import { Server } from '../../src/services/server/Server.js';
 import type { ServerOptions } from '../../src/services/server/Server.js';
 import { SessionRoutes } from '../../src/services/worker/http/routes/SessionRoutes.js';
+import { SettingsRoutes } from '../../src/services/worker/http/routes/SettingsRoutes.js';
 import { DatabaseManager } from '../../src/services/worker/DatabaseManager.js';
 import { SessionManager } from '../../src/services/worker/SessionManager.js';
 import { SessionStore } from '../../src/services/sqlite/SessionStore.js';
 import { SessionEventBroadcaster } from '../../src/services/worker/events/SessionEventBroadcaster.js';
 import { SSEBroadcaster } from '../../src/services/worker/SSEBroadcaster.js';
+import { SettingsManager } from '../../src/services/worker/SettingsManager.js';
 
 // Suppress logger output during tests
 let loggerSpies: ReturnType<typeof spyOn>[] = [];
@@ -308,6 +310,50 @@ describe('Worker API Endpoints Integration', () => {
 
       const aliasSessionId = store.createSDKSession('session-route-codex-alias', '', '', undefined, 'codex-cli');
       expect(aliasSessionId).toBe(initBody.sessionDbId);
+    });
+
+    it('should skip hook work for expired sessions instead of queueing repeated warnings', async () => {
+      const { store } = await registerSessionRoutes();
+      await startServer(server);
+
+      const initResponse = await fetch(`http://127.0.0.1:${testPort}/api/sessions/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentSessionId: 'session-route-expired',
+          project: 'worker-api-test',
+          prompt: 'hello',
+          platformSource: 'claude-code'
+        })
+      });
+      const initBody = await initResponse.json();
+      const expiredEpoch = Date.now() - 5 * 60 * 60 * 1000;
+      store.db.prepare('UPDATE sdk_sessions SET started_at_epoch = ? WHERE id = ?')
+        .run(expiredEpoch, initBody.sessionDbId);
+
+      const observationResponse = await fetch(`http://127.0.0.1:${testPort}/api/sessions/observations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentSessionId: 'session-route-expired',
+          tool_name: 'Write',
+          tool_input: { file_path: '/tmp/example.txt' },
+          tool_response: { ok: true },
+          cwd: '/tmp/project',
+          platformSource: 'claude-code'
+        })
+      });
+
+      expect(observationResponse.status).toBe(200);
+      expect(await observationResponse.json()).toEqual({ status: 'skipped', reason: 'session_expired' });
+
+      const pending = store.db.prepare('SELECT COUNT(*) AS count FROM pending_messages WHERE session_db_id = ?')
+        .get(initBody.sessionDbId) as { count: number };
+      const session = store.db.prepare('SELECT status FROM sdk_sessions WHERE id = ?')
+        .get(initBody.sessionDbId) as { status: string };
+      expect(pending.count).toBe(0);
+      expect(session.status).toBe('failed');
+      expect(loggerSpies[2]).not.toHaveBeenCalled();
     });
 
     it('should return completed_db_only for non-active sessions and mark them completed', async () => {
@@ -666,6 +712,42 @@ describe('Worker API Endpoints Integration', () => {
 
       expect(handler1Mock).toHaveBeenCalledTimes(1);
       expect(handler2Mock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Settings Routes', () => {
+    it('should read and update settings from CLAUDE_MEM_DATA_DIR', async () => {
+      const settingsPath = join(testDataDir, 'settings.json');
+      writeFileSync(settingsPath, JSON.stringify({
+        CLAUDE_MEM_TRANSCRIPTS_ENABLED: 'true',
+        CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH: join(testDataDir, 'transcript-watch.json'),
+      }, null, 2));
+
+      server = new Server(mockOptions);
+      server.registerRoutes(new SettingsRoutes(new SettingsManager({} as DatabaseManager)));
+      server.finalizeRoutes();
+      await startServer(server);
+
+      const getResponse = await fetch(`http://127.0.0.1:${testPort}/api/settings`);
+      expect(getResponse.status).toBe(200);
+      const settings = await getResponse.json();
+      expect(settings.CLAUDE_MEM_TRANSCRIPTS_ENABLED).toBe('true');
+      expect(settings.CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH).toBe(join(testDataDir, 'transcript-watch.json'));
+
+      const updateResponse = await fetch(`http://127.0.0.1:${testPort}/api/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ CLAUDE_MEM_TRANSCRIPTS_ENABLED: 'false' }),
+      });
+      expect(updateResponse.status).toBe(200);
+      expect(await updateResponse.json()).toEqual({
+        success: true,
+        message: 'Settings updated successfully',
+      });
+
+      const updated = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+      expect(updated.CLAUDE_MEM_TRANSCRIPTS_ENABLED).toBe('false');
+      expect(existsSync(settingsPath)).toBe(true);
     });
   });
 });

@@ -47,7 +47,7 @@ export interface SettingsDefaults {
   CLAUDE_MEM_CONTEXT_SHOW_TERMINAL_OUTPUT: string;
   CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED: string;
   CLAUDE_MEM_FOLDER_USE_LOCAL_MD: string;  // 'true' | 'false' - write to CLAUDE.local.md instead of CLAUDE.md
-  CLAUDE_MEM_TRANSCRIPTS_ENABLED: string;  // 'true' | 'false' - enable transcript watcher ingestion for Codex and other transcript-based clients
+  CLAUDE_MEM_TRANSCRIPTS_ENABLED: string;  // 'true' | 'false' - enable transcript watcher ingestion for Codex CLI
   CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH: string;  // Path to transcript watcher config JSON
   // Process Management
   CLAUDE_MEM_MAX_CONCURRENT_AGENTS: string;  // Max concurrent Claude SDK agent subprocesses (default: 2)
@@ -97,7 +97,7 @@ export class SettingsDefaultsManager {
     CLAUDE_MEM_LOG_LEVEL: 'INFO',
     CLAUDE_MEM_PYTHON_VERSION: '3.13',
     CLAUDE_CODE_PATH: '', // Empty means auto-detect via 'which claude'
-    CLAUDE_MEM_MODE: 'code', // Default mode profile
+    CLAUDE_MEM_MODE: 'code--zh', // Default mode profile
     // Token Economics
     CLAUDE_MEM_CONTEXT_SHOW_READ_TOKENS: 'false',
     CLAUDE_MEM_CONTEXT_SHOW_WORK_TOKENS: 'false',
@@ -113,7 +113,7 @@ export class SettingsDefaultsManager {
     CLAUDE_MEM_CONTEXT_SHOW_TERMINAL_OUTPUT: 'true',
     CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED: 'false',
     CLAUDE_MEM_FOLDER_USE_LOCAL_MD: 'false',  // When true, writes to CLAUDE.local.md instead of CLAUDE.md
-    CLAUDE_MEM_TRANSCRIPTS_ENABLED: 'true',
+    CLAUDE_MEM_TRANSCRIPTS_ENABLED: 'false',
     CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH: join(homedir(), '.claude-mem', 'transcript-watch.json'),
     // Process Management
     CLAUDE_MEM_MAX_CONCURRENT_AGENTS: '2',  // Max concurrent Claude SDK agent subprocesses
@@ -128,12 +128,12 @@ export class SettingsDefaultsManager {
     CLAUDE_MEM_TIER_SIMPLE_MODEL: 'haiku', // Portable tier alias — works across Direct API, Bedrock, Vertex, Azure (see #1463)
     CLAUDE_MEM_TIER_SUMMARY_MODEL: '',                // Empty = use default model for summaries
     // Chroma Vector Database Configuration
-    CLAUDE_MEM_CHROMA_ENABLED: 'true',         // Set to 'false' to disable Chroma and use SQLite-only search
+    CLAUDE_MEM_CHROMA_ENABLED: 'false',        // SQLite-only search by default; enable Chroma explicitly
     CLAUDE_MEM_CHROMA_MODE: 'local',           // 'local' uses persistent chroma-mcp via uvx, 'remote' connects to existing server
     CLAUDE_MEM_CHROMA_HOST: '127.0.0.1',
     CLAUDE_MEM_CHROMA_PORT: '8000',
     CLAUDE_MEM_CHROMA_SSL: 'false',
-    // Future cloud support (claude-mem pro)
+    // Future cloud support
     CLAUDE_MEM_CHROMA_API_KEY: '',
     CLAUDE_MEM_CHROMA_TENANT: 'default_tenant',
     CLAUDE_MEM_CHROMA_DATABASE: 'default_database',
@@ -171,7 +171,7 @@ export class SettingsDefaultsManager {
    * Handles both string 'true' and boolean true from JSON
    */
   static getBool(key: keyof SettingsDefaults): boolean {
-    const value = this.get(key);
+    const value = this.get(key) as string | boolean;
     return value === 'true' || value === true;
   }
 

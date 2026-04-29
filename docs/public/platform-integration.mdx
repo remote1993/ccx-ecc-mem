@@ -1,38 +1,26 @@
 ---
 title: Platform Integration Guide
-description: Build integrations against Claude-Mem's current worker-backed runtime, custom API path, and heterogeneous host integrations
+description: Supported Claude Code and Codex CLI integration model for ccx-ecc-mem
 icon: plug
 ---
 
 # Platform Integration Guide
 
-This guide is for developers building Claude-Mem integrations such as IDE plugins, editor extensions, CLI tooling, and transcript-driven clients.
+ccx-ecc-mem currently supports two host integrations:
 
-The current baseline is:
-- heterogeneous host integrations
-- a unified internal event model
-- a local worker-backed runtime on `localhost`
-- a custom third-party API extraction path
-- compatibility MCP surfaces only where explicitly enabled
+- Claude Code through the local plugin hook lifecycle
+- Codex CLI through worker-managed transcript ingestion and workspace-local `AGENTS.md` context
 
-## Core Principle
+VS Code is not a supported host integration. Other upstream ECC assets, old provider notes, and non-target host experiments are reference material only. They are not supported host integrations in the current product surface.
 
-Claude-Mem should be understood as:
-- **externally heterogeneous** — each host integrates in its native way
-- **internally unified** — normalized events flow into the same worker API and storage model
-
-That means new platforms do **not** need to mimic Claude Code hooks if their native integration model is different.
-
-## Quick Reference
-
-### Worker Service Basics
+## Worker Service Basics
 
 ```typescript
 const WORKER_BASE_URL = 'http://localhost:37777';
 const DEFAULT_PORT = 37777; // Override with CLAUDE_MEM_WORKER_PORT
 ```
 
-### Common Checks
+Common checks:
 
 ```http
 GET /health
@@ -41,91 +29,47 @@ GET /api/settings
 GET /api/search?query=authentication
 ```
 
-### Common Session Operations
+## Claude Code
 
-```http
-POST /api/sessions/init
-POST /api/sessions/observations
-POST /api/sessions/summarize
-POST /api/sessions/complete
-```
-
-## Integration Types
-
-### Hook-based hosts
-
-Use native lifecycle hooks when the host supports them.
-
-Examples in the current repository include:
-- Claude Code
-- Cursor
-- Gemini CLI
-- Windsurf
-
-Typical flow:
+Claude Code uses plugin hooks:
 
 ```text
-host hook
-  → worker-service.cjs hook <platform> <event>
-  → platform adapter
-  → normalized hook input
-  → shared event handler
-  → worker HTTP API
+plugin/hooks/hooks.json
+  -> worker-service.cjs hook claude-code <event>
+  -> src/cli/hook-command.ts
+  -> src/cli/adapters/claude-code.ts
+  -> src/cli/handlers/*
+  -> local worker HTTP API
 ```
 
-### Transcript-based hosts
+This path covers setup, session start, prompt intake, tool observations, selected read-context hints, stop summaries, and session completion.
 
-Use transcript or session log ingestion when the host does not expose reliable hooks.
+## Codex CLI
 
-Current example:
-- Codex CLI transcript watch integration
+Codex CLI is enabled explicitly:
 
-Typical flow:
-
-```text
-host transcript/session log
-  → transcript watcher
-  → parsed session/user/tool events
-  → worker ingestion path
+```bash
+npx ccx-mem install --ide codex-cli
 ```
 
-### Plugin-based hosts
+That installer:
 
-Use the host's plugin runtime when that is the native extension surface.
+- merges the Codex watch entry into `~/.claude-mem/transcript-watch.json`
+- sets `CLAUDE_MEM_TRANSCRIPTS_ENABLED=true` in `~/.claude-mem/settings.json`
+- keeps context injection workspace-local through `<workspace>/AGENTS.md`
 
-Current examples:
-- OpenCode
-- OpenClaw
+The user-facing runtime command is still the worker:
 
-Typical flow:
-
-```text
-host plugin runtime
-  → plugin-side capture/context sync
-  → worker HTTP API
+```bash
+npx ccx-mem start
 ```
 
-### MCP-based hosts
-
-Use MCP only when the host primarily exposes Claude-Mem through MCP configuration.
-
-Current examples include compatibility installers for:
-- Copilot CLI
-- Antigravity
-- Goose
-- Crush
-- Roo Code
-- Warp
-
-This is a compatibility surface, not the primary runtime model.
+There is no supported public `transcript watch` command. The worker starts the transcript watcher automatically only when transcript ingestion is enabled.
 
 ## Unified Internal Contract
 
-Regardless of host type, integrations should converge on the same internal concepts.
+Both supported hosts converge on:
 
-### Normalized event payload
-
-The shared normalized hook shape is defined around:
 - `sessionId`
 - `cwd`
 - `platform`
@@ -135,130 +79,30 @@ The shared normalized hook shape is defined around:
 - `toolResponse`
 - `transcriptPath`
 - `metadata`
-- optional subagent identity fields
 
 See:
-- `src/cli/types.ts:1`
-- `src/cli/adapters/index.ts:1`
 
-### Platform source normalization
+- `src/cli/types.ts`
+- `src/cli/adapters/index.ts`
+- `src/services/transcripts/processor.ts`
 
-Platform-specific names are reduced to a stable source label for storage and retrieval.
-
-Examples:
-- transcript-derived input → `codex`
-- Gemini-family labels → `gemini`
-- Claude-family labels → `claude`
-
-See:
-- `src/shared/platform-source.ts:1`
-
-### Worker API contract
-
-The worker remains the main internal contract for:
-- session initialization
-- observation intake
-- summary generation
-- session completion
-- retrieval and search
-- settings persistence
-
-## Current Runtime Architecture
-
-### End-to-end flow
+## Runtime Architecture
 
 ```text
-native host integration
-  → normalized event or worker request
-  → local worker runtime
-  → session / search / settings / data routes
-  → CustomApiAgent for extraction and summarization
-  → SQLite / optional Chroma / optional MCP surfaces
+Claude hooks / Codex transcript ingestion
+  -> normalized worker request
+  -> local worker runtime
+  -> session / search / settings / data routes
+  -> CustomApiAgent extraction and summarization
+  -> SQLite primary storage
+  -> optional Chroma / optional MCP compatibility surfaces
 ```
 
-### Why this boundary matters
-
-This design allows the project to:
-- support custom third-party APIs without tying to a specific host
-- support multiple CLIs and tools without forcing one external integration pattern
-- keep storage, search, and extraction logic centralized
+SQLite is the default retrieval store. Chroma and other heavier surfaces are opt-in.
 
 ## Integration Guidance
 
-### Prefer native host capabilities first
-
-When adding a new integration:
-1. use the host's native extension model first
-2. normalize into the shared internal contract
-3. reuse the worker HTTP API and existing handlers
-4. add MCP-specific behavior only when the host truly needs it
-
-### Do not over-unify external installation/runtime behavior
-
-Avoid assuming every host should:
-- install through the same hook mechanism
-- emit the same lifecycle vocabulary
-- manage context through the same file
-- expose the same permissions model
-
-External behavior may differ. Internal processing should stay consistent.
-
-### Preserve progressive disclosure
-
-When surfacing historical context:
-1. show compact search/index results first
-2. let the caller narrow to relevant items
-3. fetch full details only on demand
-
-That matches the current retrieval design and reduces context waste.
-
-## Environment Variables
-
-Common runtime configuration includes:
-
-```bash
-CLAUDE_MEM_WORKER_PORT=37777
-CLAUDE_MEM_CUSTOM_BASE_URL=https://your-api.example.com/v1
-CLAUDE_MEM_CUSTOM_API_KEY=YOUR_API_KEY
-CLAUDE_MEM_CUSTOM_MODEL=your-model-id
-```
-
-See [Configuration](/configuration) for the current full settings model.
-
-## Troubleshooting Integrations
-
-Start with the worker path:
-
-```bash
-curl http://localhost:37777/health
-curl http://localhost:37777/api/readiness
-curl http://localhost:37777/api/settings
-npm run worker:logs
-```
-
-If requests fail, inspect:
-- worker startup and readiness
-- route wiring in the worker HTTP server
-- local settings and custom API configuration
-- the host-specific native integration layer
-
-## Historical Boundary
-
-Older versions of the project may describe:
-- provider-specific runtimes
-- MCP-first system narratives
-- Claude Code-centric assumptions for every host
-
-Those descriptions do not reflect the current intended direction.
-
-For current architecture, prefer:
-- [Introduction](/introduction)
-- [Architecture Overview](/architecture/overview)
-- [Worker Service](/architecture/worker-service)
-- [Search Architecture](/architecture/search-architecture)
-
-## Related
-
-- [Configuration](/configuration)
-- [Troubleshooting](/troubleshooting)
-- [Memory Search](/usage/search-tools)
+- Do not add new public host support without code, install flow, docs, and tests.
+- Do not expose optional ECC agents or heavyweight resources through the default profile.
+- Keep Codex ingestion tied to `install --ide codex-cli` plus the worker-managed watcher.
+- Keep memory capture, search, context injection, and the worker active by default for Claude Code.

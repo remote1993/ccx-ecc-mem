@@ -1,6 +1,6 @@
 import { join, dirname, basename, sep } from 'path';
 import { homedir } from 'os';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { SettingsDefaultsManager } from './SettingsDefaultsManager.js';
@@ -19,7 +19,7 @@ function getDirname(): string {
 const _dirname = getDirname();
 
 /**
- * Simple path configuration for claude-mem
+ * Simple path configuration for ccx-ecc-mem
  * Standard paths based on Claude Code conventions
  */
 
@@ -39,7 +39,6 @@ function resolveDataDir(): string {
   const settingsPath = join(defaultDataDir, 'settings.json');
   try {
     if (existsSync(settingsPath)) {
-      const { readFileSync } = require('fs');
       const raw = JSON.parse(readFileSync(settingsPath, 'utf-8'));
       const settings = raw.env ?? raw; // handle legacy nested schema
       if (settings.CLAUDE_MEM_DATA_DIR) {
@@ -67,11 +66,11 @@ export function getDbPath(): string {
 }
 
 export const DATA_DIR = getDataDir();
-// Note: CLAUDE_CONFIG_DIR is a Claude Code setting, not claude-mem, so leave as env var
+// Note: CLAUDE_CONFIG_DIR is a Claude Code setting, not ccx-ecc-mem, so leave as env var
 export const CLAUDE_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
 
 // Plugin installation directory - respects CLAUDE_CONFIG_DIR for users with custom Claude locations
-export const MARKETPLACE_ROOT = join(CLAUDE_CONFIG_DIR, 'plugins', 'marketplaces', 'remote1993', 'ccx-mem');
+export const MARKETPLACE_ROOT = join(CLAUDE_CONFIG_DIR, 'plugins', 'marketplaces', 'remote1993');
 
 // Data subdirectories
 export const ARCHIVES_DIR = join(DATA_DIR, 'archives');

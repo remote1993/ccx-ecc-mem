@@ -2,9 +2,9 @@
   <br>
   <a href="https://github.com/remote1993/ccx-mem">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-dark-mode.webp">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-light-mode.webp">
-      <img src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/claude-mem-logo-for-light-mode.webp" alt="ccx-mem" width="400">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/ccx-ecc-mem-logo-for-dark-mode.webp">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/ccx-ecc-mem-logo-for-light-mode.webp">
+      <img src="https://raw.githubusercontent.com/remote1993/ccx-mem/main/docs/public/ccx-ecc-mem-logo-for-light-mode.webp" alt="ccx-mem" width="400">
     </picture>
   </a>
   <br>
@@ -67,11 +67,13 @@ Or install from the plugin marketplace inside Claude Code:
 Current supported host integrations:
 
 - Claude Code: local plugin registration and worker-backed context/search
-- Codex CLI: transcript watching plus workspace `AGENTS.md` context sync
+- Codex CLI: worker-managed transcript ingestion plus workspace `AGENTS.md` context sync
 
-Restart your host client after installation. Claude Code picks up the local plugin state, and Codex CLI starts feeding memory once the worker is running and transcript watching is enabled.
+VS Code is not a supported host integration.
 
-> **Note:** ccx-mem is published on npm, but `npm install -g ccx-mem` installs the **SDK/library only** — it does not register the Claude Code plugin state or configure Codex transcript watching. Always install via `npx ccx-mem install`, `npx ccx-mem install --ide codex-cli`, or the `/plugin` commands above.
+Restart your host client after installation. Claude Code picks up the local plugin state, and Codex CLI starts feeding memory once the worker is running and transcript ingestion has been enabled by `install --ide codex-cli`.
+
+> **Note:** ccx-mem is published on npm, but `npm install -g ccx-mem` installs the **SDK/library only** — it does not register the Claude Code plugin state or configure Codex transcript ingestion. Always install via `npx ccx-mem install`, `npx ccx-mem install --ide codex-cli`, or the `/plugin` commands above.
 
 ## Key Features
 

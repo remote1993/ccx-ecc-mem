@@ -92,10 +92,9 @@ export async function hookCommand(platform: string, event: string, options: Hook
   const originalStderrWrite = process.stderr.write.bind(process.stderr);
   process.stderr.write = (() => true) as typeof process.stderr.write;
 
-  const adapter = getPlatformAdapter(platform);
-  const handler = getEventHandler(event);
-
   try {
+    const adapter = getPlatformAdapter(platform);
+    const handler = getEventHandler(event);
     return await executeHookPipeline(adapter, handler, platform, options);
   } catch (error) {
     if (isWorkerUnavailableError(error)) {

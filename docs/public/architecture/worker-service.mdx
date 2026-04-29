@@ -5,7 +5,7 @@ description: "Current HTTP API, initialization flow, and Bun-managed worker runt
 
 # Worker Service
 
-The worker service is the long-running local HTTP runtime for Claude-Mem. It is built with Express.js, started through the Bun-managed worker path, and keeps hook execution lightweight by moving session orchestration, storage, search, settings, SSE updates, and custom API extraction into a separate process.
+The worker service is the long-running local HTTP runtime for ccx-ecc-mem. It is built with Express.js, started through the Bun-managed worker path, and keeps hook execution lightweight by moving session orchestration, storage, search, settings, SSE updates, and custom API extraction into a separate process.
 
 ## Overview
 
@@ -30,7 +30,7 @@ worker-service.ts
   → SQLite / optional Chroma
 ```
 
-The worker starts the HTTP server first, then finishes slower background initialization such as database setup, search route registration, transcript watcher startup, and optional Chroma backfill.
+The worker starts the HTTP server first, then finishes slower background initialization such as database setup, search route registration, optional Codex transcript watcher startup, and optional Chroma backfill.
 
 ## Initialization Model
 

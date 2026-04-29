@@ -81,11 +81,11 @@ describe('SQLiteSearchStrategy', () => {
       expect(strategy.canHandle(options)).toBe(true);
     });
 
-    it('should return false when query text is present', () => {
+    it('should return true when query text is present', () => {
       const options: StrategySearchOptions = {
-        query: 'semantic search query'
+        query: 'keyword search query'
       };
-      expect(strategy.canHandle(options)).toBe(false);
+      expect(strategy.canHandle(options)).toBe(true);
     });
 
     it('should return true when strategyHint is sqlite (even with query)', () => {
@@ -208,6 +208,19 @@ describe('SQLiteSearchStrategy', () => {
 
       const callArgs = mockSessionSearch.searchObservations.mock.calls[0];
       expect(callArgs[1].orderBy).toBe('date_asc');
+    });
+
+    it('should pass query text to SQLite search methods', async () => {
+      const options: StrategySearchOptions = {
+        query: 'memory keyword',
+        limit: 10
+      };
+
+      await strategy.search(options);
+
+      expect(mockSessionSearch.searchObservations.mock.calls[0][0]).toBe('memory keyword');
+      expect(mockSessionSearch.searchSessions.mock.calls[0][0]).toBe('memory keyword');
+      expect(mockSessionSearch.searchUserPrompts.mock.calls[0][0]).toBe('memory keyword');
     });
 
     it('should handle search errors gracefully', async () => {

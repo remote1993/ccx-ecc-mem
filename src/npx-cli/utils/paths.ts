@@ -9,6 +9,11 @@ import { homedir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
+export const PLUGIN_OWNER = 'remote1993';
+export const PLUGIN_SLUG = 'ccx-ecc-mem';
+export const INSTALLED_PLUGIN_ID = `${PLUGIN_SLUG}@${PLUGIN_OWNER}`;
+export const DEFAULT_FUSION_PROFILE = 'core';
+
 // ---------------------------------------------------------------------------
 // Platform detection
 // ---------------------------------------------------------------------------
@@ -24,9 +29,9 @@ export function claudeConfigDirectory(): string {
   return process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
 }
 
-/** Marketplace install directory for remote1993/ccx-mem. */
+/** Marketplace install directory for the remote1993 marketplace. */
 export function marketplaceDirectory(): string {
-  return join(claudeConfigDirectory(), 'plugins', 'marketplaces', 'remote1993', 'ccx-mem');
+  return join(claudeConfigDirectory(), 'plugins', 'marketplaces', PLUGIN_OWNER);
 }
 
 /** Top-level plugins directory. */
@@ -51,12 +56,36 @@ export function claudeSettingsPath(): string {
 
 /** Plugin cache directory for a specific version. */
 export function pluginCacheDirectory(version: string): string {
-  return join(pluginsDirectory(), 'cache', 'remote1993', 'ccx-mem', version);
+  return join(pluginsDirectory(), 'cache', PLUGIN_OWNER, PLUGIN_SLUG, version);
 }
 
-/** claude-mem data directory (default `~/.claude-mem`). */
+/** ccx-ecc-mem data directory (default `~/.claude-mem`). */
 export function claudeMemDataDirectory(): string {
-  return join(homedir(), '.claude-mem');
+  if (process.env.CLAUDE_MEM_DATA_DIR) {
+    return process.env.CLAUDE_MEM_DATA_DIR;
+  }
+
+  const defaultDataDirectory = join(homedir(), '.claude-mem');
+  const defaultSettingsPath = join(defaultDataDirectory, 'settings.json');
+  if (existsSync(defaultSettingsPath)) {
+    try {
+      const raw = JSON.parse(readFileSync(defaultSettingsPath, 'utf-8'));
+      const settings = raw.env && typeof raw.env === 'object' ? raw.env : raw;
+      const configuredDataDirectory = settings.CLAUDE_MEM_DATA_DIR;
+      if (typeof configuredDataDirectory === 'string' && configuredDataDirectory.trim()) {
+        return configuredDataDirectory.trim();
+      }
+    } catch {
+      // Fall through to the default data directory.
+    }
+  }
+
+  return defaultDataDirectory;
+}
+
+/** Install state persisted for the fused default surface. */
+export function fusionInstallStatePath(): string {
+  return join(claudeMemDataDirectory(), 'install-state.json');
 }
 
 // ---------------------------------------------------------------------------

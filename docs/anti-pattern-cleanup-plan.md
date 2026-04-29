@@ -33,8 +33,6 @@ Run detector: `bun run scripts/anti-pattern-test/detect-error-handling-antipatte
 - [ ] SettingsManager.ts (1 issue)
 - [ ] SDKAgent.ts (1 issue)
 - [ ] PaginationHelper.ts (1 issue)
-- [ ] OpenRouterAgent.ts (1 issue)
-- [ ] GeminiAgent.ts (1 issue)
 - [ ] SessionQueueProcessor.ts (1 issue)
 
 ## Final Verification

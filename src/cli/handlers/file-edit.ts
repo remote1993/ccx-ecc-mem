@@ -1,8 +1,7 @@
 /**
- * File Edit Handler - Cursor-specific afterFileEdit
+ * File Edit Handler - transcript-derived file edit observation
  *
- * Handles file edit observations from Cursor IDE.
- * Similar to observation handler but with file-specific metadata.
+ * Handles file edit observations with file-specific metadata.
  */
 
 import type { EventHandler, NormalizedHookInput, HookResult } from '../types.js';

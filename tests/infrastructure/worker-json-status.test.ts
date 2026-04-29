@@ -9,7 +9,7 @@
  *
  * No mocks needed - tests a pure function directly and captures real CLI output.
  */
-import { describe, it, expect } from 'bun:test';
+import { beforeAll, describe, it, expect } from 'bun:test';
 import { spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -21,12 +21,39 @@ const WORKER_SCRIPT = path.join(__dirname, '../../plugin/scripts/worker-service.
  * Run worker CLI command and return stdout + exit code
  * Uses spawnSync for synchronous output capture
  */
-function runWorkerStart(): { stdout: string; exitCode: number } {
+function runWorkerStart(): { stdout: string; stderr: string; exitCode: number } {
   const result = spawnSync('bun', [WORKER_SCRIPT, 'start'], {
     encoding: 'utf-8',
     timeout: 60000
   });
-  return { stdout: result.stdout?.trim() || '', exitCode: result.status || 0 };
+  return {
+    stdout: result.stdout?.trim() || '',
+    stderr: result.stderr?.trim() || '',
+    exitCode: result.status ?? (result.error ? 1 : 0)
+  };
+}
+
+async function waitForWorkerStartJson(): Promise<void> {
+  const deadline = Date.now() + 10000;
+  let lastResult = runWorkerStart();
+
+  while (Date.now() < deadline) {
+    if (lastResult.stdout) {
+      try {
+        JSON.parse(lastResult.stdout);
+        return;
+      } catch {
+        // Continue polling until the start command has a stable JSON response.
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+    lastResult = runWorkerStart();
+  }
+
+  throw new Error(
+    `worker start did not emit valid JSON after waiting. stdout=${JSON.stringify(lastResult.stdout)} stderr=${JSON.stringify(lastResult.stderr)}`
+  );
 }
 
 describe('worker-json-status', () => {
@@ -186,6 +213,12 @@ describe('worker-json-status', () => {
   });
 
   describe('start command JSON output', () => {
+    beforeAll(async () => {
+      if (existsSync(WORKER_SCRIPT)) {
+        await waitForWorkerStartJson();
+      }
+    });
+
     describe('when worker already healthy', () => {
       it('should output valid JSON with status: ready', () => {
         // Skip if worker script doesn't exist (not built)

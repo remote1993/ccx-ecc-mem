@@ -1,5 +1,5 @@
 /**
- * Install command for `npx ccx-mem install`.
+ * Install command for `npx ccx-ecc-mem install`.
  *
  * Replaces the git-clone + build workflow. The npm package already ships
  * a pre-built `plugin/` directory; this command copies it into the right
@@ -43,13 +43,18 @@ const log = {
 };
 import {
   claudeSettingsPath,
+  DEFAULT_FUSION_PROFILE,
   ensureDirectoryExists,
+  fusionInstallStatePath,
+  INSTALLED_PLUGIN_ID,
   installedPluginsPath,
   IS_WINDOWS,
   knownMarketplacesPath,
   marketplaceDirectory,
   npmPackagePluginDirectory,
   npmPackageRootDirectory,
+  PLUGIN_OWNER,
+  PLUGIN_SLUG,
   pluginCacheDirectory,
   pluginsDirectory,
   readPluginVersion,
@@ -59,6 +64,8 @@ import { readJsonSafe } from '../../utils/json-utils.js';
 import { detectInstalledIDEs } from './ide-detection.js';
 import { resolveBunBinaryPath } from '../utils/bun-resolver.js';
 
+const LEGACY_PLUGIN_IDS = ['ccx-mem@remote1993'];
+
 // ---------------------------------------------------------------------------
 // Registration helpers
 // ---------------------------------------------------------------------------
@@ -66,10 +73,10 @@ import { resolveBunBinaryPath } from '../utils/bun-resolver.js';
 function registerMarketplace(): void {
   const knownMarketplaces = readJsonSafe<Record<string, any>>(knownMarketplacesPath(), {});
 
-  knownMarketplaces['remote1993'] = {
+  knownMarketplaces[PLUGIN_OWNER] = {
     source: {
       source: 'github',
-      repo: 'remote1993/ccx-mem',
+      repo: `${PLUGIN_OWNER}/${PLUGIN_SLUG}`,
     },
     installLocation: marketplaceDirectory(),
     lastUpdated: new Date().toISOString(),
@@ -89,7 +96,7 @@ function registerPlugin(version: string): void {
   const cachePath = pluginCacheDirectory(version);
   const now = new Date().toISOString();
 
-  installedPlugins.plugins['ccx-mem@remote1993'] = [
+  installedPlugins.plugins[INSTALLED_PLUGIN_ID] = [
     {
       scope: 'user',
       installPath: cachePath,
@@ -98,6 +105,9 @@ function registerPlugin(version: string): void {
       lastUpdated: now,
     },
   ];
+  for (const legacyPluginId of LEGACY_PLUGIN_IDS) {
+    delete installedPlugins.plugins[legacyPluginId];
+  }
 
   writeJsonFileAtomic(installedPluginsPath(), installedPlugins);
 }
@@ -106,14 +116,92 @@ function enablePluginInClaudeSettings(): void {
   const settings = readJsonSafe<Record<string, any>>(claudeSettingsPath(), {});
 
   if (!settings.enabledPlugins) settings.enabledPlugins = {};
-  settings.enabledPlugins['ccx-mem@remote1993'] = true;
+  settings.enabledPlugins[INSTALLED_PLUGIN_ID] = true;
+  for (const legacyPluginId of LEGACY_PLUGIN_IDS) {
+    delete settings.enabledPlugins[legacyPluginId];
+  }
 
   writeJsonFileAtomic(claudeSettingsPath(), settings);
 }
 
+function readFusionRegistry(): Record<string, any> {
+  return readJsonSafe<Record<string, any>>(
+    join(npmPackagePluginDirectory(), 'fusion', 'registry.json'),
+    {},
+  );
+}
+
+function readFusionProfile(profile?: string): { name: string; registry: Record<string, any>; profile: Record<string, any> } {
+  const registry = readFusionRegistry();
+  const profiles = registry.profiles ?? {};
+  const defaultProfile = typeof registry.defaultProfile === 'string'
+    ? registry.defaultProfile
+    : DEFAULT_FUSION_PROFILE;
+  const profileName = profile ?? defaultProfile;
+
+  if (!Object.prototype.hasOwnProperty.call(profiles, profileName)) {
+    const availableProfiles = Object.keys(profiles).join(', ') || DEFAULT_FUSION_PROFILE;
+    throw new Error(`未知能力配置：${profileName}。可用配置：${availableProfiles}`);
+  }
+
+  return { name: profileName, registry, profile: profiles[profileName] };
+}
+
+function registryCapabilities(registry: Record<string, any>): Map<string, Record<string, any>> {
+  const capabilities = Array.isArray(registry.capabilities) ? registry.capabilities : [];
+  return new Map(capabilities.map((capability: Record<string, any>) => [String(capability.id), capability]));
+}
+
+function resolveProfileCapabilityIds(registry: Record<string, any>, profileName: string, seen = new Set<string>()): string[] {
+  const profile = registry.profiles?.[profileName] ?? {};
+  if (seen.has(profileName)) return [];
+  seen.add(profileName);
+
+  const inherited = Array.isArray(profile.extends)
+    ? profile.extends.flatMap((parent: string) => resolveProfileCapabilityIds(registry, parent, seen))
+    : [];
+  return [...new Set([...inherited, ...(profile.capabilities ?? [])])];
+}
+
+function localeForMode(mode?: string): string {
+  if (!mode) return 'zh-CN';
+  if (mode === 'code') return 'en';
+  if (mode === 'code--zh') return 'zh-CN';
+  return mode.replace(/^code--/, '');
+}
+
+function writeFusionInstallState(version: string, selectedIDEs: string[], selectedMode?: string, selectedProfile?: string): void {
+  const { name, registry } = readFusionProfile(selectedProfile);
+  const capabilitiesById = registryCapabilities(registry);
+  const enabledCapabilityIds = resolveProfileCapabilityIds(registry, name);
+  const enabledCapabilities = enabledCapabilityIds
+    .map((id) => capabilitiesById.get(id))
+    .filter(Boolean);
+  const optionalCapabilities = (registry.capabilities ?? [])
+    .filter((capability: Record<string, any>) => capability.status === 'optional' && !enabledCapabilityIds.includes(capability.id));
+
+  writeJsonFileAtomic(fusionInstallStatePath(), {
+    plugin: INSTALLED_PLUGIN_ID,
+    productName: 'ccx-ecc-mem',
+    version,
+    installedAt: new Date().toISOString(),
+    locale: localeForMode(selectedMode),
+    contextProfile: selectedMode ?? null,
+    capabilityProfile: name,
+    profile: name,
+    enabledCapabilityIds,
+    enabledCapabilities,
+    optionalCapabilities,
+    catalogPaths: registry.catalogPaths ?? {},
+    archived: registry.archived ?? {},
+    ides: selectedIDEs,
+    mode: selectedMode ?? null,
+  });
+}
+
 const languageModes = [
-  { value: 'code', label: 'English', hint: 'default' },
-  { value: 'code--zh', label: '中文', hint: 'Chinese' },
+  { value: 'code--zh', label: '中文', hint: '默认' },
+  { value: 'code', label: 'English', hint: '英文' },
   { value: 'code--ja', label: '日本語', hint: 'Japanese' },
   { value: 'code--ko', label: '한국어', hint: 'Korean' },
   { value: 'code--es', label: 'Español', hint: 'Spanish' },
@@ -121,7 +209,7 @@ const languageModes = [
   { value: 'code--de', label: 'Deutsch', hint: 'German' },
   { value: 'code--pt-br', label: 'Português do Brasil', hint: 'Brazilian Portuguese' },
 ];
-const defaultLanguageMode = languageModes[0].value;
+const defaultLanguageMode = 'code--zh';
 const availableLanguageModes = languageModes.map((mode) => mode.value).join(', ');
 
 function supportedIDEIds(): string[] {
@@ -142,12 +230,12 @@ function validateSelectedIDE(ide: string): void {
   const allIDEs = detectInstalledIDEs();
   const match = allIDEs.find((i) => i.id === ide);
   if (match && !match.supported) {
-    log.error(`Support for ${match.label} coming soon.`);
+    log.error(`暂不支持 ${match.label}，后续版本会补齐。`);
     process.exit(1);
   }
   if (!match) {
-    log.error(`Unknown IDE: ${ide}`);
-    log.info(`Available IDEs: ${availableIDEIds()}`);
+    log.error(`未知 IDE：${ide}`);
+    log.info(`可用 IDE：${availableIDEIds()}`);
     process.exit(1);
   }
 }
@@ -203,7 +291,7 @@ async function setupIDEs(selectedIDEs: string[]): Promise<string[]> {
         const { installCodexCli } = await import('../../services/integrations/CodexCliInstaller.js');
         const codexResult = await installCodexCli();
         if (codexResult === 0) {
-          log.success('Codex CLI: transcript watching configured.');
+          log.success('Codex CLI: transcript ingestion configured.');
         } else {
           log.error('Codex CLI: integration setup failed.');
           failedIDEs.push(ideId);
@@ -231,7 +319,7 @@ async function promptForIDESelection(): Promise<string[]> {
   const detected = detectedIDEs.filter((ide) => ide.detected && ide.supported);
 
   if (detected.length === 0) {
-    log.warn('No supported IDEs detected. Installing for Claude Code by default.');
+    log.warn('未检测到已支持的 IDE，默认安装到 Claude Code。');
     return ['claude-code'];
   }
 
@@ -242,14 +330,14 @@ async function promptForIDESelection(): Promise<string[]> {
   }));
 
   const result = await p.multiselect({
-    message: 'Which IDEs do you use?',
+    message: '你使用哪些 IDE 或 CLI？',
     options,
     initialValues: detected.map((ide) => ide.id),
     required: true,
   });
 
   if (p.isCancel(result)) {
-    p.cancel('Installation cancelled.');
+    p.cancel('已取消安装。');
     process.exit(0);
   }
 
@@ -258,13 +346,13 @@ async function promptForIDESelection(): Promise<string[]> {
 
 async function promptForModeSelection(initialValue: string): Promise<string> {
   const result = await p.select({
-    message: 'Which language should claude-mem use for injected context?',
+    message: '注入上下文使用哪种语言？',
     options: languageModes,
     initialValue,
   });
 
   if (p.isCancel(result)) {
-    p.cancel('Installation cancelled.');
+    p.cancel('已取消安装。');
     process.exit(0);
   }
 
@@ -283,6 +371,7 @@ function copyPluginToMarketplace(): void {
   const marketplaceDir = marketplaceDirectory();
   const packageRoot = npmPackageRootDirectory();
 
+  rmSync(marketplaceDir, { recursive: true, force: true });
   ensureDirectoryExists(marketplaceDir);
 
   // Only copy directories/files that are actually needed at runtime.
@@ -290,6 +379,7 @@ function copyPluginToMarketplace(): void {
   // When running from a dev checkout, the root contains many extra dirs
   // (.claude, .agents, src, docs, etc.) that must NOT be copied.
   const allowedTopLevelEntries = [
+    '.claude-plugin',
     'plugin',
     'package.json',
     'package-lock.json',
@@ -327,21 +417,8 @@ function copyPluginToCache(version: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// npm install in marketplace dir
+// Runtime dependency detection
 // ---------------------------------------------------------------------------
-
-function runNpmInstallInMarketplace(): void {
-  const marketplaceDir = marketplaceDirectory();
-  const packageJsonPath = join(marketplaceDir, 'package.json');
-
-  if (!existsSync(packageJsonPath)) return;
-
-  execSync('npm install --production', {
-    cwd: marketplaceDir,
-    stdio: 'pipe',
-    ...(IS_WINDOWS ? { shell: true as const } : {}),
-  });
-}
 
 function hasMarketplaceDependencies(): boolean {
   return existsSync(join(marketplaceDirectory(), 'node_modules'));
@@ -349,6 +426,10 @@ function hasMarketplaceDependencies(): boolean {
 
 function hasPackageCacheDependencies(): boolean {
   return existsSync(join(npmPackageRootDirectory(), 'node_modules'));
+}
+
+function packagedInstallHasRuntimeDependencies(): boolean {
+  return hasMarketplaceDependencies() || hasPackageCacheDependencies();
 }
 
 // ---------------------------------------------------------------------------
@@ -366,7 +447,6 @@ function runSmartInstall(): boolean {
   try {
     execSync(`node "${smartInstallPath}"`, {
       stdio: 'inherit',
-      ...(IS_WINDOWS ? { shell: true as const } : {}),
     });
     return true;
   } catch (error: unknown) {
@@ -386,7 +466,6 @@ function restartInstalledWorker(): boolean {
     execSync(`"${bunPath}" "${workerScript}" restart`, {
       cwd: marketplaceDir,
       stdio: 'pipe',
-      ...(IS_WINDOWS ? { shell: true as const } : {}),
     });
     return true;
   } catch (error: unknown) {
@@ -404,15 +483,17 @@ export interface InstallOptions {
   ide?: string;
   /** When provided, skip the interactive language selector and use this mode. */
   mode?: string;
+  /** Fusion capability profile to activate. */
+  profile?: string;
 }
 
 export async function runInstallCommand(options: InstallOptions = {}): Promise<void> {
   const version = readPluginVersion();
 
   if (isInteractive) {
-    p.intro(pc.bgCyan(pc.black(' claude-mem install ')));
+    p.intro(pc.bgCyan(pc.black(' ccx-ecc-mem install ')));
   } else {
-    console.log('claude-mem install');
+    console.log('ccx-ecc-mem install');
   }
   log.info(`Version: ${pc.cyan(version)}`);
   log.info(`Platform: ${process.platform} (${process.arch})`);
@@ -427,20 +508,20 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
       const existingPluginJson = JSON.parse(
         readFileSync(join(marketplaceDir, 'plugin', '.claude-plugin', 'plugin.json'), 'utf-8'),
       );
-      log.warn(`Existing installation detected (v${existingPluginJson.version ?? 'unknown'}).`);
+      log.warn(`检测到已有安装（v${existingPluginJson.version ?? 'unknown'}）。`);
     } catch (error: unknown) {
       console.warn('[install] Failed to read existing plugin version:', error instanceof Error ? error.message : String(error));
-      log.warn('Existing installation detected.');
+      log.warn('检测到已有安装。');
     }
 
     if (process.stdin.isTTY) {
       const shouldContinue = await p.confirm({
-        message: 'Overwrite existing installation?',
+        message: '是否覆盖已有安装？',
         initialValue: true,
       });
 
       if (p.isCancel(shouldContinue) || !shouldContinue) {
-        p.cancel('Installation cancelled.');
+        p.cancel('已取消安装。');
         process.exit(0);
       }
     }
@@ -461,100 +542,96 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
   let selectedMode: string | undefined;
   if (options.mode) {
     if (!validateMode(options.mode)) {
-      log.error(`Unknown mode: ${options.mode}`);
-      log.info(`Available language modes: ${availableLanguageModes}`);
+      log.error(`未知语言模式：${options.mode}`);
+      log.info(`可用语言模式：${availableLanguageModes}`);
       process.exit(1);
     }
     selectedMode = options.mode;
   } else if (process.stdin.isTTY) {
     selectedMode = await promptForModeSelection(readSelectedMode() ?? defaultLanguageMode);
+  } else {
+    selectedMode = readSelectedMode() ?? defaultLanguageMode;
+  }
+
+  const selectedProfile = options.profile;
+  try {
+    readFusionProfile(selectedProfile);
+  } catch (error: unknown) {
+    log.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
   }
 
   await runTasks([
     {
-      title: 'Copying plugin files',
+      title: '复制插件文件',
       task: async (message) => {
-        message('Copying to marketplace directory...');
+        message('正在复制到 marketplace 目录...');
         copyPluginToMarketplace();
-        return `Plugin files copied ${pc.green('OK')}`;
+        return `插件文件已复制 ${pc.green('OK')}`;
       },
     },
     {
-      title: 'Caching plugin version',
+      title: '缓存插件版本',
       task: async (message) => {
-        message(`Caching v${version}...`);
+        message(`正在缓存 v${version}...`);
         copyPluginToCache(version);
-        return `Plugin cached (v${version}) ${pc.green('OK')}`;
+        return `插件已缓存（v${version}）${pc.green('OK')}`;
       },
     },
     {
-      title: 'Registering marketplace',
+      title: '注册 marketplace',
       task: async () => {
         registerMarketplace();
-        return `Marketplace registered ${pc.green('OK')}`;
+        return `marketplace 已注册 ${pc.green('OK')}`;
       },
     },
     {
-      title: 'Registering plugin',
+      title: '注册插件',
       task: async () => {
         registerPlugin(version);
-        return `Plugin registered ${pc.green('OK')}`;
+        return `插件已注册 ${pc.green('OK')}`;
       },
     },
     {
-      title: 'Enabling plugin in Claude settings',
+      title: '启用 Claude 插件设置',
       task: async () => {
         enablePluginInClaudeSettings();
-        return `Plugin enabled ${pc.green('OK')}`;
+        return `插件已启用 ${pc.green('OK')}`;
       },
     },
     {
-      title: 'Configuring language mode',
+      title: '配置语言模式',
       task: async () => {
         if (!selectedMode) {
-          return `Language mode unchanged ${pc.green('OK')}`;
+          return `语言模式未改变 ${pc.green('OK')}`;
         }
 
         writeSelectedMode(selectedMode);
-        return `Language mode set to ${selectedMode} ${pc.green('OK')}`;
+        return `语言模式已设为 ${selectedMode} ${pc.green('OK')}`;
       },
     },
     {
-      title: 'Installing dependencies',
-      task: async (message) => {
-        if (hasMarketplaceDependencies()) {
-          return `Dependencies copied from package cache ${pc.green('OK')}`;
-        }
-
-        if (hasPackageCacheDependencies()) {
-          return `Dependencies available in package cache; reinstall skipped ${pc.green('OK')}`;
-        }
-
-        message('Running npm install...');
-        try {
-          runNpmInstallInMarketplace();
-          return `Dependencies installed ${pc.green('OK')}`;
-        } catch (error: unknown) {
-          console.warn('[install] npm install error:', error instanceof Error ? error.message : String(error));
-          return `Dependencies may need manual install ${pc.yellow('!')}`;
-        }
-      },
-    },
-    {
-      title: 'Setting up Bun and uv',
-      task: async (message) => {
-        message('Running smart-install...');
-        return runSmartInstall()
-          ? `Runtime dependencies ready ${pc.green('OK')}`
-          : `Runtime setup may need attention ${pc.yellow('!')}`;
-      },
-    },
-    {
-      title: 'Reloading worker settings',
+      title: '记录能力安装状态',
       task: async () => {
-        return restartInstalledWorker()
-          ? `Worker settings reloaded ${pc.green('OK')}`
-          : `Worker reload skipped ${pc.yellow('!')}`;
+        writeFusionInstallState(version, selectedIDEs, selectedMode, selectedProfile);
+        return `能力安装状态已记录 ${pc.green('OK')}`;
+      },
+    },
+    {
+      title: '检查运行时依赖',
+      task: async () => {
+        return packagedInstallHasRuntimeDependencies()
+          ? `运行时依赖已存在 ${pc.green('OK')}`
+          : `运行时依赖未预装，相关功能会在首次使用时提示 ${pc.yellow('!')}`;
+      },
+    },
+    {
+      title: '准备 Bun 和 uv',
+      task: async (message) => {
+        message('正在运行 smart-install...');
+        return runSmartInstall()
+          ? `运行时依赖已就绪 ${pc.green('OK')}`
+          : `运行时依赖可能需要检查 ${pc.yellow('!')}`;
       },
     },
   ]);
@@ -562,18 +639,30 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
   // IDE-specific setup
   const failedIDEs = await setupIDEs(selectedIDEs);
 
+  await runTasks([
+    {
+      title: '重新加载 worker 设置',
+      task: async () => {
+        return restartInstalledWorker()
+          ? `worker 设置已重新加载 ${pc.green('OK')}`
+          : `worker 重新加载已跳过 ${pc.yellow('!')}`;
+      },
+    },
+  ]);
+
   // Summary
-  const installStatus = failedIDEs.length > 0 ? 'Installation Partial' : 'Installation Complete';
+  const installStatus = failedIDEs.length > 0 ? '安装部分完成' : '安装完成';
   const summaryLines = [
-    `Version:     ${pc.cyan(version)}`,
-    `Plugin dir:  ${pc.cyan(marketplaceDir)}`,
-    `IDEs:        ${pc.cyan(selectedIDEs.join(', '))}`,
+    `版本：        ${pc.cyan(version)}`,
+    `插件目录：    ${pc.cyan(marketplaceDir)}`,
+    `IDE：        ${pc.cyan(selectedIDEs.join(', '))}`,
   ];
+  summaryLines.push(`能力配置：    ${pc.cyan(selectedProfile ?? readFusionProfile().name)}`);
   if (selectedMode) {
-    summaryLines.push(`Mode:        ${pc.cyan(selectedMode)}`);
+    summaryLines.push(`语言模式：    ${pc.cyan(selectedMode)}`);
   }
   if (failedIDEs.length > 0) {
-    summaryLines.push(`Failed:      ${pc.red(failedIDEs.join(', '))}`);
+    summaryLines.push(`失败项：      ${pc.red(failedIDEs.join(', '))}`);
   }
 
   if (isInteractive) {
@@ -584,34 +673,34 @@ export async function runInstallCommand(options: InstallOptions = {}): Promise<v
   }
 
   const workerPort = process.env.CLAUDE_MEM_WORKER_PORT || '37777';
-  const nextSteps = [`Start worker: ${pc.bold('npx ccx-mem start')}`];
+  const nextSteps = [`启动 worker：${pc.bold('npx ccx-ecc-mem start')}`];
 
   if (selectedIDEs.includes('claude-code')) {
-    nextSteps.push('Restart Claude Code and start a conversation.');
-    nextSteps.push(`Search past work: use ${pc.bold('/mem-search')} in Claude Code`);
+    nextSteps.push('重启 Claude Code，然后开始一个新会话。');
+    nextSteps.push(`搜索历史工作：在 Claude Code 中使用 ${pc.bold('/mem-search')}`);
   }
 
   if (selectedIDEs.includes('codex-cli')) {
-    nextSteps.push('Run Codex CLI from your project workspace to let transcript watching capture sessions.');
+    nextSteps.push('在项目工作区运行 Codex CLI，worker 会自动监听已启用的 transcript。');
   }
 
-  nextSteps.push(`View your memories: ${pc.underline(`http://localhost:${workerPort}`)}`);
+  nextSteps.push(`打开 Viewer：${pc.underline(`http://localhost:${workerPort}`)}`);
 
   if (isInteractive) {
-    p.note(nextSteps.join('\n'), 'Next Steps');
+    p.note(nextSteps.join('\n'), '下一步');
     if (failedIDEs.length > 0) {
-      p.outro(pc.yellow('claude-mem installed with some IDE setup failures.'));
+      p.outro(pc.yellow('ccx-ecc-mem 已安装，但部分 IDE 设置失败。'));
     } else {
-      p.outro(pc.green('claude-mem installed successfully!'));
+      p.outro(pc.green('ccx-ecc-mem 安装成功。'));
     }
   } else {
-    console.log('\n  Next Steps');
+    console.log('\n  下一步');
     nextSteps.forEach(l => console.log(`  ${l}`));
     if (failedIDEs.length > 0) {
-      console.log('\nclaude-mem installed with some IDE setup failures.');
+      console.log('\nccx-ecc-mem 已安装，但部分 IDE 设置失败。');
       process.exitCode = 1;
     } else {
-      console.log('\nclaude-mem installed successfully!');
+      console.log('\nccx-ecc-mem 安装成功。');
     }
   }
 }

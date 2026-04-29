@@ -8,10 +8,10 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
 
-const PLUGIN_SETTINGS_KEY = 'ccx-mem@remote1993';
+const PLUGIN_SETTINGS_KEY = 'ccx-ecc-mem@remote1993';
 
 /**
- * Check if claude-mem is disabled in Claude Code's settings (#781).
+ * Check if ccx-ecc-mem is disabled in Claude Code's settings (#781).
  * Sync read + JSON parse for speed — called before any async work.
  * Returns true only if the plugin is explicitly disabled (enabledPlugins[key] === false).
  */

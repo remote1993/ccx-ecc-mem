@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smart Install Script for ccx-mem
+ * Smart Install Script for ccx-ecc-mem
  *
  * Ensures Bun runtime and uv (Python package manager) are installed
  * (auto-installs if missing) and handles dependency installation when needed.
@@ -22,7 +22,7 @@ function isPluginDisabledInClaudeSettings() {
     const settingsPath = join(configDir, 'settings.json');
     if (!existsSync(settingsPath)) return false;
     const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
-    return settings?.enabledPlugins?.['ccx-mem@remote1993'] === false;
+    return settings?.enabledPlugins?.['ccx-ecc-mem@remote1993'] === false;
   } catch {
     return false;
   }
@@ -40,8 +40,8 @@ const IS_WINDOWS = process.platform === 'win32';
  * 1. CLAUDE_PLUGIN_ROOT env var (set by Claude Code for hooks — works for
  *    both cache-based and marketplace installs)
  * 2. Script location (dirname of this file, up one level from scripts/)
- * 3. XDG path (~/.config/claude/plugins/marketplaces/remote1993/ccx-mem)
- * 4. Legacy path (~/.claude/plugins/marketplaces/remote1993/ccx-mem)
+ * 3. XDG path (~/.config/claude/plugins/marketplaces/remote1993)
+ * 4. Legacy path (~/.claude/plugins/marketplaces/remote1993)
  */
 function resolveRoot() {
   // CLAUDE_PLUGIN_ROOT is the authoritative location set by Claude Code
@@ -60,7 +60,7 @@ function resolveRoot() {
   }
 
   // Probe XDG path, then legacy
-  const marketplaceRel = join('plugins', 'marketplaces', 'remote1993', 'ccx-mem');
+  const marketplaceRel = join('plugins', 'marketplaces', 'remote1993');
   const xdg = join(homedir(), '.config', 'claude', marketplaceRel);
   if (existsSync(join(xdg, 'package.json'))) return xdg;
 
@@ -573,61 +573,20 @@ try {
     }
   }
 
-  // Step 2: Ensure uv is installed (REQUIRED for vector search)
+  // Step 2: uv is optional; vector search can prompt when enabled.
   if (!isUvInstalled()) {
-    installUv();
-
-    // Re-check after installation
-    if (!isUvInstalled()) {
-      console.error('❌ uv is required but not available in PATH');
-      console.error('   Please restart your terminal after installation');
-      process.exit(1);
-    }
+    console.error('ℹ️  uv not found. Enhanced vector search can install or prompt for uv when enabled.');
   }
 
-  // Step 3: Install dependencies if needed
-  if (needsInstall()) {
-    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8'));
-    const newVersion = pkg.version;
-
-    installDeps();
-
-    // Verify critical modules are resolvable
-    if (!verifyCriticalModules()) {
-      console.error('⚠️  Retrying install with npm...');
-      try {
-        execSync('npm install --production --legacy-peer-deps', { cwd: ROOT, stdio: ['pipe', 'pipe', 'inherit'], shell: IS_WINDOWS });
-      } catch {
-        // npm also failed
-      }
-      if (!verifyCriticalModules()) {
-        console.error('❌ Dependencies could not be installed. Plugin may not work correctly.');
-        process.exit(1);
-      }
-    }
-
-    console.error('✅ Dependencies installed');
-
-    // Auto-restart worker to pick up new code
-    const port = process.env.CLAUDE_MEM_WORKER_PORT || 37777;
-    console.error(`[ccx-mem] Plugin updated to v${newVersion} - restarting worker...`);
-    try {
-      // Graceful shutdown via HTTP (curl is cross-platform enough)
-      execSync(`curl -s -X POST http://127.0.0.1:${port}/api/admin/shutdown`, {
-        stdio: 'ignore',
-        shell: IS_WINDOWS,
-        timeout: 5000
-      });
-      // Brief wait for port to free
-      execSync(IS_WINDOWS ? 'timeout /t 1 /nobreak >nul' : 'sleep 0.5', {
-        stdio: 'ignore',
-        shell: true
-      });
-    } catch {
-      // Worker wasn't running or already stopped - that's fine
-    }
-    // Worker will be started fresh by next hook in chain (worker-service.cjs start)
-  }
+  // Step 3: Do not install heavyweight parser dependencies during default setup.
+  writeFileSync(MARKER, JSON.stringify({
+    version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')).version,
+    bun: getBunVersion(),
+    uv: getUvVersion(),
+    dependencies: existsSync(join(ROOT, 'node_modules')) ? 'present' : 'deferred',
+    installedAt: new Date().toISOString()
+  }));
+  console.error('✅ Runtime checks completed');
 
   // Step 4: Install CLI to PATH
   installCLI();

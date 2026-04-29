@@ -15,13 +15,12 @@ import { exec, execSync, spawn, spawnSync } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../../utils/logger.js';
 import { HOOK_TIMEOUTS } from '../../shared/hook-constants.js';
+import { DATA_DIR } from '../../shared/paths.js';
 import { sanitizeEnv } from '../../supervisor/env-sanitizer.js';
 import { getSupervisor, validateWorkerPidFile, type ValidateWorkerPidStatus } from '../../supervisor/index.js';
 
 const execAsync = promisify(exec);
 
-// Standard paths for PID file management
-const DATA_DIR = path.join(homedir(), '.claude-mem');
 const PID_FILE = path.join(DATA_DIR, 'worker.pid');
 
 // Orphaned process cleanup patterns and thresholds
@@ -548,6 +547,16 @@ const AGGRESSIVE_CLEANUP_PATTERNS = ['worker-service.cjs', 'chroma-mcp'];
 // Patterns that keep the age-gated threshold (may be legitimately running)
 const AGE_GATED_CLEANUP_PATTERNS = ['mcp-server.cjs'];
 
+export function isAggressiveCleanupTargetCommand(commandLine: string): boolean {
+  if (commandLine.includes('worker-service.cjs')) {
+    return commandLine.includes('--daemon');
+  }
+
+  return AGGRESSIVE_CLEANUP_PATTERNS
+    .filter(pattern => pattern !== 'worker-service.cjs')
+    .some(pattern => commandLine.includes(pattern));
+}
+
 /**
  * Enumerate processes for aggressive startup cleanup. Aggressive patterns are
  * killed immediately; age-gated patterns only if older than ORPHAN_MAX_AGE_MINUTES.
@@ -584,7 +593,7 @@ async function enumerateAggressiveCleanupProcesses(
       if (!Number.isInteger(pid) || pid <= 0 || protectedPids.has(pid)) continue;
 
       const commandLine = proc.CommandLine || '';
-      const isAggressive = AGGRESSIVE_CLEANUP_PATTERNS.some(p => commandLine.includes(p));
+      const isAggressive = isAggressiveCleanupTargetCommand(commandLine);
 
       if (isAggressive) {
         // Kill immediately — no age check
@@ -626,7 +635,7 @@ async function enumerateAggressiveCleanupProcesses(
 
       if (!Number.isInteger(pid) || pid <= 0 || protectedPids.has(pid)) continue;
 
-      const isAggressive = AGGRESSIVE_CLEANUP_PATTERNS.some(p => command.includes(p));
+      const isAggressive = isAggressiveCleanupTargetCommand(command);
 
       if (isAggressive) {
         // Kill immediately — no age check

@@ -64,6 +64,28 @@ describe('Plugin Distribution - Required Files', () => {
   }
 });
 
+describe('Plugin Distribution - Manifest Sync', () => {
+  it('keeps the root Claude manifest aligned with the published plugin manifest', () => {
+    const rootManifest = JSON.parse(readFileSync(path.join(projectRoot, '.claude-plugin/plugin.json'), 'utf-8'));
+    const publishedManifest = JSON.parse(readFileSync(path.join(projectRoot, 'plugin/.claude-plugin/plugin.json'), 'utf-8'));
+    const expectedRootManifest = {
+      ...publishedManifest,
+      skills: publishedManifest.skills.map((entry: string) => `./plugin/${entry.replace(/^\.\//, '')}`),
+      commands: publishedManifest.commands.map((entry: string) => `./plugin/${entry.replace(/^\.\//, '')}`)
+    };
+
+    expect(rootManifest).toEqual(expectedRootManifest);
+  });
+
+  it('keeps Claude manifests compatible with Claude Code validation', () => {
+    const marketplaceManifest = JSON.parse(readFileSync(path.join(projectRoot, '.claude-plugin/marketplace.json'), 'utf-8'));
+    const publishedManifest = JSON.parse(readFileSync(path.join(projectRoot, 'plugin/.claude-plugin/plugin.json'), 'utf-8'));
+
+    expect(marketplaceManifest.version).toBeUndefined();
+    expect(publishedManifest.features).toBeUndefined();
+  });
+});
+
 describe('Plugin Distribution - hooks.json Integrity', () => {
   it('should have valid JSON in hooks.json', () => {
     const hooksPath = path.join(projectRoot, 'plugin/hooks/hooks.json');
@@ -90,7 +112,7 @@ describe('Plugin Distribution - hooks.json Integrity', () => {
   it('should include CLAUDE_PLUGIN_ROOT fallback in all hook commands (#1215)', () => {
     const hooksPath = path.join(projectRoot, 'plugin/hooks/hooks.json');
     const parsed = JSON.parse(readFileSync(hooksPath, 'utf-8'));
-    const expectedFallbackPath = '$HOME/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin';
+    const expectedFallbackPath = '$HOME/.claude/plugins/marketplaces/remote1993/plugin';
 
     for (const [eventName, matchers] of Object.entries(parsed.hooks)) {
       for (const matcher of matchers as any[]) {
@@ -106,8 +128,8 @@ describe('Plugin Distribution - hooks.json Integrity', () => {
   it('should try cache path before marketplaces fallback in all hook commands (#1533)', () => {
     const hooksPath = path.join(projectRoot, 'plugin/hooks/hooks.json');
     const parsed = JSON.parse(readFileSync(hooksPath, 'utf-8'));
-    const cachePath = '$HOME/.claude/plugins/cache/remote1993/ccx-mem';
-    const marketplacesPath = '$HOME/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin';
+    const cachePath = '$HOME/.claude/plugins/cache/remote1993/ccx-ecc-mem';
+    const marketplacesPath = '$HOME/.claude/plugins/marketplaces/remote1993/plugin';
 
     for (const [eventName, matchers] of Object.entries(parsed.hooks)) {
       for (const matcher of matchers as any[]) {
@@ -128,14 +150,43 @@ describe('Plugin Distribution - package.json Files Field', () => {
     const packageJsonPath = path.join(projectRoot, 'package.json');
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
     expect(packageJson.files).toBeDefined();
+    expect(packageJson.files).toContain('.claude-plugin');
     expect(packageJson.files).toContain('plugin/.claude-plugin');
+    expect(packageJson.files).toContain('plugin/.mcp.json');
     expect(packageJson.files).toContain('plugin/hooks');
     expect(packageJson.files).toContain('plugin/modes');
     expect(packageJson.files).toContain('plugin/scripts/*.js');
     expect(packageJson.files).toContain('plugin/scripts/*.cjs');
     expect(packageJson.files).toContain('plugin/skills');
+    expect(packageJson.files).toContain('plugin/ecc');
+    expect(packageJson.files).toContain('plugin/fusion');
     expect(packageJson.files).toContain('plugin/ui');
     expect(packageJson.files).not.toContain('plugin');
+  });
+
+  it('should expose preinstalled ECC skills while keeping commands curated', () => {
+    const pluginManifest = JSON.parse(readFileSync(path.join(projectRoot, 'plugin/.claude-plugin/plugin.json'), 'utf-8'));
+    expect(pluginManifest.skills).toContain('./ecc/skills/');
+    expect(pluginManifest.commands).not.toContain('./ecc/commands/');
+    expect(pluginManifest.commands).toContain('./fusion/');
+  });
+
+  it('should keep non-curated ECC hooks and external MCP catalogs inert', () => {
+    const pluginManifest = JSON.parse(readFileSync(path.join(projectRoot, 'plugin/.claude-plugin/plugin.json'), 'utf-8'));
+    const manifestText = JSON.stringify(pluginManifest);
+    const hooksText = readFileSync(path.join(projectRoot, 'plugin/hooks/hooks.json'), 'utf-8');
+    const mcpConfig = JSON.parse(readFileSync(path.join(projectRoot, 'plugin/.mcp.json'), 'utf-8'));
+
+    expect(manifestText).not.toContain('ecc/hooks');
+    expect(manifestText).not.toContain('ecc/mcp-configs');
+    expect(hooksText).not.toContain('plugin/ecc/hooks/hooks.json');
+    expect(Object.keys(mcpConfig.mcpServers)).toEqual(['mcp-search']);
+  });
+
+  it('should include the complete preinstalled ECC capability library', () => {
+    const packageJsonPath = path.join(projectRoot, 'package.json');
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+    expect(packageJson.files).toContain('plugin/ecc');
   });
 });
 
@@ -175,6 +226,55 @@ describe('Plugin Distribution - Build Script Verification', () => {
     expect(content).toContain('plugin/skills/mem-search/SKILL.md');
     expect(content).toContain('plugin/hooks/hooks.json');
     expect(content).toContain('plugin/.claude-plugin/plugin.json');
+  });
+});
+
+describe('Plugin Distribution - Fusion Registry', () => {
+  it('should include the curated fusion registry and generated active view', () => {
+    const registryPath = path.join(projectRoot, 'plugin/fusion/registry.json');
+    const activeViewPath = path.join(projectRoot, 'plugin/fusion/active-view.json');
+    expect(existsSync(registryPath)).toBe(true);
+    expect(existsSync(activeViewPath)).toBe(true);
+
+    const registry = JSON.parse(readFileSync(registryPath, 'utf-8'));
+    const activeView = JSON.parse(readFileSync(activeViewPath, 'utf-8'));
+    expect(registry.defaultProfile).toBe('core');
+    expect(registry.schema).toBe('capability-registry');
+    expect(activeView.defaultProfile).toBe('core');
+    expect(activeView.schema).toBe('capability-registry');
+    expect(activeView.activeCapabilities.length).toBeGreaterThan(0);
+    expect(activeView.activeCapabilities.some((capability: any) => capability.kind === 'skill')).toBe(true);
+    expect(activeView.activeCapabilities.some((capability: any) => capability.kind === 'command')).toBe(true);
+    expect(activeView.activeCapabilities.some((capability: any) => capability.kind === 'agent')).toBe(false);
+    expect(activeView.capabilitiesByStatus.optional.some((capability: any) => capability.kind === 'agent')).toBe(true);
+  });
+
+  it('should publish every default active capability implementation path', () => {
+    const registryPath = path.join(projectRoot, 'plugin/fusion/registry.json');
+    const registry = JSON.parse(readFileSync(registryPath, 'utf-8'));
+    const packageJson = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'));
+    const publishedEntries = packageJson.files as string[];
+    const capabilitiesById = new Map(registry.capabilities.map((capability: any) => [capability.id, capability]));
+
+    function resolveProfile(profileName: string, seen = new Set<string>()): string[] {
+      const profile = registry.profiles[profileName];
+      if (!profile || seen.has(profileName)) return [];
+      seen.add(profileName);
+      const inherited = (profile.extends ?? []).flatMap((parent: string) => resolveProfile(parent, seen));
+      return [...new Set([...inherited, ...(profile.capabilities ?? [])])];
+    }
+
+    const activeCapabilities = resolveProfile(registry.defaultProfile)
+      .map((id) => capabilitiesById.get(id))
+      .filter(Boolean) as any[];
+
+    for (const capability of activeCapabilities) {
+      const implementationPath = capability.implementation.path;
+      const isPublished = publishedEntries.some((entry) =>
+        implementationPath === entry || implementationPath.startsWith(`${entry}/`),
+      );
+      expect(isPublished).toBe(true);
+    }
   });
 });
 

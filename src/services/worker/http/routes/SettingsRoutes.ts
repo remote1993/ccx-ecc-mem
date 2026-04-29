@@ -3,18 +3,17 @@
  *
  * Handles persisted runtime settings for the worker and viewer.
  * Legacy MCP and branch endpoints remain available as compatibility surfaces.
- * Settings are stored in ~/.claude-mem/settings.json
+ * Settings are stored in the configured ccx-ecc-mem data directory.
  */
 
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync } from 'fs';
-import { homedir } from 'os';
-import { getPackageRoot } from '../../../../shared/paths.js';
+import { getPackageRoot, getUserSettingsPath } from '../../../../shared/paths.js';
 import { logger } from '../../../../utils/logger.js';
 import { SettingsManager } from '../../SettingsManager.js';
 import { getBranchInfo, switchBranch, pullUpdates } from '../../BranchManager.js';
-import { ModeManager } from '../../domain/ModeManager.js';
+import { ModeManager } from '../../../domain/ModeManager.js';
 import { BaseRouteHandler } from '../BaseRouteHandler.js';
 import { SettingsDefaultsManager } from '../../../../shared/SettingsDefaultsManager.js';
 import { clearPortCache } from '../../../../shared/worker-utils.js';
@@ -44,17 +43,17 @@ export class SettingsRoutes extends BaseRouteHandler {
   }
 
   /**
-   * Get environment settings (from ~/.claude-mem/settings.json)
+   * Get environment settings from the configured data directory.
    */
   private handleGetSettings = this.wrapHandler((req: Request, res: Response): void => {
-    const settingsPath = path.join(homedir(), '.claude-mem', 'settings.json');
+    const settingsPath = getUserSettingsPath();
     this.ensureSettingsFile(settingsPath);
     const settings = SettingsDefaultsManager.loadFromFile(settingsPath);
     res.json(settings);
   });
 
   /**
-   * Update environment settings (in ~/.claude-mem/settings.json) with validation
+   * Update environment settings in the configured data directory.
    */
   private handleUpdateSettings = this.wrapHandler((req: Request, res: Response): void => {
     // Validate all settings
@@ -68,7 +67,7 @@ export class SettingsRoutes extends BaseRouteHandler {
     }
 
     // Read existing settings
-    const settingsPath = path.join(homedir(), '.claude-mem', 'settings.json');
+    const settingsPath = getUserSettingsPath();
     this.ensureSettingsFile(settingsPath);
     let settings: any = {};
 
@@ -81,7 +80,7 @@ export class SettingsRoutes extends BaseRouteHandler {
         logger.error('HTTP', 'Failed to parse settings file', { settingsPath }, normalizedParseError);
         res.status(500).json({
           success: false,
-          error: 'Settings file is corrupted. Delete ~/.claude-mem/settings.json to reset.'
+          error: `Settings file is corrupted. Delete ${settingsPath} to reset.`
         });
         return;
       }
@@ -107,7 +106,7 @@ export class SettingsRoutes extends BaseRouteHandler {
   });
 
   /**
-   * Get available custom API models from supported providers.
+   * Generic custom APIs do not have a portable model discovery endpoint.
    */
   private handleGetCustomModels = this.wrapHandler(async (req: Request, res: Response): Promise<void> => {
     const baseUrl = String(req.body?.baseUrl || '').trim();
@@ -118,47 +117,7 @@ export class SettingsRoutes extends BaseRouteHandler {
       return;
     }
 
-    const provider = this.detectModelProvider(baseUrl);
-    if (provider !== 'openrouter') {
-      res.json({ provider, models: [] });
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15_000);
-
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/models', {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        res.status(response.status).json({
-          provider,
-          models: [],
-          error: `OpenRouter models request failed (${response.status})`,
-        });
-        return;
-      }
-
-      const data = await response.json() as { data?: Array<{ id?: unknown; name?: unknown }> };
-      const models = (data.data || [])
-        .map((model) => ({
-          id: typeof model.id === 'string' ? model.id : '',
-          name: typeof model.name === 'string' ? model.name : undefined,
-        }))
-        .filter((model) => model.id)
-        .sort((a, b) => a.id.localeCompare(b.id));
-
-      res.json({ provider, models });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.warn('HTTP', 'Failed to load custom API model list', { provider, error: message });
-      res.status(502).json({ provider, models: [], error: message });
-    } finally {
-      clearTimeout(timeout);
-    }
+    res.json({ provider: 'custom', models: [] });
   });
 
   private handleTestCustomModel = this.wrapHandler(async (req: Request, res: Response): Promise<void> => {
@@ -208,15 +167,6 @@ export class SettingsRoutes extends BaseRouteHandler {
       clearTimeout(timeout);
     }
   });
-
-  private detectModelProvider(baseUrl: string): 'openrouter' | 'custom' {
-    try {
-      const hostname = new URL(baseUrl).hostname.toLowerCase();
-      return hostname === 'openrouter.ai' || hostname.endsWith('.openrouter.ai') ? 'openrouter' : 'custom';
-    } catch {
-      return 'custom';
-    }
-  }
 
   /**
    * GET /api/mcp/status - Check if MCP search server is enabled

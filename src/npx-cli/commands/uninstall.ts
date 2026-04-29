@@ -1,5 +1,5 @@
 /**
- * Uninstall command for `npx ccx-mem uninstall`.
+ * Uninstall command for `npx ccx-ecc-mem uninstall`.
  *
  * Removes the plugin from the marketplace directory, cache, plugin
  * registrations, and Claude settings. Also cleans up Codex transcript
@@ -13,10 +13,14 @@ import { existsSync, rmSync } from 'fs';
 import { join } from 'path';
 import {
   claudeSettingsPath,
+  fusionInstallStatePath,
+  INSTALLED_PLUGIN_ID,
   installedPluginsPath,
   isPluginInstalled,
   knownMarketplacesPath,
   marketplaceDirectory,
+  PLUGIN_OWNER,
+  PLUGIN_SLUG,
   pluginsDirectory,
   writeJsonFileAtomic,
 } from '../utils/paths.js';
@@ -36,7 +40,7 @@ function removeMarketplaceDirectory(): boolean {
 }
 
 function removeCacheDirectory(): boolean {
-  const cacheDirectory = join(pluginsDirectory(), 'cache', 'remote1993', 'ccx-mem');
+  const cacheDirectory = join(pluginsDirectory(), 'cache', PLUGIN_OWNER, PLUGIN_SLUG);
   if (existsSync(cacheDirectory)) {
     rmSync(cacheDirectory, { recursive: true, force: true });
     return true;
@@ -44,26 +48,35 @@ function removeCacheDirectory(): boolean {
   return false;
 }
 
+function removeFusionInstallState(): boolean {
+  const installStatePath = fusionInstallStatePath();
+  if (existsSync(installStatePath)) {
+    rmSync(installStatePath, { force: true });
+    return true;
+  }
+  return false;
+}
+
 function removeFromKnownMarketplaces(): void {
   const knownMarketplaces = readJsonSafe<Record<string, any>>(knownMarketplacesPath(), {});
-  if (knownMarketplaces['remote1993']) {
-    delete knownMarketplaces['remote1993'];
+  if (knownMarketplaces[PLUGIN_OWNER]) {
+    delete knownMarketplaces[PLUGIN_OWNER];
     writeJsonFileAtomic(knownMarketplacesPath(), knownMarketplaces);
   }
 }
 
 function removeFromInstalledPlugins(): void {
   const installedPlugins = readJsonSafe<Record<string, any>>(installedPluginsPath(), {});
-  if (installedPlugins.plugins?.['ccx-mem@remote1993']) {
-    delete installedPlugins.plugins['ccx-mem@remote1993'];
+  if (installedPlugins.plugins?.[INSTALLED_PLUGIN_ID]) {
+    delete installedPlugins.plugins[INSTALLED_PLUGIN_ID];
     writeJsonFileAtomic(installedPluginsPath(), installedPlugins);
   }
 }
 
 function removeFromClaudeSettings(): void {
   const settings = readJsonSafe<Record<string, any>>(claudeSettingsPath(), {});
-  if (settings.enabledPlugins?.['ccx-mem@remote1993'] !== undefined) {
-    delete settings.enabledPlugins['ccx-mem@remote1993'];
+  if (settings.enabledPlugins?.[INSTALLED_PLUGIN_ID] !== undefined) {
+    delete settings.enabledPlugins[INSTALLED_PLUGIN_ID];
     writeJsonFileAtomic(claudeSettingsPath(), settings);
   }
 }
@@ -73,10 +86,10 @@ function removeFromClaudeSettings(): void {
 // ---------------------------------------------------------------------------
 
 export async function runUninstallCommand(): Promise<void> {
-  p.intro(pc.bgRed(pc.white(' claude-mem uninstall ')));
+  p.intro(pc.bgRed(pc.white(' ccx-ecc-mem uninstall ')));
 
   if (!isPluginInstalled()) {
-    p.log.warn('claude-mem does not appear to be installed.');
+    p.log.warn('ccx-ecc-mem does not appear to be installed.');
 
     // Still offer to clean up partial state
     if (process.stdin.isTTY) {
@@ -95,7 +108,7 @@ export async function runUninstallCommand(): Promise<void> {
     }
   } else if (process.stdin.isTTY) {
     const shouldContinue = await p.confirm({
-      message: 'Are you sure you want to uninstall claude-mem?',
+      message: 'Are you sure you want to uninstall ccx-ecc-mem?',
       initialValue: false,
     });
 
@@ -151,6 +164,15 @@ export async function runUninstallCommand(): Promise<void> {
       },
     },
     {
+      title: 'Removing fusion install state',
+      task: async () => {
+        const removed = removeFusionInstallState();
+        return removed
+          ? `Fusion install state removed ${pc.green('OK')}`
+          : `Fusion install state not found ${pc.dim('skipped')}`;
+      },
+    },
+    {
       title: 'Removing marketplace registration',
       task: async () => {
         removeFromKnownMarketplaces();
@@ -175,7 +197,7 @@ export async function runUninstallCommand(): Promise<void> {
 
   const ideCleanups: Array<{ label: string; fn: () => Promise<number> | number }> = [
     {
-      label: 'Codex CLI transcript watch',
+      label: 'Codex CLI transcript ingestion',
       fn: async () => {
         const { uninstallCodexCli } = await import('../../services/integrations/CodexCliInstaller.js');
         return uninstallCodexCli();
@@ -203,5 +225,5 @@ export async function runUninstallCommand(): Promise<void> {
     'Note',
   );
 
-  p.outro(pc.green('claude-mem has been uninstalled.'));
+  p.outro(pc.green('ccx-ecc-mem has been uninstalled.'));
 }

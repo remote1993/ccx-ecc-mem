@@ -1,14 +1,13 @@
 import { execFile } from 'child_process';
 import { rmSync } from 'fs';
-import { homedir } from 'os';
 import path from 'path';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
 import { HOOK_TIMEOUTS } from '../shared/hook-constants.js';
+import { DATA_DIR } from '../shared/paths.js';
 import { isPidAlive, type ManagedProcessRecord, type ProcessRegistry } from './process-registry.js';
 
 const execFileAsync = promisify(execFile);
-const DATA_DIR = path.join(homedir(), '.claude-mem');
 const PID_FILE = path.join(DATA_DIR, 'worker.pid');
 
 type TreeKillFn = (pid: number, signal?: string, callback?: (error?: Error | null) => void) => void;

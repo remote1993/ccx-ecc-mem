@@ -1,6 +1,6 @@
 ---
 title: "Configuration"
-description: "Environment variables and settings for Claude-Mem"
+description: "Environment variables and settings for ccx-ecc-mem"
 ---
 
 # Configuration
@@ -13,27 +13,29 @@ Settings are managed in `~/.claude-mem/settings.json`. The file is auto-created 
 
 | Setting                       | Default                         | Description                           |
 |-------------------------------|---------------------------------|---------------------------------------|
-| `CLAUDE_MEM_MODEL`            | `sonnet`                        | Claude model alias used by compatible custom APIs when processing observations |
-| `CLAUDE_MEM_MODE`             | `code`                          | Active mode profile (e.g., `code--es`, `email-investigation`) |
+| `CLAUDE_MEM_MODEL`            | `claude-sonnet-4-6`             | Claude model alias used by compatible custom APIs when processing observations |
+| `CLAUDE_MEM_MODE`             | `code--zh`                      | Active mode profile and default language |
 | `CLAUDE_MEM_CONTEXT_OBSERVATIONS` | `50`                        | Number of observations to inject      |
 | `CLAUDE_MEM_WORKER_PORT`      | `37777`                         | Worker service port                   |
 | `CLAUDE_MEM_WORKER_HOST`      | `127.0.0.1`                     | Worker service host address           |
 | `CLAUDE_MEM_SKIP_TOOLS`       | `ListMcpResourcesTool,SlashCommand,Skill,TodoWrite,AskUserQuestion` | Comma-separated tools to exclude from observations |
+| `CLAUDE_MEM_CHROMA_ENABLED`   | `false`                         | Enable optional Chroma semantic retrieval; SQLite search remains active when false |
+| `CLAUDE_MEM_TRANSCRIPTS_ENABLED` | `false`                      | Enable Codex CLI transcript ingestion; the Codex installer sets this to `true` |
 
 ### Custom API Settings
 
 | Setting                               | Default                               | Description |
 |---------------------------------------|---------------------------------------|-------------|
-| `CLAUDE_MEM_CUSTOM_BASE_URL`          | `https://openrouter.ai/api/v1/chat/completions` | OpenAI-compatible chat completions endpoint used by the worker |
+| `CLAUDE_MEM_CUSTOM_BASE_URL`          | —                                     | OpenAI-compatible chat completions endpoint used by the worker |
 | `CLAUDE_MEM_CUSTOM_API_KEY`           | —                                     | API key used for custom API requests |
-| `CLAUDE_MEM_CUSTOM_MODEL`             | `xiaomi/mimo-v2-flash:free`           | Model identifier sent to the custom API |
-| `CLAUDE_MEM_CUSTOM_APP_NAME`          | `claude-mem`                          | Optional application name sent as the request title |
+| `CLAUDE_MEM_CUSTOM_MODEL`             | —                                     | Model identifier sent to the custom API |
+| `CLAUDE_MEM_CUSTOM_APP_NAME`          | `ccx-mem`                             | Optional application name sent as the request title |
 | `CLAUDE_MEM_CUSTOM_MAX_CONTEXT_MESSAGES` | `20`                               | Maximum recent messages retained before truncation |
 | `CLAUDE_MEM_CUSTOM_MAX_TOKENS`        | `100000`                              | Estimated token budget used when truncating conversation history |
 | `CLAUDE_MEM_CUSTOM_TIMEOUT_MS`        | `120000`                              | Request timeout in milliseconds |
 | `CLAUDE_MEM_CUSTOM_TEMPERATURE`       | `0.3`                                 | Sampling temperature sent to the custom API |
 
-Claude-mem currently uses a single worker-side custom API path built around an OpenAI-compatible chat completions request/response shape. Configure these fields in `~/.claude-mem/settings.json` to point observation extraction at your own compatible endpoint.
+ccx-ecc-mem currently uses a single worker-side custom API path built around an OpenAI-compatible chat completions request/response shape. Configure these fields in `~/.claude-mem/settings.json` to point observation extraction at your own compatible endpoint.
 
 ### System Configuration
 
@@ -82,9 +84,16 @@ Configure the active workflow mode and language.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `CLAUDE_MEM_MODE` | `code` | Defines behavior and language. See [Modes & Languages](modes). |
+| `CLAUDE_MEM_MODE` | `code--zh` | Defines behavior and language. See [Modes & Languages](modes). |
 
 ### Examples
+
+**Chinese Code Mode (default):**
+```json
+{
+  "CLAUDE_MEM_MODE": "code--zh"
+}
+```
 
 **Spanish Code Mode:**
 ```json
@@ -154,7 +163,7 @@ Current lifecycle coverage includes `Setup`, `SessionStart`, `UserPromptSubmit`,
 
 ### Search Configuration
 
-Claude-Mem provides worker-backed retrieval for querying your project history.
+ccx-ecc-mem provides worker-backed retrieval for querying your project history.
 
 The current runtime reads and serves stored context through the worker HTTP API and viewer surfaces. Where enabled, legacy MCP tooling remains available as a compatibility surface.
 
@@ -165,7 +174,7 @@ Retrieval operations are available via:
 
 ## Version Channel
 
-Claude-Mem supports switching between stable and beta versions via the web viewer UI.
+ccx-ecc-mem supports switching between stable and beta versions via the web viewer UI.
 
 ### Accessing Version Channel
 
@@ -191,7 +200,7 @@ Worker service is managed by Bun as a background process. The worker auto-starts
 
 ## Folder Context Files
 
-Claude-mem can automatically generate `CLAUDE.md` files in your project folders with activity timelines. This feature is disabled by default.
+ccx-ecc-mem can automatically generate `CLAUDE.md` files in your project folders with activity timelines. This feature is disabled by default.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -201,7 +210,7 @@ See [Folder Context Files](usage/folder-context) for full documentation on how t
 
 ## Context Injection Configuration
 
-Claude-Mem injects past observations into each new session, giving Claude awareness of recent work. You can configure exactly what gets injected using the **Context Settings Modal**.
+ccx-ecc-mem injects past observations into each new session, giving Claude awareness of recent work. You can configure exactly what gets injected using the **Context Settings Modal**.
 
 ### Context Settings Modal
 

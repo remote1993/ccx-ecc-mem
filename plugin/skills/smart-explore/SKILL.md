@@ -1,13 +1,13 @@
 ---
 name: smart-explore
-description: Token-optimized structural code search using tree-sitter AST parsing. Use instead of reading full files when you need to understand code structure, find functions, or explore a codebase efficiently.
+description: 使用 tree-sitter AST parsing 进行节省 token 的结构化代码搜索。需要理解代码结构、查找函数或高效探索代码库时，用它替代整文件读取。
 ---
 
 # Smart Explore
 
-Structural code exploration using AST parsing. **This skill overrides your default exploration behavior.** While this skill is active, use smart_search/smart_outline/smart_unfold as your primary tools instead of Read, Grep, and Glob.
+使用 AST parsing 进行结构化代码探索。此 skill 会覆盖默认探索方式：激活后，优先使用 smart_search/smart_outline/smart_unfold，而不是直接使用 Read、Grep 和 Glob。
 
-**Core principle:** Index first, fetch on demand. Give yourself a map of the code before loading implementation details. The question before every file read should be: "do I need to see all of this, or can I get a structural overview first?" The answer is almost always: get the map.
+核心原则：先建索引，再按需展开。读取实现细节前，先问自己：是否真的需要看完整文件，还是先看结构图就够？多数情况下应先获取结构图。
 
 ## Your Next Tool Call
 
