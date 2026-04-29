@@ -3,19 +3,52 @@ import type { Capability, ViewerCapabilitiesResponse } from '../types';
 import type { ViewerLabels } from '../i18n';
 
 interface CapabilityCenterProps {
+  isOpen: boolean;
+  onClose: () => void;
   data: ViewerCapabilitiesResponse | null;
   labels: ViewerLabels;
   isLoading: boolean;
   error?: string | null;
 }
 
-function CapabilityFrame({ children }: { children: React.ReactNode }) {
+function CapabilityDialog({
+  children,
+  labels,
+  onClose,
+  runtime,
+}: {
+  children: React.ReactNode;
+  labels: ViewerLabels;
+  onClose: () => void;
+  runtime?: React.ReactNode;
+}) {
   return (
-    <section className="capability-shell">
-      <div className="capability-center">
-        {children}
+    <div className="modal-backdrop capability-backdrop" onClick={onClose}>
+      <div className="capability-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header capability-modal-header">
+          <div className="capability-modal-title">
+            <h2>{labels.capabilityCenter}</h2>
+            <p>{labels.capabilityCenterDescription}</p>
+          </div>
+          <div className="header-controls capability-header-controls">
+            {runtime}
+            <button
+              onClick={onClose}
+              className="modal-close-btn"
+              title={labels.closeEsc}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="capability-modal-body">
+          {children}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -63,30 +96,35 @@ function CapabilityGroup({ title, capabilities, locale }: { title: string; capab
   );
 }
 
-export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityCenterProps) {
+export function CapabilityCenter({ isOpen, onClose, data, labels, isLoading, error }: CapabilityCenterProps) {
   const [selectedStatus, setSelectedStatus] = React.useState('all');
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   if (error) {
     return (
-      <CapabilityFrame>
-        <header className="capability-center-header">
-          <h1>{labels.capabilityCenter}</h1>
-        </header>
+      <CapabilityDialog labels={labels} onClose={onClose}>
         <p className="capability-error">{error}</p>
-      </CapabilityFrame>
+      </CapabilityDialog>
     );
   }
 
   if (!data) {
     return (
-      <CapabilityFrame>
-        <header className="capability-center-header">
-          <h1>{labels.capabilityCenter}</h1>
-        </header>
+      <CapabilityDialog labels={labels} onClose={onClose}>
         <div className="feed-state">
           {isLoading ? labels.loading : labels.noItems}
         </div>
-      </CapabilityFrame>
+      </CapabilityDialog>
     );
   }
 
@@ -111,24 +149,21 @@ export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityC
     ? groupDefinitions
     : groupDefinitions.filter(group => group.status === selectedStatus);
 
-  return (
-    <CapabilityFrame>
-      <div className="capability-center-header">
-        <div>
-          <h1>{labels.capabilityCenter}</h1>
-          <p>{labels.capabilityCenterDescription}</p>
-        </div>
-        <dl className="capability-runtime">
-          <div>
-            <dt>{labels.capabilityProfile}</dt>
-            <dd>{data.defaultProfile}</dd>
-          </div>
-          <div>
-            <dt>{labels.capabilityLocale}</dt>
-            <dd>{locale}</dd>
-          </div>
-        </dl>
+  const runtime = (
+    <dl className="capability-runtime">
+      <div>
+        <dt>{labels.capabilityProfile}</dt>
+        <dd>{data.defaultProfile}</dd>
       </div>
+      <div>
+        <dt>{labels.capabilityLocale}</dt>
+        <dd>{locale}</dd>
+      </div>
+    </dl>
+  );
+
+  return (
+    <CapabilityDialog labels={labels} onClose={onClose} runtime={runtime}>
       <div className="capability-tabs" role="tablist" aria-label={labels.capabilityCenter}>
         {tabs.map(tab => (
           <button
@@ -155,6 +190,6 @@ export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityC
           />
         ))}
       </div>
-    </CapabilityFrame>
+    </CapabilityDialog>
   );
 }

@@ -19,6 +19,7 @@ export function App() {
   const [currentFilter, setCurrentFilter] = useState('');
   const [currentSource, setCurrentSource] = useState('all');
   const [contextPreviewOpen, setContextPreviewOpen] = useState(false);
+  const [capabilityCenterOpen, setCapabilityCenterOpen] = useState(false);
   const [logsModalOpen, setLogsModalOpen] = useState(false);
   const [paginatedObservations, setPaginatedObservations] = useState<Observation[]>([]);
   const [paginatedSummaries, setPaginatedSummaries] = useState<Summary[]>([]);
@@ -83,6 +84,10 @@ export function App() {
     setContextPreviewOpen(prev => !prev);
   }, []);
 
+  const toggleCapabilityCenter = useCallback(() => {
+    setCapabilityCenterOpen(prev => !prev);
+  }, []);
+
   // Toggle logs modal
   const toggleLogsModal = useCallback(() => {
     setLogsModalOpen(prev => !prev);
@@ -135,14 +140,9 @@ export function App() {
         themePreference={preference}
         onThemeChange={setThemePreference}
         onContextPreviewToggle={toggleContextPreview}
+        onCapabilityCenterToggle={toggleCapabilityCenter}
+        isCapabilityCenterOpen={capabilityCenterOpen}
         labels={labels}
-      />
-
-      <CapabilityCenter
-        data={capabilities}
-        labels={labels}
-        isLoading={capabilitiesLoading}
-        error={capabilitiesError}
       />
 
       <Feed
@@ -153,6 +153,15 @@ export function App() {
         isLoading={pagination.observations.isLoading || pagination.summaries.isLoading || pagination.prompts.isLoading}
         hasMore={pagination.observations.hasMore || pagination.summaries.hasMore || pagination.prompts.hasMore}
         labels={labels}
+      />
+
+      <CapabilityCenter
+        isOpen={capabilityCenterOpen}
+        onClose={toggleCapabilityCenter}
+        data={capabilities}
+        labels={labels}
+        isLoading={capabilitiesLoading}
+        error={capabilitiesError}
       />
 
       <ContextSettingsModal

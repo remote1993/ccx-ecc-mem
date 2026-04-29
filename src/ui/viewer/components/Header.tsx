@@ -18,6 +18,8 @@ interface HeaderProps {
   themePreference: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
   onContextPreviewToggle: () => void;
+  onCapabilityCenterToggle: () => void;
+  isCapabilityCenterOpen: boolean;
   labels: ViewerLabels;
 }
 
@@ -46,6 +48,8 @@ export function Header({
   themePreference,
   onThemeChange,
   onContextPreviewToggle,
+  onCapabilityCenterToggle,
+  isCapabilityCenterOpen,
   labels
 }: HeaderProps) {
   useSpinningFavicon(isProcessing);
@@ -77,6 +81,14 @@ export function Header({
               {formatSourceLabel(source, labels)}
             </button>
           ))}
+          <button
+            type="button"
+            className={`source-tab capability-launch-tab ${isCapabilityCenterOpen ? 'active' : ''}`}
+            onClick={onCapabilityCenterToggle}
+            aria-pressed={isCapabilityCenterOpen}
+          >
+            {labels.capabilityCenter}
+          </button>
         </div>
       </div>
       <div className="status">
