@@ -1418,9 +1418,19 @@
       }
     }
 
+    .capability-shell {
+      flex: 0 0 auto;
+      width: 100%;
+      padding: 16px 18px;
+      background: var(--color-bg-primary);
+      border-bottom: 1px solid var(--color-border-primary);
+      box-shadow: 0 1px 2px rgba(31, 35, 40, 0.03);
+    }
+
     .capability-center {
       width: 100%;
-      margin: 0 0 22px;
+      max-width: 1180px;
+      margin: 0 auto;
       padding: 0;
     }
 
@@ -1429,7 +1439,7 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 18px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .capability-center-header h1 {
@@ -1480,7 +1490,7 @@
     .capability-tabs {
       display: flex;
       gap: 8px;
-      margin-bottom: 18px;
+      margin-bottom: 12px;
       overflow-x: auto;
       padding-bottom: 2px;
       scrollbar-width: none;
@@ -1539,7 +1549,11 @@
     }
 
     .capability-group {
-      margin-top: 20px;
+      margin-top: 0;
+    }
+
+    .capability-group + .capability-group {
+      margin-top: 16px;
     }
 
     .capability-group-header {
@@ -1578,8 +1592,30 @@
 
     .capability-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 10px;
+    }
+
+    .capability-panel-body {
+      max-height: min(360px, 42vh);
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-bg-scrollbar-thumb) transparent;
+    }
+
+    .capability-panel-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .capability-panel-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .capability-panel-body::-webkit-scrollbar-thumb {
+      background: var(--color-bg-scrollbar-thumb);
+      border-radius: 999px;
     }
 
     .capability-card {
@@ -1969,8 +2005,8 @@
         max-width: 160px;
       }
 
-      .capability-center {
-        width: 100%;
+      .capability-shell {
+        padding: 14px 16px;
       }
 
       .capability-center-header {
@@ -2092,9 +2128,12 @@
         display: none;
       }
 
+      .capability-shell {
+        padding: 14px 16px;
+      }
+
       .capability-center {
         width: 100%;
-        margin-top: 18px;
       }
 
       .capability-center-header {
@@ -2118,6 +2157,10 @@
 
       .capability-grid {
         grid-template-columns: 1fr;
+      }
+
+      .capability-panel-body {
+        max-height: 42vh;
       }
     }
 

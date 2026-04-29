@@ -64,6 +64,8 @@ import { readJsonSafe } from '../../utils/json-utils.js';
 import { detectInstalledIDEs } from './ide-detection.js';
 import { resolveBunBinaryPath } from '../utils/bun-resolver.js';
 
+const LEGACY_PLUGIN_IDS = ['ccx-mem@remote1993'];
+
 // ---------------------------------------------------------------------------
 // Registration helpers
 // ---------------------------------------------------------------------------
@@ -103,6 +105,9 @@ function registerPlugin(version: string): void {
       lastUpdated: now,
     },
   ];
+  for (const legacyPluginId of LEGACY_PLUGIN_IDS) {
+    delete installedPlugins.plugins[legacyPluginId];
+  }
 
   writeJsonFileAtomic(installedPluginsPath(), installedPlugins);
 }
@@ -112,6 +117,9 @@ function enablePluginInClaudeSettings(): void {
 
   if (!settings.enabledPlugins) settings.enabledPlugins = {};
   settings.enabledPlugins[INSTALLED_PLUGIN_ID] = true;
+  for (const legacyPluginId of LEGACY_PLUGIN_IDS) {
+    delete settings.enabledPlugins[legacyPluginId];
+  }
 
   writeJsonFileAtomic(claudeSettingsPath(), settings);
 }

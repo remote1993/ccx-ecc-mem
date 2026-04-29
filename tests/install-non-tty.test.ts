@@ -109,6 +109,12 @@ describe('Install Non-TTY Support', () => {
       expect(setupIndex).toBeGreaterThan(0);
       expect(reloadIndex).toBeGreaterThan(setupIndex);
     });
+
+    it('removes the legacy ccx-mem plugin id during upgrade install', () => {
+      expect(installSource).toContain("const LEGACY_PLUGIN_IDS = ['ccx-mem@remote1993']");
+      expect(installSource).toContain('delete installedPlugins.plugins[legacyPluginId]');
+      expect(installSource).toContain('delete settings.enabledPlugins[legacyPluginId]');
+    });
   });
 
   describe('TaskDescriptor interface', () => {

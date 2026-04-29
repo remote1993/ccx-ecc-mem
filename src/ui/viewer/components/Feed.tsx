@@ -11,14 +11,13 @@ interface FeedProps {
   observations: Observation[];
   summaries: Summary[];
   prompts: UserPrompt[];
-  intro?: React.ReactNode;
   onLoadMore: () => void;
   isLoading: boolean;
   hasMore: boolean;
   labels: ViewerLabels;
 }
 
-export function Feed({ observations, summaries, prompts, intro, onLoadMore, isLoading, hasMore, labels }: FeedProps) {
+export function Feed({ observations, summaries, prompts, onLoadMore, isLoading, hasMore, labels }: FeedProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const onLoadMoreRef = useRef(onLoadMore);
@@ -67,7 +66,6 @@ export function Feed({ observations, summaries, prompts, intro, onLoadMore, isLo
     <div className="feed" ref={feedRef}>
       <ScrollToTop targetRef={feedRef} labels={labels} />
       <div className="feed-content">
-        {intro}
         <div className="timeline-feed">
           {items.map(item => {
             const key = `${item.itemType}-${item.id}`;

@@ -9,6 +9,16 @@ interface CapabilityCenterProps {
   error?: string | null;
 }
 
+function CapabilityFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="capability-shell">
+      <div className="capability-center">
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function localized(text: Capability['title'] | Capability['summary'], locale = 'zh-CN'): string {
   return text?.[locale as 'zh-CN'] || text?.en || text?.['zh-CN'] || '';
 }
@@ -58,25 +68,25 @@ export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityC
 
   if (error) {
     return (
-      <section className="capability-center">
+      <CapabilityFrame>
         <header className="capability-center-header">
           <h1>{labels.capabilityCenter}</h1>
         </header>
         <p className="capability-error">{error}</p>
-      </section>
+      </CapabilityFrame>
     );
   }
 
   if (!data) {
     return (
-      <section className="capability-center">
+      <CapabilityFrame>
         <header className="capability-center-header">
           <h1>{labels.capabilityCenter}</h1>
         </header>
         <div className="feed-state">
           {isLoading ? labels.loading : labels.noItems}
         </div>
-      </section>
+      </CapabilityFrame>
     );
   }
 
@@ -102,7 +112,7 @@ export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityC
     : groupDefinitions.filter(group => group.status === selectedStatus);
 
   return (
-    <section className="capability-center">
+    <CapabilityFrame>
       <div className="capability-center-header">
         <div>
           <h1>{labels.capabilityCenter}</h1>
@@ -134,15 +144,17 @@ export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityC
           </button>
         ))}
       </div>
-      {isLoading ? <div className="feed-state feed-state-inline">{labels.loading}</div> : null}
-      {visibleGroups.map(group => (
-        <CapabilityGroup
-          key={group.status}
-          title={group.label}
-          capabilities={group.capabilities}
-          locale={locale}
-        />
-      ))}
-    </section>
+      <div className="capability-panel-body">
+        {isLoading ? <div className="feed-state feed-state-inline">{labels.loading}</div> : null}
+        {visibleGroups.map(group => (
+          <CapabilityGroup
+            key={group.status}
+            title={group.label}
+            capabilities={group.capabilities}
+            locale={locale}
+          />
+        ))}
+      </div>
+    </CapabilityFrame>
   );
 }

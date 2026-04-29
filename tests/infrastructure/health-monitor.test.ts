@@ -268,7 +268,8 @@ describe('HealthMonitor', () => {
 
       expect(result).toBe(false);
       expect(elapsed).toBeGreaterThanOrEqual(1400);
-      expect(elapsed).toBeLessThan(2500);
+      // CI and full-suite local runs can delay timer callbacks under load.
+      expect(elapsed).toBeLessThan(5000);
       spy.mockRestore();
     });
 

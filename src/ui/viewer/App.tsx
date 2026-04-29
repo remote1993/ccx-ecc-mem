@@ -138,18 +138,17 @@ export function App() {
         labels={labels}
       />
 
+      <CapabilityCenter
+        data={capabilities}
+        labels={labels}
+        isLoading={capabilitiesLoading}
+        error={capabilitiesError}
+      />
+
       <Feed
         observations={allObservations}
         summaries={allSummaries}
         prompts={allPrompts}
-        intro={(
-          <CapabilityCenter
-            data={capabilities}
-            labels={labels}
-            isLoading={capabilitiesLoading}
-            error={capabilitiesError}
-          />
-        )}
         onLoadMore={handleLoadMore}
         isLoading={pagination.observations.isLoading || pagination.summaries.isLoading || pagination.prompts.isLoading}
         hasMore={pagination.observations.hasMore || pagination.summaries.hasMore || pagination.prompts.hasMore}
