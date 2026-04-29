@@ -135,6 +135,148 @@ function stripHardcodedDirname(filePath) {
   }
 }
 
+function readJsonFile(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+}
+
+function registryCapabilities(registry) {
+  const capabilities = Array.isArray(registry.capabilities) ? registry.capabilities : [];
+  return new Map(capabilities.map((capability) => [capability.id, capability]));
+}
+
+function resolveProfileCapabilityIds(registry, profileName, seen = new Set()) {
+  const profile = registry.profiles?.[profileName];
+  if (!profile) {
+    throw new Error(`Fusion registry references missing profile: ${profileName}`);
+  }
+  if (seen.has(profileName)) return [];
+  seen.add(profileName);
+
+  const inherited = (profile.extends ?? []).flatMap((parent) =>
+    resolveProfileCapabilityIds(registry, parent, seen),
+  );
+  return [...new Set([...inherited, ...(profile.capabilities ?? [])])];
+}
+
+function capabilityImplementationPath(capability) {
+  return capability?.implementation?.path;
+}
+
+function capabilityFilePath(capability) {
+  const implementationPath = capabilityImplementationPath(capability);
+  if (!implementationPath || !fs.existsSync(implementationPath)) return implementationPath;
+  return fs.statSync(implementationPath).isDirectory()
+    ? path.join(implementationPath, 'SKILL.md')
+    : implementationPath;
+}
+
+function assertExistingRegistryPaths(registry) {
+  const capabilitiesById = registryCapabilities(registry);
+  const coreIds = resolveProfileCapabilityIds(registry, registry.defaultProfile ?? 'core');
+  if (coreIds.length === 0) {
+    throw new Error('Fusion default profile must include at least one capability.');
+  }
+
+  for (const capabilityId of coreIds) {
+    const capability = capabilitiesById.get(capabilityId);
+    if (!capability) {
+      throw new Error(`Fusion profile references missing capability: ${capabilityId}`);
+    }
+
+    const implementationPath = capabilityImplementationPath(capability);
+    if (!implementationPath) {
+      throw new Error(`Fusion capability ${capabilityId} is missing implementation.path`);
+    }
+    if (!fs.existsSync(implementationPath)) {
+      throw new Error(`Fusion capability ${capabilityId} references missing path: ${implementationPath}`);
+    }
+  }
+}
+
+function assertEccPreinstallComplete() {
+  const requiredPaths = [
+    'plugin/ecc/LICENSE.everything-claude-code',
+    'plugin/ecc/skills',
+    'plugin/ecc/commands',
+    'plugin/ecc/agents',
+    'plugin/ecc/docs',
+    'plugin/ecc/rules',
+    'plugin/ecc/schemas',
+    'plugin/ecc/manifests/install-profiles.json',
+    'plugin/ecc/manifests/install-modules.json',
+    'plugin/ecc/mcp-configs/mcp-servers.json',
+  ];
+
+  for (const filePath of requiredPaths) {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`ECC preinstall is incomplete; missing: ${filePath}`);
+    }
+  }
+}
+
+function assertCoreAvoidsHeavyRuntime(registry) {
+  const forbiddenTerms = registry.dependencyPolicy?.coreMustAvoid ?? [];
+  const capabilitiesById = registryCapabilities(registry);
+  const coreIds = resolveProfileCapabilityIds(registry, registry.defaultProfile ?? 'core');
+
+  for (const capabilityId of coreIds) {
+    const capability = capabilitiesById.get(capabilityId);
+    if (!capability || capability.dependencyTier !== 'core') continue;
+
+    const filePath = capabilityFilePath(capability);
+    if (!filePath || !fs.existsSync(filePath)) continue;
+
+    const content = fs.readFileSync(filePath, 'utf-8').toLowerCase();
+    for (const term of forbiddenTerms) {
+      if (content.includes(String(term).toLowerCase())) {
+        throw new Error(`Fusion core capability ${capabilityId} references forbidden default dependency: ${term}`);
+      }
+    }
+  }
+}
+
+function groupCapabilities(capabilities) {
+  return capabilities.reduce((groups, capability) => {
+    const status = capability.status ?? 'reference';
+    groups[status] ??= [];
+    groups[status].push(capability);
+    return groups;
+  }, { active: [], optional: [], reference: [], archived: [] });
+}
+
+function writeFusionActiveView(registry) {
+  const capabilitiesById = registryCapabilities(registry);
+  const defaultProfile = registry.defaultProfile ?? 'core';
+  const activeIds = resolveProfileCapabilityIds(registry, defaultProfile);
+  const activeCapabilities = activeIds.map((id) => capabilitiesById.get(id)).filter(Boolean);
+  const optionalProfiles = Object.fromEntries(
+    Object.entries(registry.profiles ?? {}).filter(([name]) => name !== defaultProfile),
+  );
+  const grouped = groupCapabilities(registry.capabilities ?? []);
+
+  const activeView = {
+    version: registry.version,
+    schema: registry.schema ?? 'capability-registry',
+    defaultProfile,
+    defaultLocale: registry.defaultLocale ?? 'zh-CN',
+    locales: registry.locales ?? ['zh-CN', 'en'],
+    activeCapabilityIds: activeIds,
+    activeCapabilities,
+    capabilitiesByStatus: grouped,
+    optionalProfiles,
+    catalogPaths: registry.catalogPaths,
+    archived: registry.archived,
+    dependencySummary: {
+      core: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'core').length,
+      optional: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'optional').length,
+      heavy: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'heavy').length,
+      external: (registry.capabilities ?? []).filter((capability) => capability.dependencyTier === 'external').length,
+    },
+  };
+
+  fs.writeFileSync('plugin/fusion/active-view.json', JSON.stringify(activeView, null, 2) + '\n');
+}
+
 async function buildHooks() {
   console.log('🔨 Building ccx-mem hooks and worker service...\n');
 
@@ -161,10 +303,10 @@ async function buildHooks() {
     // Note: bun:sqlite is a Bun built-in, no external dependencies needed for SQLite
     console.log('\n📦 Generating plugin package.json...');
     const pluginPackageJson = {
-      name: 'ccx-mem-plugin',
+      name: 'ccx-ecc-mem-plugin',
       version: version,
       private: true,
-      description: 'Runtime dependencies for ccx-mem bundled hooks',
+      description: 'Runtime dependencies for the ccx-ecc-mem bundled plugin',
       type: 'module',
       dependencies: {
         'tree-sitter-cli': '^0.26.5',
@@ -444,13 +586,30 @@ async function buildHooks() {
       'plugin/skills/smart-explore/SKILL.md',
       'plugin/hooks/hooks.json',
       'plugin/.claude-plugin/plugin.json',
+      'plugin/fusion/registry.json',
+      'plugin/ecc/manifests/install-profiles.json',
+      'plugin/ecc/manifests/install-modules.json',
+      'plugin/ecc/mcp-configs/mcp-servers.json',
     ];
     for (const filePath of requiredDistributionFiles) {
       if (!fs.existsSync(filePath)) {
         throw new Error(`Missing required distribution file: ${filePath}`);
       }
     }
-    console.log('✓ All required distribution files present');
+
+    const fusionRegistry = readJsonFile('plugin/fusion/registry.json');
+    assertExistingRegistryPaths(fusionRegistry);
+    assertEccPreinstallComplete();
+    assertCoreAvoidsHeavyRuntime(fusionRegistry);
+    writeFusionActiveView(fusionRegistry);
+
+    const capabilityCount = resolveProfileCapabilityIds(
+      fusionRegistry,
+      fusionRegistry.defaultProfile ?? 'core',
+    ).length;
+
+    console.log(`✓ All required distribution files present`);
+    console.log(`✓ Fusion capability profile validated (${capabilityCount} active capabilities)`);
 
     console.log('\n✅ All build targets compiled successfully!');
     console.log(`   Output: ${hooksDir}/`);

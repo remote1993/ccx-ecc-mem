@@ -28,8 +28,6 @@ import {
   type WorkerRef
 } from './agents/index.js';
 
-// Default OpenAI-compatible endpoint
-const DEFAULT_CUSTOM_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_REQUEST_TIMEOUT_MS = 120000;
 const DEFAULT_TEMPERATURE = 0.3;
 
@@ -448,7 +446,7 @@ export class CustomApiAgent {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': siteUrl || 'https://github.com/remote1993/ccx-mem',
+        'HTTP-Referer': siteUrl || 'https://github.com/remote1993/ccx-ecc-mem',
         'X-Title': appName || 'ccx-mem',
         'Content-Type': 'application/json',
       },

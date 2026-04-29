@@ -284,8 +284,8 @@ export class SessionSearch {
   }
 
   /**
-   * Search observations using filter-only direct SQLite query.
-   * Vector search is handled by ChromaDB - this only supports filtering without query text.
+   * Search observations using direct SQLite filters and FTS5 keyword fallback.
+   * Chroma provides semantic search when enabled; SQLite remains the default low-load path.
    */
   searchObservations(query: string | undefined, options: SearchOptions = {}): ObservationSearchResult[] {
     const params: any[] = [];
@@ -347,8 +347,8 @@ export class SessionSearch {
   }
 
   /**
-   * Search session summaries using filter-only direct SQLite query.
-   * Vector search is handled by ChromaDB - this only supports filtering without query text.
+   * Search session summaries using direct SQLite filters and FTS5 keyword fallback.
+   * Chroma provides semantic search when enabled; SQLite remains the default low-load path.
    */
   searchSessions(query: string | undefined, options: SearchOptions = {}): SessionSummarySearchResult[] {
     const params: any[] = [];
@@ -601,8 +601,8 @@ export class SessionSearch {
   }
 
   /**
-   * Search user prompts using filter-only direct SQLite query.
-   * Vector search is handled by ChromaDB - this only supports filtering without query text.
+   * Search user prompts using direct SQLite filters and LIKE keyword fallback.
+   * Chroma provides semantic search when enabled; SQLite remains the default low-load path.
    */
   searchUserPrompts(query: string | undefined, options: SearchOptions = {}): UserPromptSearchResult[] {
     const params: any[] = [];

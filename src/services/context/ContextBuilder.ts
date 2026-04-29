@@ -39,7 +39,6 @@ const VERSION_MARKER_PATH = path.join(
   'plugins',
   'marketplaces',
   'remote1993',
-  'ccx-mem',
   'plugin',
   '.install-version'
 );

@@ -156,7 +156,7 @@ export class WorkerService {
   // Service layer
   private dbManager: DatabaseManager;
   private sessionManager: SessionManager;
-  private sseBroadcaster: SSEBroadcaster;
+  public sseBroadcaster: SSEBroadcaster;
   private customApiAgent: CustomApiAgent;
   private paginationHelper: PaginationHelper;
   private settingsManager: SettingsManager;
@@ -479,7 +479,7 @@ export class WorkerService {
       }
 
       // Mark MCP as externally ready once the bundled stdio server binary exists.
-      // Codex/Claude Desktop connect to this binary directly; the loopback client
+      // Compatible local clients can connect to this binary directly; the loopback client
       // below is only a best-effort self-check and should not mark health false.
       const mcpServerPath = path.join(__dirname, 'mcp-server.cjs');
       this.mcpReady = existsSync(mcpServerPath);
@@ -611,7 +611,7 @@ export class WorkerService {
   }
 
   /**
-   * Start transcript watcher for Codex and other transcript-based clients.
+   * Start transcript watcher for Codex CLI when that integration is installed.
    * This is intentionally non-fatal so Claude hooks remain usable even if
    * transcript ingestion is misconfigured.
    */
@@ -1148,26 +1148,35 @@ export async function ensureWorkerStarted(port: number): Promise<boolean> {
 async function main() {
   const command = process.argv[2];
 
-  // Early exit if plugin is disabled in Claude Code settings (#781).
-  // Only gate hook-initiated commands; CLI management (stop/status) still works.
-  const hookInitiatedCommands = ['start', 'hook', 'restart', '--daemon'];
-  if ((hookInitiatedCommands.includes(command) || command === undefined) && isPluginDisabledInClaudeSettings()) {
-    process.exit(0);
-  }
-
   const port = getWorkerPort();
 
-  // Helper for JSON status output in 'start' command
-  // Exit code 0 ensures Windows Terminal doesn't keep tabs open
   function exitWithStatus(status: 'ready' | 'error', message?: string): never {
     const output = buildStatusOutput(status, message);
     console.log(JSON.stringify(output));
     process.exit(0);
   }
 
+  // Early exit if plugin is disabled in Claude Code settings (#781).
+  // Only gate hook-initiated commands; CLI management (stop/status) still works.
+  const hookInitiatedCommands = ['start', 'hook', 'restart', '--daemon'];
+  if ((hookInitiatedCommands.includes(command) || command === undefined) && isPluginDisabledInClaudeSettings()) {
+    if (command === 'start') {
+      exitWithStatus('ready', 'Plugin disabled in Claude Code settings');
+    }
+    process.exit(0);
+  }
+
   switch (command) {
     case 'start': {
-      const success = await ensureWorkerStarted(port);
+      let success = false;
+      try {
+        success = await ensureWorkerStarted(port);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error('SYSTEM', 'Failed to ensure worker started', { port }, error instanceof Error ? error : new Error(message));
+        exitWithStatus('error', message);
+      }
+
       if (success) {
         exitWithStatus('ready');
       } else {
@@ -1243,10 +1252,15 @@ async function main() {
       // Validate CLI args first (before any I/O)
       const platform = process.argv[3];
       const event = process.argv[4];
+      const supportedPlatforms = ['claude-code', 'codex-cli'];
       if (!platform || !event) {
         console.error('Usage: ccx-mem hook <platform> <event>');
-        console.error('Platforms: claude-code, codex-cli, raw');
+        console.error(`Platforms: ${supportedPlatforms.join(', ')}`);
         console.error('Events: context, session-init, observation, summarize, user-message');
+        process.exit(1);
+      }
+      if (!supportedPlatforms.includes(platform)) {
+        console.error(`Unsupported platform "${platform}". Supported platforms: ${supportedPlatforms.join(', ')}`);
         process.exit(1);
       }
 

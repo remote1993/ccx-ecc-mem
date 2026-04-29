@@ -20,7 +20,7 @@ The interactive installer will:
 - Copy plugin files to the correct locations
 - Register the Claude Code marketplace plugin locally
 - Prepare runtime dependencies by reusing the downloaded package cache when available
-- Configure Codex transcript watching when you select Codex CLI
+- Configure Codex worker-managed transcript ingestion only when you select Codex CLI
 
 ### Option 2: Plugin Marketplace
 
@@ -51,7 +51,7 @@ Then restart Claude Code or open Codex CLI in your project workspace.
 - **Claude Code**: Latest version with plugin support
 - **Codex CLI**: Optional, for transcript-based integration
 - **Bun**: JavaScript runtime and process manager (auto-installed if missing)
-- **uv**: Python package manager for vector search (auto-installed if missing)
+- **uv**: Optional Python package manager for Chroma vector search
 - **SQLite 3**: For persistent storage (bundled)
 
 ## Advanced Installation
@@ -95,11 +95,12 @@ Check that the plugin is registered locally:
 cat ~/.claude/plugins/installed_plugins.json
 ```
 
-#### 3. Verify Codex Transcript Watching
+#### 3. Verify Codex Transcript Ingestion
 
 If you installed Codex CLI support, check:
 ```bash
 cat ~/.claude-mem/transcript-watch.json
+cat ~/.claude-mem/settings.json
 ```
 
 #### 4. Data Directory Location

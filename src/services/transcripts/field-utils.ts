@@ -4,7 +4,7 @@ import type { FieldSpec, MatchRule, TranscriptSchema, WatchTarget } from './type
 interface ResolveContext {
   watch: WatchTarget;
   schema: TranscriptSchema;
-  session?: Record<string, unknown>;
+  session?: object;
 }
 
 function parsePath(path: string): Array<string | number> {

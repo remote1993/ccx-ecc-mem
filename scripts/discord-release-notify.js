@@ -63,7 +63,7 @@ function truncate(text, maxLength) {
 
 async function postToDiscord(webhookUrl, version, notes) {
   const cleanedNotes = notes ? cleanNotes(notes) : 'No release notes available.';
-  const repoUrl = 'https://github.com/remote1993/ccx-mem';
+  const repoUrl = 'https://github.com/remote1993/ccx-ecc-mem';
 
   const payload = {
     embeds: [

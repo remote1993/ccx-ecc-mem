@@ -3,7 +3,7 @@ import { authFetch } from '../utils/api';
 
 // Log levels and components matching the logger.ts definitions
 type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
-type LogComponent = 'HOOK' | 'WORKER' | 'SDK' | 'PARSER' | 'DB' | 'SYSTEM' | 'HTTP' | 'SESSION' | 'CHROMA';
+type LogComponent = string;
 
 interface ParsedLogLine {
   raw: string;
@@ -17,24 +17,34 @@ interface ParsedLogLine {
 
 // Configuration for log levels
 const LOG_LEVELS: { key: LogLevel; label: string; icon: string; color: string }[] = [
-  { key: 'DEBUG', label: 'Debug', icon: '🔍', color: '#8b8b8b' },
-  { key: 'INFO', label: 'Info', icon: 'ℹ️', color: '#58a6ff' },
-  { key: 'WARN', label: 'Warn', icon: '⚠️', color: '#d29922' },
-  { key: 'ERROR', label: 'Error', icon: '❌', color: '#f85149' },
+  { key: 'DEBUG', label: 'Debug', icon: 'D', color: '#8b8b8b' },
+  { key: 'INFO', label: 'Info', icon: 'I', color: '#58a6ff' },
+  { key: 'WARN', label: 'Warn', icon: 'W', color: '#d29922' },
+  { key: 'ERROR', label: 'Error', icon: 'E', color: '#f85149' },
 ];
 
 // Configuration for log components
 const LOG_COMPONENTS: { key: LogComponent; label: string; icon: string; color: string }[] = [
-  { key: 'HOOK', label: 'Hook', icon: '🪝', color: '#a371f7' },
-  { key: 'WORKER', label: 'Worker', icon: '⚙️', color: '#58a6ff' },
-  { key: 'SDK', label: 'SDK', icon: '📦', color: '#3fb950' },
-  { key: 'PARSER', label: 'Parser', icon: '📄', color: '#79c0ff' },
-  { key: 'DB', label: 'DB', icon: '🗄️', color: '#f0883e' },
-  { key: 'SYSTEM', label: 'System', icon: '💻', color: '#8b949e' },
-  { key: 'HTTP', label: 'HTTP', icon: '🌐', color: '#39d353' },
-  { key: 'SESSION', label: 'Session', icon: '📋', color: '#db61a2' },
-  { key: 'CHROMA', label: 'Chroma', icon: '🔮', color: '#a855f7' },
+  { key: 'HOOK', label: 'Hook', icon: 'HK', color: '#a371f7' },
+  { key: 'WORKER', label: 'Worker', icon: 'WK', color: '#58a6ff' },
+  { key: 'SDK', label: 'SDK', icon: 'SD', color: '#3fb950' },
+  { key: 'PARSER', label: 'Parser', icon: 'PR', color: '#79c0ff' },
+  { key: 'DB', label: 'DB', icon: 'DB', color: '#f0883e' },
+  { key: 'SYSTEM', label: 'System', icon: 'SY', color: '#8b949e' },
+  { key: 'HTTP', label: 'HTTP', icon: 'HT', color: '#39d353' },
+  { key: 'SESSION', label: 'Session', icon: 'SS', color: '#db61a2' },
+  { key: 'QUEUE', label: 'Queue', icon: 'QU', color: '#f778ba' },
+  { key: 'TRANSCRIPT', label: 'Transcript', icon: 'TR', color: '#7ee787' },
+  { key: 'PROJECT_NAME', label: 'Project', icon: 'PJ', color: '#d2a8ff' },
+  { key: 'CHROMA', label: 'Chroma', icon: 'CH', color: '#a855f7' },
+  { key: 'CHROMA_MCP', label: 'Chroma MCP', icon: 'CM', color: '#a855f7' },
+  { key: 'CHROMA_SYNC', label: 'Chroma Sync', icon: 'CS', color: '#a855f7' },
+  { key: 'FOLDER_INDEX', label: 'Folder Index', icon: 'FI', color: '#ffab70' },
+  { key: 'AGENTS_MD', label: 'AGENTS.md', icon: 'AG', color: '#8b949e' },
 ];
+
+const ALL_LEVELS = LOG_LEVELS.map(level => level.key);
+const ALL_COMPONENTS = LOG_COMPONENTS.map(component => component.key);
 
 // Parse a single log line into structured data
 function parseLogLine(line: string): ParsedLogLine {
@@ -88,12 +98,13 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
 
   // Filter state
   const [activeLevels, setActiveLevels] = useState<Set<LogLevel>>(
-    new Set(['DEBUG', 'INFO', 'WARN', 'ERROR'])
+    new Set(ALL_LEVELS)
   );
   const [activeComponents, setActiveComponents] = useState<Set<LogComponent>>(
-    new Set(['HOOK', 'WORKER', 'SDK', 'PARSER', 'DB', 'SYSTEM', 'HTTP', 'SESSION', 'CHROMA'])
+    new Set(ALL_COMPONENTS)
   );
   const [alignmentOnly, setAlignmentOnly] = useState(false);
+  const [problemsOnly, setProblemsOnly] = useState(false);
 
   // Parse and filter log lines
   const parsedLines = useMemo(() => {
@@ -107,11 +118,25 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
       if (alignmentOnly) {
         return line.raw.includes('[ALIGNMENT]');
       }
+      if (problemsOnly && line.level !== 'WARN' && line.level !== 'ERROR') {
+        return false;
+      }
       // Always show unparsed lines
       if (!line.level || !line.component) return true;
-      return activeLevels.has(line.level) && activeComponents.has(line.component);
+      const knownComponent = LOG_COMPONENTS.some(component => component.key === line.component);
+      return activeLevels.has(line.level) && (!knownComponent || activeComponents.has(line.component));
     });
-  }, [parsedLines, activeLevels, activeComponents, alignmentOnly]);
+  }, [parsedLines, activeLevels, activeComponents, alignmentOnly, problemsOnly]);
+
+  const logCounts = useMemo(() => {
+    const counts = { DEBUG: 0, INFO: 0, WARN: 0, ERROR: 0 };
+    for (const line of parsedLines) {
+      if (line.level && counts[line.level] !== undefined) {
+        counts[line.level] += 1;
+      }
+    }
+    return counts;
+  }, [parsedLines]);
 
   // Check if user is at bottom before updating
   const checkIfAtBottom = useCallback(() => {
@@ -248,7 +273,7 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
   // Select all / none for levels
   const setAllLevels = useCallback((enabled: boolean) => {
     if (enabled) {
-      setActiveLevels(new Set(['DEBUG', 'INFO', 'WARN', 'ERROR']));
+      setActiveLevels(new Set(ALL_LEVELS));
     } else {
       setActiveLevels(new Set());
     }
@@ -257,7 +282,7 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
   // Select all / none for components
   const setAllComponents = useCallback((enabled: boolean) => {
     if (enabled) {
-      setActiveComponents(new Set(['HOOK', 'WORKER', 'SDK', 'PARSER', 'DB', 'SYSTEM', 'HTTP', 'SESSION', 'CHROMA']));
+      setActiveComponents(new Set(ALL_COMPONENTS));
     } else {
       setActiveComponents(new Set());
     }
@@ -344,6 +369,11 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
       <div className="console-header">
         <div className="console-tabs">
           <div className="console-tab active">Console</div>
+          <div className="console-summary">
+            <span>{filteredLines.length}/{parsedLines.length}</span>
+            <span className="console-summary-warn">{logCounts.WARN} warn</span>
+            <span className="console-summary-error">{logCounts.ERROR} error</span>
+          </div>
         </div>
         <div className="console-controls">
           <label className="console-auto-refresh">
@@ -396,6 +426,16 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
           <span className="console-filter-label">Quick:</span>
           <div className="console-filter-chips">
             <button
+              className={`console-filter-chip ${problemsOnly ? 'active' : ''}`}
+              onClick={() => setProblemsOnly(!problemsOnly)}
+              style={{
+                '--chip-color': '#f85149',
+              } as React.CSSProperties}
+              title="Show only warning and error logs"
+            >
+              Problems
+            </button>
+            <button
               className={`console-filter-chip ${alignmentOnly ? 'active' : ''}`}
               onClick={() => setAlignmentOnly(!alignmentOnly)}
               style={{
@@ -420,7 +460,7 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
                 } as React.CSSProperties}
                 title={level.label}
               >
-                {level.icon} {level.label}
+                <span className="console-filter-chip-code">{level.icon}</span> {level.label}
               </button>
             ))}
             <button
@@ -445,7 +485,7 @@ export function LogsDrawer({ isOpen, onClose }: LogsDrawerProps) {
                 } as React.CSSProperties}
                 title={comp.label}
               >
-                {comp.icon} {comp.label}
+                <span className="console-filter-chip-code">{comp.icon}</span> {comp.label}
               </button>
             ))}
             <button

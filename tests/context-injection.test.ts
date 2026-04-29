@@ -11,8 +11,8 @@ import {
 /**
  * Tests for the shared context injection utility.
  *
- * injectContextIntoMarkdownFile is used by MCP integrations and OpenCode
- * installer to inject or update a <claude-mem-context> section in markdown files.
+ * injectContextIntoMarkdownFile is used by workspace-local context writers to
+ * inject or update a <claude-mem-context> section in markdown files.
  */
 
 describe('Context Injection', () => {

@@ -150,7 +150,7 @@ export const sessionInitHandler: EventHandler = {
 
     // Semantic context injection: query Chroma for relevant past observations
     // and inject as additionalContext so Claude receives relevant memory each prompt.
-    // Controlled by CLAUDE_MEM_SEMANTIC_INJECT setting (default: true).
+    // Controlled by CLAUDE_MEM_SEMANTIC_INJECT setting (default: false for low-load SQLite-only installs).
     const semanticInject =
       String(settings.CLAUDE_MEM_SEMANTIC_INJECT).toLowerCase() === 'true';
     let additionalContext = '';

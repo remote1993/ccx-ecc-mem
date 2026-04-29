@@ -1057,6 +1057,16 @@ export class SessionStore {
     `).run(nowIso, nowEpoch, sessionDbId);
   }
 
+  markSessionFailed(sessionDbId: number): void {
+    const nowEpoch = Date.now();
+    const nowIso = new Date(nowEpoch).toISOString();
+    this.db.prepare(`
+      UPDATE sdk_sessions
+      SET status = 'failed', completed_at = ?, completed_at_epoch = ?
+      WHERE id = ?
+    `).run(nowIso, nowEpoch, sessionDbId);
+  }
+
   /**
    * Ensures memory_session_id is registered in sdk_sessions before FK-constrained INSERT.
    * This fixes Issue #846 where observations fail after worker restart because the
@@ -1445,7 +1455,7 @@ export class SessionStore {
    */
   getObservationsByIds(
     ids: number[],
-    options: { orderBy?: 'date_desc' | 'date_asc'; limit?: number; project?: string; type?: string | string[]; concepts?: string | string[]; files?: string | string[] } = {}
+    options: { orderBy?: 'date_desc' | 'date_asc' | 'relevance'; limit?: number; project?: string; type?: string | string[]; concepts?: string | string[]; files?: string | string[] } = {}
   ): ObservationRecord[] {
     if (ids.length === 0) return [];
 
@@ -2188,7 +2198,7 @@ export class SessionStore {
    */
   getSessionSummariesByIds(
     ids: number[],
-    options: { orderBy?: 'date_desc' | 'date_asc'; limit?: number; project?: string } = {}
+    options: { orderBy?: 'date_desc' | 'date_asc' | 'relevance'; limit?: number; project?: string } = {}
   ): SessionSummaryRecord[] {
     if (ids.length === 0) return [];
 
@@ -2220,7 +2230,7 @@ export class SessionStore {
    */
   getUserPromptsByIds(
     ids: number[],
-    options: { orderBy?: 'date_desc' | 'date_asc'; limit?: number; project?: string } = {}
+    options: { orderBy?: 'date_desc' | 'date_asc' | 'relevance'; limit?: number; project?: string } = {}
   ): UserPromptRecord[] {
     if (ids.length === 0) return [];
 

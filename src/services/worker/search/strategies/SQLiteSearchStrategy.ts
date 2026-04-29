@@ -1,13 +1,14 @@
 /**
- * SQLiteSearchStrategy - Direct SQLite queries for filter-only searches
+ * SQLiteSearchStrategy - Direct SQLite memory queries
  *
- * This strategy handles searches without query text (filter-only):
+ * This strategy handles SQLite-backed memory searches:
+ * - FTS5/LIKE keyword searches when Chroma is disabled or unavailable
  * - Date range filtering
  * - Project filtering
  * - Type filtering
  * - Concept/file filtering
  *
- * Used when: No query text is provided, or as a fallback when Chroma fails
+ * Used when: Chroma is disabled/unavailable, or as a fallback when Chroma fails
  */
 
 import { BaseSearchStrategy, SearchStrategy } from './SearchStrategy.js';
@@ -30,9 +31,7 @@ export class SQLiteSearchStrategy extends BaseSearchStrategy implements SearchSt
   }
 
   canHandle(options: StrategySearchOptions): boolean {
-    // Can handle filter-only queries (no query text)
-    // Also used as fallback when Chroma is unavailable
-    return !options.query || options.strategyHint === 'sqlite';
+    return true;
   }
 
   async search(options: StrategySearchOptions): Promise<StrategySearchResult> {
@@ -45,7 +44,8 @@ export class SQLiteSearchStrategy extends BaseSearchStrategy implements SearchSt
       offset = 0,
       project,
       dateRange,
-      orderBy = 'date_desc'
+      orderBy = 'date_desc',
+      query
     } = options;
 
     const searchObservations = searchType === 'all' || searchType === 'observations';
@@ -58,8 +58,9 @@ export class SQLiteSearchStrategy extends BaseSearchStrategy implements SearchSt
 
     const baseOptions = { limit, offset, orderBy, project, dateRange };
 
-    logger.debug('SEARCH', 'SQLiteSearchStrategy: Filter-only query', {
+    logger.debug('SEARCH', 'SQLiteSearchStrategy: SQLite memory search', {
       searchType,
+      hasQuery: !!query,
       hasDateRange: !!dateRange,
       hasProject: !!project
     });
@@ -67,7 +68,7 @@ export class SQLiteSearchStrategy extends BaseSearchStrategy implements SearchSt
     const obsOptions = searchObservations ? { ...baseOptions, type: obsType, concepts, files } : null;
 
     try {
-      return this.executeSqliteSearch(obsOptions, searchSessions, searchPrompts, baseOptions);
+      return this.executeSqliteSearch(query, obsOptions, searchSessions, searchPrompts, baseOptions);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
       logger.error('WORKER', 'SQLiteSearchStrategy: Search failed', {}, errorObj);
@@ -76,6 +77,7 @@ export class SQLiteSearchStrategy extends BaseSearchStrategy implements SearchSt
   }
 
   private executeSqliteSearch(
+    query: string | undefined,
     obsOptions: Record<string, any> | null,
     searchSessions: boolean,
     searchPrompts: boolean,
@@ -86,13 +88,13 @@ export class SQLiteSearchStrategy extends BaseSearchStrategy implements SearchSt
     let prompts: UserPromptSearchResult[] = [];
 
     if (obsOptions) {
-      observations = this.sessionSearch.searchObservations(undefined, obsOptions);
+      observations = this.sessionSearch.searchObservations(query, obsOptions);
     }
     if (searchSessions) {
-      sessions = this.sessionSearch.searchSessions(undefined, baseOptions);
+      sessions = this.sessionSearch.searchSessions(query, baseOptions);
     }
     if (searchPrompts) {
-      prompts = this.sessionSearch.searchUserPrompts(undefined, baseOptions);
+      prompts = this.sessionSearch.searchUserPrompts(query, baseOptions);
     }
 
     return {

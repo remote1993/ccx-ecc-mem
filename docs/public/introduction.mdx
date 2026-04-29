@@ -30,7 +30,7 @@ Or install from the plugin marketplace inside Claude Code:
 /plugin install ccx-mem
 ```
 
-For Claude Code, restart the client after installation. For Codex CLI, start the worker with `npx ccx-mem start` and work from your project directory so transcript watching can capture sessions.
+For Claude Code, restart the client after installation. For Codex CLI, install with `--ide codex-cli`, start the worker with `npx ccx-mem start`, and work from your project directory so the worker-managed transcript watcher can capture sessions.
 
 ## Key Features
 
@@ -69,7 +69,7 @@ For Claude Code, restart the client after installation. For Codex CLI, start the
 
 **Core Components:**
 1. **Hook Entry Layer** - `src/cli/` adapters and handlers translate Claude Code lifecycle events into worker requests
-2. **Transcript Integration** - Optional Codex CLI transcript watching imports sessions from project workspaces
+2. **Transcript Integration** - Optional Codex CLI transcript ingestion imports sessions from project workspaces after Codex support is installed
 3. **Worker Service** - HTTP API on port 37777 manages sessions, storage, search, settings, logs, SSE, and custom API extraction
 4. **SQLite Database** - Stores sessions, prompts, observations, summaries, and project/source metadata
 5. **Retrieval Surfaces** - Web viewer, HTTP APIs, skills, and MCP compatibility tools expose worker-backed history
@@ -83,7 +83,7 @@ See [Architecture Overview](architecture/overview) for details.
 - **Claude Code**: Latest version with plugin support
 - **Codex CLI**: Optional, for transcript-based integration
 - **Bun**: JavaScript runtime and process manager (auto-installed if missing)
-- **uv**: Python package manager for vector search (auto-installed if missing)
+- **uv**: Optional Python package manager for Chroma vector search
 - **SQLite 3**: For persistent storage (bundled)
 
 ## Current Release
@@ -94,7 +94,8 @@ See [Architecture Overview](architecture/overview) for details.
 - Supports Claude Code marketplace installation with `/plugin marketplace add remote1993/ccx-mem`
 - Fixes viewer source filtering so only detected integrations are shown
 - Adds viewer bundle cache busting so updated UI code is not hidden by browser cache
-- Removes the obsolete OpenClaw install-script copy step from the deploy workflow
+- Keeps the supported host surface focused on Claude Code and Codex CLI
+- Treats VS Code as unsupported reference material, not a runtime host
 
 ## Next Steps
 

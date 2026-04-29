@@ -1,131 +1,115 @@
 ---
 name: mem-search
-description: Search claude-mem's persistent cross-session memory database. Use when user asks "did we already solve this?", "how did we do X last time?", or needs work from previous sessions.
+description: 搜索 ccx-ecc-mem 的跨会话持久记忆数据库。用户询问“之前是否解决过这个问题”“上次怎么做的”或需要历史工作上下文时使用。
 ---
 
 # Memory Search
 
-Search past work across all sessions. Simple workflow: search -> filter -> fetch.
+搜索历史会话中的工作记录。固定流程：先搜索，再筛选，最后只拉取必要详情。
 
-## When to Use
+## 何时使用
 
-Use when users ask about PREVIOUS sessions (not current conversation):
+当用户询问过去会话或历史工作，而不是当前对话时使用：
 
-- "Did we already fix this?"
-- "How did we solve X last time?"
-- "What happened last week?"
+- “我们之前修过这个吗？”
+- “上次是怎么解决 X 的？”
+- “上周发生了什么？”
 
-## 3-Layer Workflow (ALWAYS Follow)
+## 三层检索流程
 
-**NEVER fetch full details without filtering first. 10x token savings.**
+不要跳过筛选直接拉取完整详情；先筛选通常能节省约 10 倍 token。
 
-### Step 1: Search - Get Index with IDs
+### 第 1 步：Search，获取带 ID 的索引
 
-Use the `search` MCP tool:
+使用 `search` MCP tool：
 
-```
+```text
 search(query="authentication", limit=20, project="my-project")
 ```
 
-**Returns:** Table with IDs, timestamps, types, titles (~50-100 tokens/result)
+返回带 ID、时间、类型、标题的紧凑表格，约每条 50-100 tokens。
 
-```
-| ID | Time | T | Title | Read |
-|----|------|---|-------|------|
-| #11131 | 3:48 PM | 🟣 | Added JWT authentication | ~75 |
-| #10942 | 2:15 PM | 🔴 | Fixed auth token expiration | ~50 |
-```
+参数：
 
-**Parameters:**
+- `query`：搜索词
+- `limit`：最大结果数，默认 20，最大 100
+- `project`：项目名过滤
+- `type`：可选，`observations`、`sessions` 或 `prompts`
+- `obs_type`：可选，逗号分隔，如 `bugfix,feature,decision,discovery,change`
+- `dateStart` / `dateEnd`：可选，`YYYY-MM-DD` 或 epoch ms
+- `offset`：可选，跳过前 N 条
+- `orderBy`：可选，`date_desc`、`date_asc` 或 `relevance`
 
-- `query` (string) - Search term
-- `limit` (number) - Max results, default 20, max 100
-- `project` (string) - Project name filter
-- `type` (string, optional) - "observations", "sessions", or "prompts"
-- `obs_type` (string, optional) - Comma-separated: bugfix, feature, decision, discovery, change
-- `dateStart` (string, optional) - YYYY-MM-DD or epoch ms
-- `dateEnd` (string, optional) - YYYY-MM-DD or epoch ms
-- `offset` (number, optional) - Skip N results
-- `orderBy` (string, optional) - "date_desc" (default), "date_asc", "relevance"
+### 第 2 步：Timeline，查看候选结果附近上下文
 
-### Step 2: Timeline - Get Context Around Interesting Results
+使用 `timeline` MCP tool：
 
-Use the `timeline` MCP tool:
-
-```
+```text
 timeline(anchor=11131, depth_before=3, depth_after=3, project="my-project")
 ```
 
-Or find anchor automatically from query:
+也可以用查询自动找 anchor：
 
-```
+```text
 timeline(query="authentication", depth_before=3, depth_after=3, project="my-project")
 ```
 
-**Returns:** `depth_before + 1 + depth_after` items in chronological order with observations, sessions, and prompts interleaved around the anchor.
+返回 anchor 前后的 observations、sessions 和 prompts，按时间顺序交错展示。
 
-**Parameters:**
+### 第 3 步：Fetch，只拉取筛选后的完整详情
 
-- `anchor` (number, optional) - Observation ID to center around
-- `query` (string, optional) - Find anchor automatically if anchor not provided
-- `depth_before` (number, optional) - Items before anchor, default 5, max 20
-- `depth_after` (number, optional) - Items after anchor, default 5, max 20
-- `project` (string) - Project name filter
+根据搜索标题和 timeline 上下文挑出相关 ID，丢弃其余结果。
 
-### Step 3: Fetch - Get Full Details ONLY for Filtered IDs
+使用 `get_observations` MCP tool：
 
-Review titles from Step 1 and context from Step 2. Pick relevant IDs. Discard the rest.
-
-Use the `get_observations` MCP tool:
-
-```
+```text
 get_observations(ids=[11131, 10942])
 ```
 
-**ALWAYS use `get_observations` for 2+ observations - single request vs N requests.**
+两条及以上 observation 必须批量调用 `get_observations`，避免 N 次请求。
 
-**Parameters:**
+参数：
 
-- `ids` (array of numbers, required) - Observation IDs to fetch
-- `orderBy` (string, optional) - "date_desc" (default), "date_asc"
-- `limit` (number, optional) - Max observations to return
-- `project` (string, optional) - Project name filter
+- `ids`：必填，observation ID 数组
+- `orderBy`：可选，`date_desc` 或 `date_asc`
+- `limit`：可选，最大返回数量
+- `project`：可选，项目名过滤
 
-**Returns:** Complete observation objects with title, subtitle, narrative, facts, concepts, files (~500-1000 tokens each)
+完整 observation 通常包含 title、subtitle、narrative、facts、concepts、files，约每条 500-1000 tokens。
 
-## Examples
+## 示例
 
-**Find recent bug fixes:**
+查找最近 bug 修复：
 
-```
+```text
 search(query="bug", type="observations", obs_type="bugfix", limit=20, project="my-project")
 ```
 
-**Find what happened last week:**
+查找上周发生的事：
 
-```
+```text
 search(type="observations", dateStart="2025-11-11", limit=20, project="my-project")
 ```
 
-**Understand context around a discovery:**
+理解某个发现附近的上下文：
 
-```
+```text
 timeline(anchor=11131, depth_before=5, depth_after=5, project="my-project")
 ```
 
-**Batch fetch details:**
+批量拉取详情：
 
-```
+```text
 get_observations(ids=[11131, 10942, 10855], orderBy="date_desc")
 ```
 
-## Why This Workflow?
+## 为什么这样做
 
-- **Search index:** ~50-100 tokens per result
-- **Full observation:** ~500-1000 tokens each
-- **Batch fetch:** 1 HTTP request vs N individual requests
-- **10x token savings** by filtering before fetching
+- 搜索索引：约每条 50-100 tokens
+- 完整 observation：约每条 500-1000 tokens
+- 批量拉取：1 个 HTTP 请求，而不是 N 个单独请求
+- 先筛选再拉取，通常能节省约 10 倍 token
 
 ## Knowledge Agents
 
-Want synthesized answers instead of raw records? Use `/knowledge-agent` to build a queryable corpus from your observation history. The knowledge agent reads all matching observations and answers questions conversationally.
+如果需要综合答案而不是原始记录，使用 `/knowledge-agent` 从 observation 历史构建可查询语料库。knowledge agent 会读取匹配 observations，并以对话方式回答问题。

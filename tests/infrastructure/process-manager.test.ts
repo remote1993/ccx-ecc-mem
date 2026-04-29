@@ -18,6 +18,7 @@ import {
   runOneTimeChromaMigration,
   captureProcessStartToken,
   verifyPidFileOwnership,
+  isAggressiveCleanupTargetCommand,
   type PidInfo
 } from '../../src/services/infrastructure/index.js';
 
@@ -166,6 +167,20 @@ describe('ProcessManager', () => {
       expect(parseElapsedTime('')).toBe(-1);
       expect(parseElapsedTime('   ')).toBe(-1);
       expect(parseElapsedTime('invalid')).toBe(-1);
+    });
+  });
+
+  describe('isAggressiveCleanupTargetCommand', () => {
+    it('targets worker daemon processes but leaves lifecycle commands alone', () => {
+      expect(isAggressiveCleanupTargetCommand('/home/user/.bun/bin/bun /tmp/plugin/scripts/worker-service.cjs --daemon')).toBe(true);
+      expect(isAggressiveCleanupTargetCommand('/home/user/.bun/bin/bun /tmp/plugin/scripts/worker-service.cjs restart')).toBe(false);
+      expect(isAggressiveCleanupTargetCommand('/home/user/.bun/bin/bun /tmp/plugin/scripts/worker-service.cjs start')).toBe(false);
+      expect(isAggressiveCleanupTargetCommand('/home/user/.bun/bin/bun /tmp/plugin/scripts/worker-service.cjs status')).toBe(false);
+    });
+
+    it('still targets chroma helper processes for startup cleanup', () => {
+      expect(isAggressiveCleanupTargetCommand('/tmp/uvx chroma-mcp --stdio')).toBe(true);
+      expect(isAggressiveCleanupTargetCommand('/home/user/.bun/bin/bun /tmp/plugin/scripts/mcp-server.cjs')).toBe(false);
     });
   });
 

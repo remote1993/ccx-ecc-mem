@@ -1,7 +1,7 @@
 /**
  * IDE Auto-Detection
  *
- * Detects the currently supported host clients for claude-mem.
+ * Detects the currently supported host clients for ccx-ecc-mem.
  *
  * Pure Node.js — no Bun APIs used.
  */
@@ -20,7 +20,7 @@ export interface IDEInfo {
   label: string;
   /** Whether the IDE was detected on this system. */
   detected: boolean;
-  /** Whether claude-mem has implemented setup for this IDE. */
+  /** Whether ccx-ecc-mem has implemented setup for this IDE. */
   supported: boolean;
   /** Short hint text shown in the multi-select. */
   hint?: string;
@@ -32,7 +32,7 @@ export interface IDEInfo {
 
 /**
  * Detect all known IDEs and return an array of `IDEInfo` objects.
- * Each entry indicates whether the IDE was found and whether claude-mem
+ * Each entry indicates whether the IDE was found and whether ccx-ecc-mem
  * currently supports setting it up.
  */
 export function detectInstalledIDEs(): IDEInfo[] {

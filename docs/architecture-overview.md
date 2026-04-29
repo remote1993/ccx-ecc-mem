@@ -6,7 +6,7 @@
 +----------------------------------------------------------------+
 | Host integrations                                              |
 | +-- Claude Code hooks                                          |
-| +-- Codex CLI transcript watch + AGENTS.md context             |
+| +-- Codex CLI worker-managed transcript ingestion + AGENTS.md  |
 +----------------------------------------------------------------+
 | Unified CLI hook entry                                         |
 | +-- worker-service.cjs hook <platform> <event>                 |
@@ -35,7 +35,7 @@ The current repository direction is:
 - a single worker-backed runtime
 - a single custom API extraction path
 - focused host integrations for Claude Code and Codex CLI
-- transcript watching retained for Codex-side session capture
+- transcript ingestion retained for Codex-side session capture, enabled only by the Codex installer
 
 This means the system should be understood as **worker-first**, not provider-first and not MCP-first.
 
@@ -81,7 +81,7 @@ worker session
 Important implications:
 
 - there is no active multi-provider runtime in the main path
-- old Gemini/OpenRouter provider narratives are historical unless reintroduced in code
+- old multi-provider narratives are historical unless reintroduced in code
 - stateless custom APIs use a synthetic `memorySessionId` generated locally by the worker
 
 ## Session Model

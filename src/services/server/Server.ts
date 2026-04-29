@@ -118,7 +118,20 @@ export class Server {
 
     // Close the server
     await new Promise<void>((resolve, reject) => {
-      this.server!.close(err => err ? reject(err) : resolve());
+      this.server!.close(err => {
+        if (!err) {
+          resolve();
+          return;
+        }
+
+        if ((err as NodeJS.ErrnoException).code === 'ERR_SERVER_NOT_RUNNING') {
+          logger.debug('SYSTEM', 'HTTP server was already closed');
+          resolve();
+          return;
+        }
+
+        reject(err);
+      });
     });
 
     // Extra delay on Windows to ensure port is fully released

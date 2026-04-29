@@ -76,8 +76,8 @@
     "session": "会话",
     "previously": "之前",
     "session_started": "会话已开始",
-    "access_prefix": "可通过 get_observations([IDs]) 或 mem-search skill 访问",
-    "access_suffix": "过往工作 token。",
+    "access_prefix": "可通过 get_observations([IDs]) 或 mem-search skill 查看",
+    "access_suffix": "过往工作记录。",
     "column_key": "列说明",
     "read": "读取",
     "read_description": "读取这条观察所需的 token（现在了解它的成本）",
@@ -91,12 +91,12 @@
     "trust_index": "优先信任这个索引，不要重复读取代码来获取过往决策和经验",
     "context_economics": "上下文经济性",
     "loading": "加载",
-    "tokens_to_read": "token 阅读",
+    "tokens_to_read": "读取成本",
     "work_investment": "工作投入",
-    "work_investment_description": "token 用于研究、构建和决策",
+    "work_investment_description": "用于研究、构建和决策的 token 投入",
     "your_savings": "已节省",
-    "tokens": "token",
+    "tokens": "tokens",
     "reduction_from_reuse": "来自复用的减少比例",
-    "access_human_suffix": "过往研究与决策 token。使用 ccx-mem skill 可按 ID 访问记忆。"
+    "access_human_suffix": "过往研究与决策 token。使用 ccx-ecc-mem skill 可按 ID 访问记忆。"
   }
 }

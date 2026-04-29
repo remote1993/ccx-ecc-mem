@@ -105,7 +105,7 @@ async function main() {
   // Help flag
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
-Claude-Mem Pending Queue Manager
+ccx-ecc-mem Pending Queue Manager
 
 Check and process pending observation queue backlog.
 
@@ -128,7 +128,7 @@ Examples:
   bun scripts/check-pending-queue.ts --process --limit 5
 
 What is this for?
-  If the claude-mem worker crashes or restarts, pending observations may
+  If the ccx-ecc-mem worker crashes or restarts, pending observations may
   be left unprocessed. This script shows the backlog and lets you trigger
   processing. The worker no longer auto-recovers on startup to give you
   control over when processing happens.
@@ -140,13 +140,13 @@ What is this for?
   const limitArg = args.find((_, i) => args[i - 1] === '--limit');
   const limit = limitArg ? parseInt(limitArg, 10) : 10;
 
-  console.log('\n=== Claude-Mem Pending Queue Status ===\n');
+  console.log('\n=== ccx-ecc-mem Pending Queue Status ===\n');
 
   // Check worker health
   const healthy = await checkWorkerHealth();
   if (!healthy) {
     console.log('Worker is not running. Start it with:');
-    console.log('  cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem && npm run worker:start\n');
+    console.log('  cd ~/.claude/plugins/marketplaces/remote1993 && npm run worker:start\n');
     process.exit(1);
   }
   console.log('Worker status: Running\n');

@@ -9,7 +9,6 @@
  */
 
 import { execSync } from 'child_process';
-import { homedir } from 'os';
 import path from 'path';
 import { DatabaseManager } from './DatabaseManager.js';
 import { SessionManager } from './SessionManager.js';
@@ -77,7 +76,8 @@ export class SDKAgent {
     // On worker restart or crash recovery, memorySessionId may exist from a previous
     // SDK session but we must NOT resume because the SDK context was lost.
     // NEVER use contentSessionId for resume - that would inject messages into the user's transcript!
-    const hasRealMemorySessionId = !!session.memorySessionId;
+    const resumeSessionId = session.memorySessionId ?? undefined;
+    const hasRealMemorySessionId = !!resumeSessionId;
     const shouldResume = hasRealMemorySessionId && session.lastPromptNumber > 1 && !session.forceInit;
 
     // Clear forceInit after using it
@@ -139,7 +139,7 @@ export class SDKAgent {
         // instead of polluting user's actual project resume lists
         cwd: OBSERVER_SESSIONS_DIR,
         // Only resume if shouldResume is true (memorySessionId exists, not first prompt, not forceInit)
-        ...(shouldResume && { resume: session.memorySessionId }),
+        ...(shouldResume ? { resume: resumeSessionId } : {}),
         disallowedTools,
         abortController: session.abortController,
         pathToClaudeCodeExecutable: claudePath,
@@ -496,8 +496,7 @@ export class SDKAgent {
    * Get model ID from settings or environment
    */
   private getModelId(): string {
-    const settingsPath = path.join(homedir(), '.claude-mem', 'settings.json');
-    const settings = SettingsDefaultsManager.loadFromFile(settingsPath);
+    const settings = SettingsDefaultsManager.loadFromFile(USER_SETTINGS_PATH);
     return settings.CLAUDE_MEM_MODEL;
   }
 }

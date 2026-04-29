@@ -1,13 +1,13 @@
 ---
 name: claude-code-plugin-release
-description: Automated semantic versioning and release workflow for Claude Code plugins. Handles version increments across package.json, marketplace.json, and plugin.json, build verification, git tagging, GitHub releases, and changelog generation.
+description: Claude Code 插件的自动化语义版本与发布工作流。处理 package.json、marketplace.json、plugin.json 的版本递增、构建验证、git tag、GitHub release 和 changelog 生成。
 ---
 
 # Version Bump & Release Workflow
 
-**IMPORTANT:** You must first plan and write detailed release notes before starting the version bump workflow.
+重要：开始 version bump 前，必须先规划并写好详细 release notes。
 
-**CRITICAL:** ALWAYS commit EVERYTHING (including build artifacts). At the end of this workflow, NOTHING should be left uncommitted or unpushed. Run `git status` at the end to verify.
+关键要求：提交所有内容，包括构建产物。工作流结束时不应留下未提交或未推送的变更；最后运行 `git status` 验证。
 
 ## Preparation
 

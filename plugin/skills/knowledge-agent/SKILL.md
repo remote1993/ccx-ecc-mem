@@ -1,80 +1,79 @@
 ---
 name: knowledge-agent
-description: Build and query AI-powered knowledge bases from claude-mem observations. Use when users want to create focused "brains" from their observation history, ask questions about past work patterns, or compile expertise on specific topics.
+description: 从 ccx-ecc-mem observations 构建并查询 AI 知识库。用户想基于历史观察创建聚焦“知识脑”、询问过往工作模式或整理某个主题的经验时使用。
 ---
 
 # Knowledge Agent
 
-Build and query AI-powered knowledge bases from claude-mem observations.
+从 ccx-ecc-mem observations 构建并查询 AI 知识库。
 
-## What Are Knowledge Agents?
+## Knowledge Agent 是什么
 
-Knowledge agents are filtered corpora of observations compiled into a conversational AI session. Build a corpus from your observation history, prime it (loads the knowledge into an AI session), then ask it questions conversationally.
+Knowledge agent 是由筛选后的 observations 编译成的对话式 AI 语料库。先从历史 observations 构建 corpus，再 prime corpus，把知识加载到 AI 会话中，之后即可用自然语言连续提问。
 
-Think of them as custom "brains": "everything about hooks", "all decisions from the last month", "all bugfixes for the worker service".
+可以把它理解为自定义“知识脑”：例如“hooks 生命周期的一切”“最近一个月的所有决策”“worker service 的全部 bugfix”。
 
-## Workflow
+## 工作流
 
-### Step 1: Build a corpus
+### 第 1 步：构建 corpus
 
 ```text
-build_corpus name="hooks-expertise" description="Everything about the hooks lifecycle" project="claude-mem" concepts="hooks" limit=500
+build_corpus name="hooks-expertise" description="Everything about the hooks lifecycle" project="ccx-ecc-mem" concepts="hooks" limit=500
 ```
 
-Filter options:
-- `project` — filter by project name
-- `types` — comma-separated: decision, bugfix, feature, refactor, discovery, change
-- `concepts` — comma-separated concept tags
-- `files` — comma-separated file paths (prefix match)
-- `query` — semantic search query
-- `dateStart` / `dateEnd` — ISO date range
-- `limit` — max observations (default 500)
+过滤选项：
 
-### Step 2: Prime the corpus
+- `project`：按项目名过滤
+- `types`：逗号分隔，如 `decision,bugfix,feature,refactor,discovery,change`
+- `concepts`：逗号分隔的 concept tags
+- `files`：逗号分隔的文件路径，按前缀匹配
+- `query`：语义搜索查询
+- `dateStart` / `dateEnd`：ISO 日期范围
+- `limit`：最大 observations 数，默认 500
+
+### 第 2 步：prime corpus
 
 ```text
 prime_corpus name="hooks-expertise"
 ```
 
-This creates an AI session loaded with all the corpus knowledge. Takes a moment for large corpora.
+这会创建一个载入 corpus 知识的 AI 会话。大型 corpus 需要等待一段时间。
 
-### Step 3: Query
+### 第 3 步：查询
 
 ```text
 query_corpus name="hooks-expertise" question="What are the 5 lifecycle hooks and when does each fire?"
 ```
 
-The knowledge agent answers from its corpus. Follow-up questions maintain context.
+knowledge agent 会基于 corpus 回答。后续问题会保留对话上下文。
 
-### Step 4: List corpora
+### 第 4 步：列出 corpora
 
 ```text
 list_corpora
 ```
 
-Shows all corpora with stats and priming status.
+显示所有 corpora 的统计信息和 priming 状态。
 
-## Tips
+## 使用建议
 
-- **Focused corpora work best** — "hooks architecture" beats "everything ever"
-- **Prime once, query many times** — the session persists across queries
-- **Reprime for fresh context** — if the conversation drifts, reprime to reset
-- **Rebuild to update** — when new observations are added, rebuild then reprime
+- 聚焦 corpus 效果最好：“hooks architecture” 优于 “everything ever”。
+- 先 prime 一次，再多次 query；session 会跨查询保留。
+- 如果对话偏离主题，使用 reprime 重置上下文。
+- 新 observations 加入后，先 rebuild，再 reprime。
 
-## Maintenance
+## 维护
 
-### Rebuild a corpus (refresh with new observations)
+刷新已有 corpus：
 
 ```text
 rebuild_corpus name="hooks-expertise"
 ```
 
-After rebuilding, reprime to load the updated knowledge:
-
-### Reprime (fresh session)
+刷新后重新 prime：
 
 ```text
 reprime_corpus name="hooks-expertise"
 ```
 
-Clears prior Q&A context and reloads the corpus into a new session.
+`reprime_corpus` 会清空之前的 Q&A 上下文，并把 corpus 重新加载到新会话中。

@@ -110,7 +110,7 @@ async function main() {
   // Help flag
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
-Claude-Mem Queue Clearer
+ccx-ecc-mem Queue Clearer
 
 Clear messages from the observation queue.
 
@@ -149,14 +149,14 @@ What is this for?
   const clearAll = args.includes('--all');
 
   console.log(clearAll
-    ? '\n=== Claude-Mem Queue Clearer (ALL) ===\n'
-    : '\n=== Claude-Mem Queue Clearer (Failed) ===\n');
+    ? '\n=== ccx-ecc-mem Queue Clearer (ALL) ===\n'
+    : '\n=== ccx-ecc-mem Queue Clearer (Failed) ===\n');
 
   // Check worker health
   const healthy = await checkWorkerHealth();
   if (!healthy) {
     console.log('Worker is not running. Start it with:');
-    console.log('  cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem && npm run worker:start\n');
+    console.log('  cd ~/.claude/plugins/marketplaces/remote1993 && npm run worker:start\n');
     process.exit(1);
   }
   console.log('Worker status: Running\n');

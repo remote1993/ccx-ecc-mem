@@ -18,7 +18,7 @@ describe('Hook Lifecycle - Event Handlers', () => {
       const { getEventHandler } = await import('../src/cli/handlers/index.js');
       const recognizedTypes = [
         'context', 'session-init', 'observation',
-        'summarize', 'user-message', 'file-edit', 'file-context'
+        'summarize', 'user-message', 'file-edit', 'file-context', 'fusion-policy'
       ];
       for (const type of recognizedTypes) {
         const handler = getEventHandler(type);
@@ -60,22 +60,16 @@ describe('Hook Lifecycle - Event Handlers', () => {
 
 describe('Codex CLI Compatibility (#744)', () => {
   describe('getPlatformAdapter', () => {
-    it('should return claudeCodeAdapter for codex', async () => {
-      const { getPlatformAdapter, claudeCodeAdapter } = await import('../src/cli/adapters/index.js');
-      const adapter = getPlatformAdapter('codex');
-      expect(adapter).toBe(claudeCodeAdapter);
-    });
-
     it('should return claudeCodeAdapter for codex-cli', async () => {
       const { getPlatformAdapter, claudeCodeAdapter } = await import('../src/cli/adapters/index.js');
       const adapter = getPlatformAdapter('codex-cli');
       expect(adapter).toBe(claudeCodeAdapter);
     });
 
-    it('should return rawAdapter for any unrecognized platform string', async () => {
-      const { getPlatformAdapter, rawAdapter } = await import('../src/cli/adapters/index.js');
-      const adapter = getPlatformAdapter('some-future-cli');
-      expect(adapter).toBe(rawAdapter);
+    it('should reject any unrecognized platform string', async () => {
+      const { getPlatformAdapter } = await import('../src/cli/adapters/index.js');
+      expect(() => getPlatformAdapter('some-future-cli')).toThrow('Unsupported platform');
+      expect(() => getPlatformAdapter('codex')).toThrow('Unsupported platform');
     });
   });
 

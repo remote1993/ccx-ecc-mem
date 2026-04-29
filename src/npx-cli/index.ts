@@ -1,19 +1,18 @@
 /**
- * NPX CLI entry point for claude-mem.
+ * NPX CLI entry point for ccx-ecc-mem.
  *
  * Usage:
- *   npx ccx-mem                     → interactive install
- *   npx ccx-mem install             → interactive install
- *   npx ccx-mem install --ide <id|all> → direct host setup
- *   npx ccx-mem update              → update to latest version
- *   npx ccx-mem uninstall           → remove plugin and Codex config
- *   npx ccx-mem version             → print version
- *   npx ccx-mem start               → start worker service
- *   npx ccx-mem stop                → stop worker service
- *   npx ccx-mem restart             → restart worker service
- *   npx ccx-mem status              → show worker status
- *   npx ccx-mem search <query>      → search observations
- *   npx ccx-mem transcript watch    → start transcript watcher
+ *   npx ccx-ecc-mem                 → interactive install
+ *   npx ccx-ecc-mem install         → interactive install
+ *   npx ccx-ecc-mem install --ide <id|all> → direct host setup
+ *   npx ccx-ecc-mem update          → update to latest version
+ *   npx ccx-ecc-mem uninstall       → remove plugin and Codex config
+ *   npx ccx-ecc-mem version         → print version
+ *   npx ccx-ecc-mem start           → start worker service
+ *   npx ccx-ecc-mem stop            → stop worker service
+ *   npx ccx-ecc-mem restart         → restart worker service
+ *   npx ccx-ecc-mem status          → show worker status
+ *   npx ccx-ecc-mem search <query>  → search observations
  *
  * This file is pure Node.js — Bun is NOT required for install commands.
  * Runtime commands (`start`, `stop`, etc.) delegate to Bun via the installed plugin.
@@ -36,31 +35,34 @@ function printHelp(): void {
   const version = readPluginVersion();
 
   console.log(`
-${pc.bold('claude-mem')} v${version} — persistent memory for AI coding assistants
+${pc.bold('ccx-ecc-mem')} v${version} — 中文优先、少依赖的 Claude Code 本地能力、记忆与治理插件
 
-${pc.bold('Install Commands')} (no Bun required):
-  ${pc.cyan('npx ccx-mem')}                     Interactive install
-  ${pc.cyan('npx ccx-mem install')}              Interactive install
-  ${pc.cyan('npx ccx-mem install --ide <id|all>')} Install for specific host(s)
-  ${pc.cyan('npx ccx-mem install --mode <mode>')} Set injected-context language
-  ${pc.cyan('npx ccx-mem update')}               Update to latest version
-  ${pc.cyan('npx ccx-mem uninstall')}            Remove plugin and Codex config
-  ${pc.cyan('npx ccx-mem version')}              Print version
+${pc.bold('安装命令')}（不需要 Bun）：
+  ${pc.cyan('npx ccx-ecc-mem')}                 交互式安装
+  ${pc.cyan('npx ccx-ecc-mem install')}          交互式安装
+  ${pc.cyan('npx ccx-ecc-mem install --ide <id|all>')} 为指定宿主安装
+  ${pc.cyan('npx ccx-ecc-mem install --mode <mode>')} 设置注入上下文语言
+  ${pc.cyan('npx ccx-ecc-mem install --profile <profile>')} 选择能力配置
+  ${pc.cyan('npx ccx-ecc-mem update')}           更新到最新版本
+  ${pc.cyan('npx ccx-ecc-mem uninstall')}        卸载插件和 Codex 配置
+  ${pc.cyan('npx ccx-ecc-mem version')}          输出版本
 
-${pc.bold('Runtime Commands')} (requires Bun, delegates to installed plugin):
-  ${pc.cyan('npx ccx-mem start')}                Start worker service
-  ${pc.cyan('npx ccx-mem stop')}                 Stop worker service
-  ${pc.cyan('npx ccx-mem restart')}              Restart worker service
-  ${pc.cyan('npx ccx-mem status')}               Show worker status
-  ${pc.cyan('npx ccx-mem search <query>')}       Search observations
-  ${pc.cyan('npx ccx-mem adopt [--dry-run] [--branch <name>]')}    Stamp merged worktrees into parent project
-  ${pc.cyan('npx ccx-mem transcript watch')}     Start transcript watcher
+${pc.bold('运行命令')}（需要 Bun，委托给已安装插件）：
+  ${pc.cyan('npx ccx-ecc-mem start')}            启动 worker 服务
+  ${pc.cyan('npx ccx-ecc-mem stop')}             停止 worker 服务
+  ${pc.cyan('npx ccx-ecc-mem restart')}          重启 worker 服务
+  ${pc.cyan('npx ccx-ecc-mem status')}           查看 worker 状态
+  ${pc.cyan('npx ccx-ecc-mem search <query>')}   搜索记忆观察
+  ${pc.cyan('npx ccx-ecc-mem adopt [--dry-run] [--branch <name>]')}    将已合并 worktree 归档到父项目
 
-${pc.bold('IDE Identifiers')}:
+${pc.bold('兼容别名')}:
+  ${pc.cyan('npx ccx-mem')} 仍可作为兼容别名使用
+
+${pc.bold('IDE 标识')}:
   claude-code, codex-cli, all
 
-${pc.bold('Language Modes')}:
-  code, code--zh, code--ja, code--ko, code--es, code--fr, code--de, code--pt-br
+${pc.bold('语言模式')}:
+  code--zh, code, code--ja, code--ko, code--es, code--fr, code--de, code--pt-br
 `);
 }
 
@@ -70,8 +72,8 @@ function readOptionValue(flag: string): string | undefined {
 
   const value = args[index + 1];
   if (!value || value.startsWith('--')) {
-    console.error(pc.red(`Missing value for ${flag}`));
-    console.error(`Run ${pc.bold('npx ccx-mem --help')} for usage information.`);
+    console.error(pc.red(`${flag} 缺少参数值`));
+    console.error(`运行 ${pc.bold('npx ccx-ecc-mem --help')} 查看用法。`);
     process.exit(1);
   }
 
@@ -96,8 +98,10 @@ async function main(): Promise<void> {
       const ideValue = readOptionValue('--ide');
       const modeValue = readOptionValue('--mode');
 
+      const profileValue = readOptionValue('--profile');
+
       const { runInstallCommand } = await import('./commands/install.js');
-      await runInstallCommand({ ide: ideValue, mode: modeValue });
+      await runInstallCommand({ ide: ideValue, mode: modeValue, profile: profileValue });
       break;
     }
 
@@ -169,24 +173,10 @@ async function main(): Promise<void> {
       break;
     }
 
-    // -- Transcript --------------------------------------------------------
-    case 'transcript': {
-      const subCommand = args[1]?.toLowerCase();
-      if (subCommand === 'watch') {
-        const { runTranscriptWatchCommand } = await import('./commands/runtime.js');
-        runTranscriptWatchCommand();
-      } else {
-        console.error(pc.red(`Unknown transcript subcommand: ${subCommand ?? '(none)'}`));
-        console.error(`Usage: npx ccx-mem transcript watch`);
-        process.exit(1);
-      }
-      break;
-    }
-
     // -- Unknown -----------------------------------------------------------
     default: {
-      console.error(pc.red(`Unknown command: ${command}`));
-      console.error(`Run ${pc.bold('npx ccx-mem --help')} for usage information.`);
+      console.error(pc.red(`未知命令：${command}`));
+      console.error(`运行 ${pc.bold('npx ccx-ecc-mem --help')} 查看用法。`);
       process.exit(1);
     }
   }

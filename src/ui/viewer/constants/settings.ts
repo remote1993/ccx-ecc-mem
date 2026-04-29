@@ -1,10 +1,9 @@
 /**
- * Default settings values for Claude Memory
- * Shared across UI components and hooks
+ * Default settings values shared across UI components and hooks.
  */
 export const DEFAULT_SETTINGS = {
   CLAUDE_MEM_MODEL: 'claude-sonnet-4-6',
-  CLAUDE_MEM_MODE: 'code',
+  CLAUDE_MEM_MODE: 'code--zh',
   CLAUDE_MEM_CONTEXT_OBSERVATIONS: '50',
   CLAUDE_MEM_WORKER_PORT: '37777',
   CLAUDE_MEM_WORKER_HOST: '127.0.0.1',
@@ -35,7 +34,7 @@ export const DEFAULT_SETTINGS = {
   CLAUDE_MEM_CONTEXT_SHOW_TERMINAL_OUTPUT: 'true',
   CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED: 'false',
   CLAUDE_MEM_FOLDER_USE_LOCAL_MD: 'false',
-  CLAUDE_MEM_TRANSCRIPTS_ENABLED: 'true',
+  CLAUDE_MEM_TRANSCRIPTS_ENABLED: 'false',
   CLAUDE_MEM_TRANSCRIPTS_CONFIG_PATH: '~/.claude-mem/transcript-watch.json',
 
   // Exclusion Settings

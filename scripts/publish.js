@@ -21,7 +21,7 @@ const question = (query) => new Promise((resolve) => rl.question(query, resolve)
 
 async function publish() {
   try {
-    console.log('📦 Claude-mem Marketplace Release Tool\n');
+    console.log('📦 ccx-ecc-mem Marketplace Release Tool\n');
 
     // Check git status
     console.log('🔍 Checking git status...');
@@ -120,7 +120,7 @@ async function publish() {
     await execAsync(`git commit -m "chore: Release v${newVersion}
 
 Marketplace release for Claude Code plugin
-https://github.com/remote1993/ccx-mem"`);
+https://github.com/remote1993/ccx-ecc-mem"`);
     await execAsync(`git tag v${newVersion}`);
     console.log(`✓ Created commit and tag v${newVersion}`);
 
@@ -131,7 +131,7 @@ https://github.com/remote1993/ccx-mem"`);
     console.log('✓ Pushed to git');
 
     console.log(`\n✅ Successfully released v${newVersion}! 🎉`);
-    console.log(`\n🏷️  Tag: https://github.com/remote1993/ccx-mem/releases/tag/v${newVersion}`);
+    console.log(`\n🏷️  Tag: https://github.com/remote1993/ccx-ecc-mem/releases/tag/v${newVersion}`);
     console.log(`📦 Marketplace will sync from this tag automatically`);
 
   } catch (error) {

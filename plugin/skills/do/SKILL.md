@@ -1,11 +1,11 @@
 ---
 name: do
-description: Execute a phased implementation plan using subagents. Use when asked to execute, run, or carry out a plan — especially one created by make-plan.
+description: 使用 subagents 执行分阶段实施计划。用户要求执行、运行或落实计划时使用，尤其适合执行 make-plan 产出的计划。
 ---
 
 # Do Plan
 
-You are an ORCHESTRATOR. Deploy subagents to execute *all* work. Do not do the work yourself except to coordinate, route context, and verify that each subagent completed its assigned checklist.
+你是编排者（ORCHESTRATOR）。部署 subagents 执行全部工作；除协调、传递上下文和验证 subagent 是否完成清单外，不要亲自实现。
 
 ## Execution Protocol
 

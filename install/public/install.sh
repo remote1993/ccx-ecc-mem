@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# claude-mem installer redirect
+# ccx-ecc-mem installer redirect
 # The old curl-pipe-bash installer has been replaced by npx ccx-mem.
 # This script now redirects users to the new install method.
 
@@ -15,11 +15,11 @@ NC='\033[0m' # No Color
 echo ""
 echo -e "${YELLOW}The curl-pipe-bash installer has been replaced.${NC}"
 echo ""
-echo -e "${GREEN}Install claude-mem with a single command:${NC}"
+echo -e "${GREEN}Install ccx-ecc-mem with a single command:${NC}"
 echo ""
 echo -e "  ${CYAN}npx ccx-mem install${NC}"
 echo ""
 echo -e "This requires Node.js >= 18. Get it from ${CYAN}https://nodejs.org${NC}"
 echo ""
-echo -e "For more info, visit: ${CYAN}https://docs.claude-mem.ai/installation${NC}"
+echo -e "For more info, visit: ${CYAN}https://github.com/remote1993/ccx-mem#快速开始${NC}"
 echo ""

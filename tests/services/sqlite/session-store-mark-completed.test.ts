@@ -64,3 +64,31 @@ describe('SessionStore.markSessionCompleted', () => {
     expect(new Date(row.completed_at).getTime()).toBeGreaterThan(0);
   });
 });
+
+describe('SessionStore.markSessionFailed', () => {
+  let store: SessionStore;
+
+  beforeEach(() => {
+    store = new SessionStore(':memory:');
+  });
+
+  afterEach(() => {
+    store.close();
+  });
+
+  it('sets status to failed and records completed_at timestamps', () => {
+    const before = Date.now();
+    const id = store.createSDKSession('session-failed', 'project', 'prompt');
+
+    store.markSessionFailed(id);
+
+    const row = store.db.prepare(
+      'SELECT status, completed_at, completed_at_epoch FROM sdk_sessions WHERE id = ?'
+    ).get(id) as { status: string; completed_at: string; completed_at_epoch: number };
+
+    expect(row.status).toBe('failed');
+    expect(row.completed_at).toBeTruthy();
+    expect(row.completed_at_epoch).toBeGreaterThanOrEqual(before);
+    expect(row.completed_at_epoch).toBeLessThanOrEqual(Date.now());
+  });
+});

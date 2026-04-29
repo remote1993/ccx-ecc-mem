@@ -1,19 +1,32 @@
 datasets/
 node_modules/
 dist/
+coverage/
+.nyc_output/
+.cache/
+.turbo/
+.bun/
 **/_tree-sitter/
 *.log
 .DS_Store
 .env
 .env.local
+.env.*
+!.env.example
 *.tmp
 *.temp
+*.tsbuildinfo
+*.tgz
 .install-version
 .claude/settings.local.json
 .claude/agents/
 .claude/skills/
 .claude/plans/
 .claude/worktrees/
+.codex
+.codex/
+.translation-cache.json
+.vscode/
 plugin/data/
 plugin/data.backup/
 package-lock.json
@@ -25,7 +38,8 @@ Auto Run Docs/
 src/ui/viewer.html
 
 # Local MCP server config (for development only)
-.mcp.json
+/.mcp.json
+!plugin/.mcp.json
 .cursor/
 
 # Ignore WebStorm project files (for dinosaur IDE users)

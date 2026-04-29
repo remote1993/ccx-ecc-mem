@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Worker Service is the local Express HTTP server that backs Claude-Mem's current runtime. It runs on port 37777 by default (configurable via `CLAUDE_MEM_WORKER_PORT`) and serves as the main orchestration layer for session lifecycle handling, search, settings, viewer APIs, and async extraction.
+The Worker Service is the local Express HTTP server that backs ccx-ecc-mem's current runtime. It runs on port 37777 by default (configurable via `CLAUDE_MEM_WORKER_PORT`) and serves as the main orchestration layer for session lifecycle handling, search, settings, viewer APIs, and async extraction.
 
 ## Current Request Flow
 

@@ -12,8 +12,8 @@ export const ENV_PRESERVE = new Set([
   'CLAUDE_CODE_GIT_BASH_PATH',
 ]);
 
-export function sanitizeEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
-  const sanitized: NodeJS.ProcessEnv = {};
+export function sanitizeEnv(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const sanitized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) continue;

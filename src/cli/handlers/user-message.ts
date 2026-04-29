@@ -21,7 +21,7 @@ async function fetchAndDisplayContext(project: string, colorsParam: string, port
 
   const output = await response.text();
   process.stderr.write(
-    "\n\n" + String.fromCodePoint(0x1F4DD) + " Claude-Mem Context Loaded\n\n" +
+    "\n\n" + String.fromCodePoint(0x1F4DD) + " ccx-ecc-mem Context Loaded\n\n" +
     output +
     "\n\n" + String.fromCodePoint(0x1F4A1) + " Wrap any message with <private> ... </private> to prevent storing sensitive information.\n" +
     "\n" + String.fromCodePoint(0x1F4AC) + " Community https://discord.gg/J4wttp9vDu" +

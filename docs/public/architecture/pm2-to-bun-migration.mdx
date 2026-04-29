@@ -6,7 +6,7 @@ description: "Complete technical documentation for the process management and da
 <Note>
 **Historical Migration Documentation**
 
-This document describes the PM2 to Bun migration that occurred in v7.1.0 (December 2025). If you're installing claude-mem for the first time, this migration has already been completed and you can use the current Bun-based system documented in the main guides.
+This document describes the PM2 to Bun migration that occurred in v7.1.0 (December 2025). If you're installing ccx-ecc-mem for the first time, this migration has already been completed and you can use the current Bun-based system documented in the main guides.
 
 This documentation is preserved for users upgrading from versions older than v7.1.0.
 </Note>
@@ -19,7 +19,7 @@ This documentation is preserved for users upgrading from versions older than v7.
 
 ## Executive Summary
 
-Claude-mem version 7.1.0 introduces two major architectural migrations:
+ccx-ecc-mem version 7.1.0 introduces two major architectural migrations:
 
 1. **Process Management**: PM2 → Custom Bun-based ProcessManager
 2. **Database Driver**: better-sqlite3 npm package → bun:sqlite runtime module
@@ -504,8 +504,8 @@ npm run worker:restart
 git checkout <pre-7.1.0-tag>
 npm install && npm run build && npm run sync-marketplace
 
-# 2. Start PM2 worker
-pm2 start plugin/scripts/worker-cli.js --name claude-mem-worker
+# 2. Start old PM2 worker from that checked-out version
+pm2 start <old-worker-entry> --name claude-mem-worker
 
 # 3. Update to new version
 git checkout main

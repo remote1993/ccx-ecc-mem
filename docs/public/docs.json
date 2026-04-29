@@ -3,10 +3,10 @@
   "name": "ccx-mem",
   "description": "Worker-backed persistent memory for Claude Code and Codex CLI",
   "theme": "mint",
-  "favicon": "/claude-mem-logomark.webp",
+  "favicon": "/ccx-ecc-mem-logomark.webp",
   "logo": {
-    "light": "/claude-mem-logo-for-light-mode.webp",
-    "dark": "/claude-mem-logo-for-dark-mode.webp",
+    "light": "/ccx-ecc-mem-logo-for-light-mode.webp",
+    "dark": "/ccx-ecc-mem-logo-for-dark-mode.webp",
     "href": "https://github.com/remote1993/ccx-mem"
   },
   "colors": {
