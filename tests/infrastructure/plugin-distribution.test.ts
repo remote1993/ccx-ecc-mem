@@ -76,6 +76,14 @@ describe('Plugin Distribution - Manifest Sync', () => {
 
     expect(rootManifest).toEqual(expectedRootManifest);
   });
+
+  it('keeps Claude manifests compatible with Claude Code validation', () => {
+    const marketplaceManifest = JSON.parse(readFileSync(path.join(projectRoot, '.claude-plugin/marketplace.json'), 'utf-8'));
+    const publishedManifest = JSON.parse(readFileSync(path.join(projectRoot, 'plugin/.claude-plugin/plugin.json'), 'utf-8'));
+
+    expect(marketplaceManifest.version).toBeUndefined();
+    expect(publishedManifest.features).toBeUndefined();
+  });
 });
 
 describe('Plugin Distribution - hooks.json Integrity', () => {
@@ -104,7 +112,7 @@ describe('Plugin Distribution - hooks.json Integrity', () => {
   it('should include CLAUDE_PLUGIN_ROOT fallback in all hook commands (#1215)', () => {
     const hooksPath = path.join(projectRoot, 'plugin/hooks/hooks.json');
     const parsed = JSON.parse(readFileSync(hooksPath, 'utf-8'));
-    const expectedFallbackPath = '$HOME/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin';
+    const expectedFallbackPath = '$HOME/.claude/plugins/marketplaces/remote1993/plugin';
 
     for (const [eventName, matchers] of Object.entries(parsed.hooks)) {
       for (const matcher of matchers as any[]) {
@@ -120,8 +128,8 @@ describe('Plugin Distribution - hooks.json Integrity', () => {
   it('should try cache path before marketplaces fallback in all hook commands (#1533)', () => {
     const hooksPath = path.join(projectRoot, 'plugin/hooks/hooks.json');
     const parsed = JSON.parse(readFileSync(hooksPath, 'utf-8'));
-    const cachePath = '$HOME/.claude/plugins/cache/remote1993/ccx-mem';
-    const marketplacesPath = '$HOME/.claude/plugins/marketplaces/remote1993/ccx-mem/plugin';
+    const cachePath = '$HOME/.claude/plugins/cache/remote1993/ccx-ecc-mem';
+    const marketplacesPath = '$HOME/.claude/plugins/marketplaces/remote1993/plugin';
 
     for (const [eventName, matchers] of Object.entries(parsed.hooks)) {
       for (const matcher of matchers as any[]) {
@@ -142,6 +150,7 @@ describe('Plugin Distribution - package.json Files Field', () => {
     const packageJsonPath = path.join(projectRoot, 'package.json');
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
     expect(packageJson.files).toBeDefined();
+    expect(packageJson.files).toContain('.claude-plugin');
     expect(packageJson.files).toContain('plugin/.claude-plugin');
     expect(packageJson.files).toContain('plugin/.mcp.json');
     expect(packageJson.files).toContain('plugin/hooks');

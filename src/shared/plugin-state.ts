@@ -8,7 +8,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
 
-const PLUGIN_SETTINGS_KEY = 'ccx-mem@remote1993';
+const PLUGIN_SETTINGS_KEY = 'ccx-ecc-mem@remote1993';
 
 /**
  * Check if ccx-ecc-mem is disabled in Claude Code's settings (#781).

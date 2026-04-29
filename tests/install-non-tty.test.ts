@@ -81,6 +81,14 @@ describe('Install Non-TTY Support', () => {
   });
 
   describe('non-interactive install path', () => {
+    it('copies the root Claude marketplace manifest during install', () => {
+      expect(installSource).toContain("'.claude-plugin'");
+    });
+
+    it('cleans the marketplace directory before copying runtime files', () => {
+      expect(installSource).toContain('rmSync(marketplaceDir, { recursive: true, force: true })');
+    });
+
     it('defaults to claude-code when not interactive and no IDE specified', () => {
       // The non-interactive path should have a fallback
       expect(installSource).toContain("selectedIDEs = ['claude-code']");

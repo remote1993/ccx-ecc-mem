@@ -49,6 +49,7 @@
     "./modes/*": "./plugin/modes/*"
   },
   "files": [
+    ".claude-plugin",
     "dist",
     "plugin/.claude-plugin",
     "plugin/CLAUDE.md",
@@ -71,7 +72,7 @@
   "scripts": {
     "dev": "npm run build-and-sync",
     "build": "node scripts/sync-plugin-manifests.js && node scripts/build-hooks.js",
-    "build-and-sync": "npm run build && npm run sync-marketplace && sleep 1 && cd ~/.claude/plugins/marketplaces/remote1993/ccx-mem && npm run worker:restart",
+    "build-and-sync": "npm run build && npm run sync-marketplace && sleep 1 && cd ~/.claude/plugins/marketplaces/remote1993 && npm run worker:restart",
     "sync-marketplace": "node scripts/sync-marketplace.cjs",
     "sync-marketplace:force": "node scripts/sync-marketplace.cjs --force",
     "build:binaries": "node scripts/build-worker-binary.js",

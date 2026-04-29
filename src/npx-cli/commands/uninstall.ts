@@ -20,6 +20,7 @@ import {
   knownMarketplacesPath,
   marketplaceDirectory,
   PLUGIN_OWNER,
+  PLUGIN_SLUG,
   pluginsDirectory,
   writeJsonFileAtomic,
 } from '../utils/paths.js';
@@ -39,7 +40,7 @@ function removeMarketplaceDirectory(): boolean {
 }
 
 function removeCacheDirectory(): boolean {
-  const cacheDirectory = join(pluginsDirectory(), 'cache', PLUGIN_OWNER, 'ccx-mem');
+  const cacheDirectory = join(pluginsDirectory(), 'cache', PLUGIN_OWNER, PLUGIN_SLUG);
   if (existsSync(cacheDirectory)) {
     rmSync(cacheDirectory, { recursive: true, force: true });
     return true;

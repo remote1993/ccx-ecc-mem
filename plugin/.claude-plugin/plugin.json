@@ -35,23 +35,5 @@
   ],
   "commands": [
     "./fusion/"
-  ],
-  "features": {
-    "agents": 0,
-    "optionalAgents": 8,
-    "commands": 7,
-    "skills": 183,
-    "configAssets": true,
-    "hookEvents": [
-      "Setup",
-      "SessionStart",
-      "UserPromptSubmit",
-      "PreToolUse",
-      "PostToolUse",
-      "Stop"
-    ],
-    "customTools": [
-      "mcp-search"
-    ]
-  }
+  ]
 }

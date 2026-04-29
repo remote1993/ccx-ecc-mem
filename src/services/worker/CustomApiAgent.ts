@@ -446,7 +446,7 @@ export class CustomApiAgent {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': siteUrl || 'https://github.com/remote1993/ccx-mem',
+        'HTTP-Referer': siteUrl || 'https://github.com/remote1993/ccx-ecc-mem',
         'X-Title': appName || 'ccx-mem',
         'Content-Type': 'application/json',
       },

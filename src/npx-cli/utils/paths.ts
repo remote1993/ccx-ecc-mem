@@ -10,7 +10,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 export const PLUGIN_OWNER = 'remote1993';
-export const PLUGIN_SLUG = 'ccx-mem';
+export const PLUGIN_SLUG = 'ccx-ecc-mem';
 export const INSTALLED_PLUGIN_ID = `${PLUGIN_SLUG}@${PLUGIN_OWNER}`;
 export const DEFAULT_FUSION_PROFILE = 'core';
 
@@ -29,9 +29,9 @@ export function claudeConfigDirectory(): string {
   return process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
 }
 
-/** Marketplace install directory for remote1993/ccx-mem. */
+/** Marketplace install directory for the remote1993 marketplace. */
 export function marketplaceDirectory(): string {
-  return join(claudeConfigDirectory(), 'plugins', 'marketplaces', PLUGIN_OWNER, PLUGIN_SLUG);
+  return join(claudeConfigDirectory(), 'plugins', 'marketplaces', PLUGIN_OWNER);
 }
 
 /** Top-level plugins directory. */

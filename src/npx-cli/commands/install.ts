@@ -363,6 +363,7 @@ function copyPluginToMarketplace(): void {
   const marketplaceDir = marketplaceDirectory();
   const packageRoot = npmPackageRootDirectory();
 
+  rmSync(marketplaceDir, { recursive: true, force: true });
   ensureDirectoryExists(marketplaceDir);
 
   // Only copy directories/files that are actually needed at runtime.
@@ -370,6 +371,7 @@ function copyPluginToMarketplace(): void {
   // When running from a dev checkout, the root contains many extra dirs
   // (.claude, .agents, src, docs, etc.) that must NOT be copied.
   const allowedTopLevelEntries = [
+    '.claude-plugin',
     'plugin',
     'package.json',
     'package-lock.json',

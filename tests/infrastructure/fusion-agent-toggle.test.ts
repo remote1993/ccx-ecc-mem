@@ -57,11 +57,13 @@ describe('Fusion agent profile toggles', () => {
   it('does not expose agent paths or agent counts in the default plugin manifest', () => {
     const pluginManifest = readJson('plugin/.claude-plugin/plugin.json');
     const hooksText = readFileSync(path.join(projectRoot, 'plugin/hooks/hooks.json'), 'utf-8');
+    const manifestText = JSON.stringify(pluginManifest);
 
     expect(pluginManifest.agents).toBeUndefined();
-    expect(pluginManifest.features?.agents).toBe(0);
-    expect(pluginManifest.features?.optionalAgents).toBeGreaterThan(0);
-    expect(JSON.stringify(pluginManifest)).not.toContain('./ecc/agents');
+    expect(pluginManifest.features).toBeUndefined();
+    expect(manifestText).not.toContain('"agents":');
+    expect(manifestText).not.toContain('optionalAgents');
+    expect(manifestText).not.toContain('./ecc/agents');
     expect(hooksText).not.toContain('plugin/ecc/agents');
   });
 });
