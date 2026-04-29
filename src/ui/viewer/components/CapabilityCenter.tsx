@@ -54,6 +54,8 @@ function CapabilityGroup({ title, capabilities, locale }: { title: string; capab
 }
 
 export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityCenterProps) {
+  const [selectedStatus, setSelectedStatus] = React.useState('all');
+
   if (error) {
     return (
       <section className="capability-center">
@@ -80,12 +82,24 @@ export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityC
 
   const locale = data.defaultLocale || 'zh-CN';
   const groups = data.capabilitiesByStatus || { active: [], optional: [], reference: [], archived: [] };
-  const groupStats = [
-    { label: labels.activeCapabilities, value: groups.active?.length || 0 },
-    { label: labels.optionalCapabilities, value: groups.optional?.length || 0 },
-    { label: labels.referenceCapabilities, value: groups.reference?.length || 0 },
-    { label: labels.archivedCapabilities, value: groups.archived?.length || 0 },
+  const groupDefinitions = [
+    { status: 'active', label: labels.activeCapabilities, capabilities: groups.active || [] },
+    { status: 'optional', label: labels.optionalCapabilities, capabilities: groups.optional || [] },
+    { status: 'reference', label: labels.referenceCapabilities, capabilities: groups.reference || [] },
+    { status: 'archived', label: labels.archivedCapabilities, capabilities: groups.archived || [] },
   ];
+  const totalCapabilities = groupDefinitions.reduce((count, group) => count + group.capabilities.length, 0);
+  const tabs = [
+    { status: 'all', label: labels.all, value: totalCapabilities },
+    ...groupDefinitions.map(group => ({
+      status: group.status,
+      label: group.label,
+      value: group.capabilities.length,
+    })),
+  ];
+  const visibleGroups = selectedStatus === 'all'
+    ? groupDefinitions
+    : groupDefinitions.filter(group => group.status === selectedStatus);
 
   return (
     <section className="capability-center">
@@ -105,19 +119,30 @@ export function CapabilityCenter({ data, labels, isLoading, error }: CapabilityC
           </div>
         </dl>
       </div>
-      <div className="capability-stats" aria-label={labels.capabilityCenter}>
-        {groupStats.map(stat => (
-          <div className="capability-stat" key={stat.label}>
-            <span>{stat.value}</span>
-            <strong>{stat.label}</strong>
-          </div>
+      <div className="capability-tabs" role="tablist" aria-label={labels.capabilityCenter}>
+        {tabs.map(tab => (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedStatus === tab.status}
+            className={`capability-tab${selectedStatus === tab.status ? ' is-active' : ''}`}
+            key={tab.status}
+            onClick={() => setSelectedStatus(tab.status)}
+          >
+            <span>{tab.value}</span>
+            <strong>{tab.label}</strong>
+          </button>
         ))}
       </div>
       {isLoading ? <div className="feed-state feed-state-inline">{labels.loading}</div> : null}
-      <CapabilityGroup title={labels.activeCapabilities} capabilities={groups.active || []} locale={locale} />
-      <CapabilityGroup title={labels.optionalCapabilities} capabilities={groups.optional || []} locale={locale} />
-      <CapabilityGroup title={labels.referenceCapabilities} capabilities={groups.reference || []} locale={locale} />
-      <CapabilityGroup title={labels.archivedCapabilities} capabilities={groups.archived || []} locale={locale} />
+      {visibleGroups.map(group => (
+        <CapabilityGroup
+          key={group.status}
+          title={group.label}
+          capabilities={group.capabilities}
+          locale={locale}
+        />
+      ))}
     </section>
   );
 }
