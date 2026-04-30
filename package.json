@@ -26,7 +26,7 @@
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/remote1993/ccx-ecc-mem.git"
+    "url": "git+https://github.com/remote1993/ccx-ecc-mem.git"
   },
   "homepage": "https://github.com/remote1993/ccx-ecc-mem#readme",
   "bugs": {
@@ -34,8 +34,8 @@
   },
   "type": "module",
   "bin": {
-    "ccx-ecc-mem": "./dist/npx-cli/index.js",
-    "ccx-mem": "./dist/npx-cli/index.js"
+    "ccx-ecc-mem": "dist/npx-cli/index.js",
+    "ccx-mem": "dist/npx-cli/index.js"
   },
   "exports": {
     ".": {
